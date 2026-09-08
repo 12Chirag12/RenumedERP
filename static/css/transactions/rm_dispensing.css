@@ -25,12 +25,6 @@
   min-height: 0;
 }
 
-.rm-dispensing-page .rm-grid-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--navy);
-}
-
 .rm-dispensing-page.cu-page[data-page-init] .rm-section-no-strip .cu-section-fields.rm-grid-fields {
   padding: 0 !important;
   gap: 0;

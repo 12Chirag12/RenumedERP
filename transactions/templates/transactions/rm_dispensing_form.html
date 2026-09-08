@@ -28,7 +28,8 @@
         {% csrf_token %}
         {% if edit_instance %}<input type="hidden" name="edit_pk" value="{{ edit_instance.pk }}">{% endif %}
 
-        <div class="cu-section rm-section-block rm-section-no-strip">
+        <div class="cu-section txn-section rm-section-block rm-section-no-strip">
+          <h3 class="txn-section-title">Dispensing details</h3>
           <div class="cu-section-fields">
 
             <div class="cu-row-2-eq">
@@ -130,8 +131,8 @@
         </div>
 
         <div class="rm-grid-block">
-          <div class="rm-grid-title">Bill of Material as per specification</div>
-          <div class="cu-section rm-section-block rm-section-no-strip rm-grid-section">
+          <div class="cu-section txn-section rm-section-block rm-section-no-strip rm-grid-section">
+            <h3 class="txn-section-title">Bill of Material as per specification</h3>
             <div class="cu-section-fields rm-grid-fields">
               <div class="rm-panel-shell rm-grid-panel">
                 <div class="rm-table-wrap rm-table-wrap--grid">

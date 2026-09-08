@@ -29,7 +29,8 @@
         {% csrf_token %}
         {% if edit_instance %}<input type="hidden" name="edit_pk" value="{{ edit_instance.pk }}">{% endif %}
 
-        <div class="cu-section pkg-cont-section-block pkg-cont-section-no-strip">
+        <div class="cu-section txn-section pkg-cont-section-block pkg-cont-section-no-strip">
+          <h3 class="txn-section-title">Packing details</h3>
           <div class="cu-section-fields">
 
             <div class="pkg-cont-row-first">
