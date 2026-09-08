@@ -1,0 +1,227 @@
+{% extends base_template %}
+{% block title %}Batch allocation — PharmaERP{% endblock %}
+
+{% block content %}
+<div class="cu-page batch-allocation-page" data-page-init="batch_allocation">
+
+  <header class="ba-page-heading">
+    <h1>Batch allocation</h1>
+    <p>Select customer, sales order, and product. Enter batch size, number range, and MFG / EXP months, then create batches. Quantities are distributed evenly with the remainder on the last batch.</p>
+  </header>
+
+  {{ batch_alloc_ajax_urls|json_script:"baAjaxUrls" }}
+
+  <div class="cu-panel">
+    <div class="cu-card-header">
+      <div class="icon-wrap">
+        <i class="bi bi-layers"></i>
+      </div>
+      <div>
+        <h2>Batch allocation</h2>
+        <p>Order details, product line, and batch parameters</p>
+      </div>
+    </div>
+
+    <div class="cu-card-body">
+      {% include "includes/form_errors_alert.html" with form=form %}
+
+      <form method="post" action="{% url 'transactions:batch_allocation' %}" id="baForm" novalidate>
+        {% csrf_token %}
+
+        <div class="ba-form">
+          <div class="ba-layout">
+            <div class="ba-layout__main">
+              <div class="ba-layout__col ba-layout__col--primary">
+
+                <div class="cu-section ba-section-block ba-entry-section ba-section-no-strip">
+                  <div class="cu-section-fields">
+
+                    <div id="baSecOrder" class="ba-subblock" data-ba-hard-disable="1">
+                      <div class="cu-row-3-eq">
+                        <div class="cu-field">
+                          <label class="cu-label" for="baCustomer">Customer <span class="req">*</span></label>
+                          {{ form.customer }}
+                          {% if form.customer.errors %}<span class="field-error">{{ form.customer.errors.0 }}</span>{% endif %}
+                        </div>
+                        <div class="cu-field">
+                          <label class="cu-label" for="baOrderSelect">Order No. <span class="req">*</span></label>
+                          <select id="baOrderSelect" class="cu-select searchable-dropdown ba-select-full" disabled>
+                            <option value="">— Select order —</option>
+                          </select>
+                          {% if form.order_id.errors %}<span class="field-error">{{ form.order_id.errors.0 }}</span>{% endif %}
+                        </div>
+                        <div class="cu-field">
+                          <label class="cu-label" for="baOrdDateDisplay">Order date</label>
+                          <input type="text" id="baOrdDateDisplay" class="cu-input" readonly tabindex="-1" placeholder="—">
+                        </div>
+                      </div>
+                      <div class="cu-field">
+                        <label class="cu-label" for="baOrdRemarks">Remarks</label>
+                        <input type="text" id="baOrdRemarks" class="cu-input" readonly tabindex="-1" placeholder="—">
+                      </div>
+                    </div>
+
+                    <div id="baSecProduct" class="ba-subblock" data-ba-hard-disable="1">
+                      <div class="cu-field">
+                        <label class="cu-label" for="baProductSelect">Product <span class="req">*</span></label>
+                        <select id="baProductSelect" class="cu-select searchable-dropdown ba-select-full" disabled>
+                          <option value="">— Select product —</option>
+                        </select>
+                        {% if form.order_line_id.errors %}<span class="field-error">{{ form.order_line_id.errors.0 }}</span>{% endif %}
+                      </div>
+                      <div class="cu-row-4-eq ba-readonly-metrics">
+                        <div class="cu-field">
+                          <label class="cu-label" for="baDispOrderQtyL">Remaining qty (Lacs)</label>
+                          <input type="text" id="baDispOrderQtyL" class="cu-input cu-num" readonly tabindex="-1" value="—">
+                        </div>
+                        <div class="cu-field">
+                          <label class="cu-label" for="baDispOrderQtyN">Remaining (Nos.)</label>
+                          <input type="text" id="baDispOrderQtyN" class="cu-input cu-num" readonly tabindex="-1" value="—">
+                        </div>
+                        <div class="cu-field">
+                          <label class="cu-label" for="baDispExportType">Export type</label>
+                          <input type="text" id="baDispExportType" class="cu-input" readonly tabindex="-1" value="—">
+                        </div>
+                        <div class="cu-field">
+                          <label class="cu-label" for="baAbbrText">Batch Abbr.</label>
+                          <input type="text" id="baAbbrText" class="cu-input ba-abbr-readonly" readonly tabindex="-1" value="—">
+                        </div>
+                      </div>
+                    </div>
+
+                    <div id="baSecBatch" class="ba-subblock ba-section-disabled">
+                      <div class="cu-field ba-partial-row">
+                        {{ form.partial }}
+                        <label class="cu-label" for="baPartialYn">Partial allocation</label>
+                      </div>
+                      <div class="cu-row-2-eq">
+                        <div class="cu-field">
+                          <label class="cu-label" for="baPartialL">Partial qty (Lacs)</label>
+                          {{ form.partial_qty_l }}
+                          {% if form.partial_qty_l.errors %}<span class="field-error">{{ form.partial_qty_l.errors.0 }}</span>{% endif %}
+                        </div>
+                        <div class="cu-field">
+                          <label class="cu-label" for="baPartialN">Partial qty (Nos.)</label>
+                          {{ form.partial_qty_n }}
+                          {% if form.partial_qty_n.errors %}<span class="field-error">{{ form.partial_qty_n.errors.0 }}</span>{% endif %}
+                        </div>
+                      </div>
+
+                      <div class="cu-row-4-eq">
+                        <div class="cu-field">
+                          <label class="cu-label" for="baBatchSizeL">Batch size (Lacs) <span class="req">*</span></label>
+                          {{ form.batch_size_l }}
+                          {% if form.batch_size_l.errors %}<span class="field-error">{{ form.batch_size_l.errors.0 }}</span>{% endif %}
+                        </div>
+                        <div class="cu-field">
+                          <label class="cu-label" for="baBatchSizeN">Batch size (Nos.) <span class="req">*</span></label>
+                          {{ form.batch_size_n }}
+                          {% if form.batch_size_n.errors %}<span class="field-error">{{ form.batch_size_n.errors.0 }}</span>{% endif %}
+                        </div>
+                        <div class="cu-field">
+                          <label class="cu-label" for="baBatchFrom">Batch No From <span class="req">*</span></label>
+                          {{ form.batch_from }}
+                          {% if form.batch_from.errors %}<span class="field-error">{{ form.batch_from.errors.0 }}</span>{% endif %}
+                        </div>
+                        <div class="cu-field">
+                          <label class="cu-label" for="baBatchTo">Batch No To <span class="req">*</span></label>
+                          {{ form.batch_to }}
+                          {% if form.batch_to.errors %}<span class="field-error">{{ form.batch_to.errors.0 }}</span>{% endif %}
+                        </div>
+                      </div>
+
+                      <div class="cu-row-2-eq">
+                        <div class="cu-field">
+                          <label class="cu-label" for="baMfgDt">MFG date (MMM-YYYY) <span class="req">*</span></label>
+                          {{ form.mfg_dt }}
+                          {% if form.mfg_dt.errors %}<span class="field-error">{{ form.mfg_dt.errors.0 }}</span>{% endif %}
+                        </div>
+                        <div class="cu-field">
+                          <label class="cu-label" for="baExpDt">EXP date (MMM-YYYY) <span class="req">*</span></label>
+                          {{ form.exp_dt }}
+                          {% if form.exp_dt.errors %}<span class="field-error">{{ form.exp_dt.errors.0 }}</span>{% endif %}
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+              </div>
+
+              <div class="ba-layout__col ba-layout__col--side ba-prev-column">
+                <div class="ba-h-section-title">
+                  <i class="bi bi-clock-history"></i>
+                  <span>Previous batches</span>
+                </div>
+                <div class="cu-section ba-section-block ba-section-no-strip ba-prev-section">
+                  <div class="cu-section-fields ba-prev-fields">
+                    <div class="ba-panel-shell ba-prev-panel">
+                      <div class="ba-prev-table-wrap">
+                        <table class="ba-inline-table ba-prev-table">
+                          <thead>
+                            <tr>
+                              <th>Batch No</th>
+                              <th>MFG</th>
+                              <th>EXP</th>
+                              <th>Size</th>
+                            </tr>
+                          </thead>
+                          <tbody id="baPrevBody">
+                            <tr><td colspan="4" class="ba-muted">Select a product…</td></tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="ba-preview-outer">
+            <div class="ba-h-section-title">
+              <i class="bi bi-grid-3x3-gap"></i>
+              <span>Batches to create</span>
+            </div>
+            <div class="cu-section ba-section-block ba-section-no-strip">
+              <div class="cu-section-fields ba-preview-fields">
+                <div class="ba-panel-shell">
+                  <div class="ba-preview-scroll">
+                    <table class="ba-inline-table ba-preview-table" style="width:100%;border-collapse:collapse;">
+                      <thead>
+                        <tr>
+                          <th>Batch No</th>
+                          <th>MFG Date</th>
+                          <th>EXP Date</th>
+                          <th>Batch Size</th>
+                        </tr>
+                      </thead>
+                      <tbody id="baPreviewBody"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {{ form.order_id }}
+        {{ form.order_line_id }}
+
+        <div class="cu-actions ba-actions">
+          <div aria-hidden="true"></div>
+          <button type="submit" class="btn-save btn-save-main" id="baCreateBtn" aria-disabled="true">
+            <i class="bi bi-check2-circle"></i> Create batches
+          </button>
+          <a href="{% url 'transactions:batch_allocation' %}" class="btn-cancel" id="baClear"><i class="bi bi-x-lg"></i> Clear</a>
+        </div>
+        <span class="field-error js-err" id="err-baForm"></span>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

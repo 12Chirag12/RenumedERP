@@ -1,0 +1,186 @@
+{% extends base_template %}
+{% block title %}Inventory — PharmaERP{% endblock %}
+
+{% block content %}
+<div class="cu-page inv-stk-view-page" data-page-init="inventory_stock" data-lifecycle-url="{% url 'inventory:inventory_stock_lifecycle_ajax' %}">
+
+  <header class="inw-page-heading">
+    <h1>Inventory</h1>
+    <p>
+   <strong>Inventory Stock View</strong> is a tool that allows you to view the stock of your products and items.
+  </header>
+
+  <div class="cu-panel inv-stk-view-panel">
+    <div class="cu-card-header inv-stk-view-card-head">
+      <div class="icon-wrap"><i class="bi bi-box-seam"></i></div>
+      <div>
+        <h2>Filters</h2>
+        <p>Choose criteria and click <strong>Apply</strong>. Product and item lists reflect SKUs that currently have ledger rows (optionally scoped by customer).</p>
+      </div>
+    </div>
+
+    <div class="cu-card-body inv-stk-view-body">
+      <form method="get" class="inv-stk-filters" id="invStkFilterForm" action="">
+        <div class="inv-stk-filter-grid">
+          <div class="cu-field">
+            <label class="cu-label" for="id_inv_stk_customer">Customer</label>
+            <select name="customer" id="id_inv_stk_customer" class="cu-select searchable-dropdown">
+              <option value="">— All customers —</option>
+              {% for c in customers %}
+                <option value="{{ c.pk }}" {% if sel_customer_id is not None and c.pk == sel_customer_id %}selected{% endif %}>{{ c.cust_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="cu-field">
+            <label class="cu-label" for="id_inv_stk_category">Stock category</label>
+            <select name="category" id="id_inv_stk_category" class="cu-select searchable-dropdown">
+              <option value="">— All categories —</option>
+              {% for cat in categories %}
+                <option value="{{ cat.pk }}" {% if sel_category_id and cat.pk == sel_category_id %}selected{% endif %}>{{ cat.prod_cat_id }} — {{ cat.prod_cat_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="cu-field">
+            <label class="cu-label" for="id_inv_stk_sku_kind">Row type</label>
+            <select name="sku_kind" id="id_inv_stk_sku_kind" class="cu-select searchable-dropdown">
+              <option value="all" {% if sel_sku_kind == 'all' %}selected{% endif %}>Products and items</option>
+              <option value="product" {% if sel_sku_kind == 'product' %}selected{% endif %}>Products (FG) only</option>
+              <option value="item" {% if sel_sku_kind == 'item' %}selected{% endif %}>Items (RM / PM / …) only</option>
+            </select>
+          </div>
+          <div class="cu-field">
+            <label class="cu-label" for="id_inv_stk_product">Product</label>
+            <select name="product" id="id_inv_stk_product" class="cu-select searchable-dropdown">
+              <option value="">— Any product —</option>
+              {% for p in products %}
+                <option value="{{ p.pk }}" {% if sel_product_id is not None and p.pk == sel_product_id %}selected{% endif %}>{{ p.prod_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="cu-field">
+            <label class="cu-label" for="id_inv_stk_item">Item</label>
+            <select name="item" id="id_inv_stk_item" class="cu-select searchable-dropdown">
+              <option value="">— Any item —</option>
+              {% for it in items %}
+                <option value="{{ it.pk }}" {% if sel_item_id is not None and it.pk == sel_item_id %}selected{% endif %}>{{ it.item_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="cu-field inv-stk-filter-span-2">
+            <label class="cu-label" for="id_inv_stk_batch">Batch no. contains</label>
+            <input type="text" name="batch" id="id_inv_stk_batch" class="cu-input" maxlength="100"
+                   value="{{ sel_batch|default:'' }}" placeholder="Optional partial match" autocomplete="off">
+          </div>
+          <div class="cu-field inv-stk-check-field">
+            <span class="cu-label">Balances</span>
+            <label class="inv-stk-checkbox-label" for="id_inv_stk_show_zero">
+              <input type="checkbox" name="show_zero" id="id_inv_stk_show_zero" value="1" {% if sel_show_zero %}checked{% endif %}>
+              Include zero balance rows
+            </label>
+          </div>
+          <div class="cu-field inv-stk-filter-actions">
+            <label class="cu-label">&nbsp;</label>
+            <button type="submit" class="btn-primary">Apply</button>
+          </div>
+        </div>
+      </form>
+
+      <p class="inv-stk-summary">
+        {{ result_summary }}
+      </p>
+
+      {% if page_obj.paginator.count == 0 %}
+        <p class="inv-stk-empty">No rows match these filters. Widen the search or enable “Include zero balance rows”.</p>
+      {% else %}
+        <div class="inv-stk-table-wrap">
+          <table class="inv-stk-table">
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Category</th>
+                <th>SKU</th>
+                <th>Batch</th>
+                <th>Mfg</th>
+                <th>Exp</th>
+                <th class="num">Available</th>
+                <th class="num">Reserved</th>
+                <th>Status</th>
+                <th>Opened FY</th>
+                <th>Last trn</th>
+                <th class="inv-stk-muted">Ref</th>
+                <th class="inv-stk-actions">History</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in page_obj %}
+                <tr>
+                  <td>{{ row.customer.cust_name }}</td>
+                  <td><span class="inv-stk-muted">{{ row.item_category.prod_cat_id }}</span></td>
+                  <td class="inv-stk-sku">
+                    {% if row.product_id %}
+                      {{ row.product.prod_name }}
+                    {% else %}
+                      {{ row.item.item_name }}
+                    {% endif %}
+                  </td>
+                  <td>{{ row.batch_no|default:"—" }}</td>
+                  <td class="inv-stk-muted">{% if row.mfg_date %}{{ row.mfg_date }}{% else %}—{% endif %}</td>
+                  <td class="inv-stk-muted">{% if row.exp_date %}{{ row.exp_date }}{% else %}—{% endif %}</td>
+                  <td class="num">
+                    {{ row.qty }}{% if row.product_id and row.product.uom %} {{ row.product.uom.short_name }}{% elif row.item_id and row.item.uom %} {{ row.item.uom.short_name }}{% endif %}
+                  </td>
+                  <td class="num">
+                    {{ row.reserved_qty }}{% if row.product_id and row.product.uom %} {{ row.product.uom.short_name }}{% elif row.item_id and row.item.uom %} {{ row.item.uom.short_name }}{% endif %}
+                  </td>
+                  <td>
+                    {% if row.is_closed %}
+                      <span class="inv-stk-badge inv-stk-badge--closed">Closed</span>
+                    {% else %}
+                      <span class="inv-stk-badge inv-stk-badge--open">Open</span>
+                    {% endif %}
+                  </td>
+                  <td class="inv-stk-muted">{% if row.opened_in_fy %}{{ row.opened_in_fy.fy_display }}{% else %}—{% endif %}</td>
+                  <td class="inv-stk-muted">{% if row.last_trn_date %}{{ row.last_trn_date }} {{ row.last_trn_type }}{% else %}—{% endif %}</td>
+                  <td class="inv-stk-muted" style="font-size:11px;">{% if row.ref_doc_type %}{{ row.ref_doc_type }} #{{ row.ref_doc_id }}{% else %}—{% endif %}</td>
+                  <td class="inv-stk-actions">
+                    <button type="button" class="btn-action inv-stk-lifecycle-btn" data-inv-id="{{ row.inv_id }}" title="View stock lifecycle">
+                      <i class="bi bi-clock-history"></i>
+                    </button>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if page_obj.paginator.num_pages > 1 %}
+        <nav class="inv-stk-pagination" aria-label="Inventory pages">
+          <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+          {% if page_obj.has_previous %}
+            <a href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
+          {% endif %}
+          {% if page_obj.has_next %}
+            <a href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next</a>
+          {% endif %}
+        </nav>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  <div id="invStkLifecycleModal" class="inv-stk-lifecycle-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="invStkLifecycleTitle">
+    <div class="inv-stk-lifecycle-panel">
+      <header class="inv-stk-lifecycle-head">
+        <div>
+          <h3 id="invStkLifecycleTitle">Stock lifecycle</h3>
+          <p id="invStkLifecycleSub" class="inv-stk-lifecycle-sub"></p>
+        </div>
+        <button type="button" class="inv-stk-lifecycle-close" id="invStkLifecycleClose" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </header>
+      <div id="invStkLifecycleBody" class="inv-stk-lifecycle-body"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

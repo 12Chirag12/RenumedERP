@@ -1,0 +1,195 @@
+{% extends base_template %}
+<!--
+  create_user.html
+  Admin-only form to create a new user account.
+  Features cascading Department → Sub-Department (Designation) → Role dropdowns.
+-->
+{% load static %}
+{% block title %}Create User — PharmaERP{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/users/create_user.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="cu-page" data-page-init="create_user">
+
+  <!-- Page heading -->
+  <div class="cu-heading">
+    <h1>Create New User</h1>
+    <p>Add a new account for a staff member. Only Administrators can do this.</p>
+  </div>
+
+  <!-- Panel -->
+  <div class="cu-panel">
+
+    <!-- Dark header -->
+    <div class="cu-card-header">
+      <div class="icon-wrap"><i class="bi bi-person-plus-fill"></i></div>
+      <div>
+        <h2>New User Details</h2>
+        <p>Select department, sub-department and role, then set login credentials</p>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="cu-card-body">
+
+      <!-- Note -->
+      <div class="cu-note">
+        <strong>Note:</strong> Set a secure initial password for the new user.
+        Assign <strong>role-based</strong> and/or <strong>department-based</strong> access groups below;
+        module access is controlled only through Access Control (not job title alone).
+      </div>
+
+      <form method="POST" id="createUserForm">
+        {% csrf_token %}
+
+        <!-- ── Personal Details section ──────────────────────── -->
+        <div class="cu-section">
+          <div class="cu-section-label">Personal<br>Details</div>
+          <div class="cu-section-fields">
+
+            <!-- Row 1: First Name + Last Name -->
+            <div class="cu-row">
+              <div class="cu-field">
+                <label class="cu-label">First Name</label>
+                <input type="text" name="first_name" class="cu-input" placeholder="First name"
+                  value="{{ form.first_name.value|default:'' }}" />
+                {% if form.first_name.errors %}
+                  <span class="field-error">{{ form.first_name.errors.0 }}</span>
+                {% endif %}
+              </div>
+              <div class="cu-field">
+                <label class="cu-label">Last Name</label>
+                <input type="text" name="last_name" class="cu-input" placeholder="Last name"
+                  value="{{ form.last_name.value|default:'' }}" />
+              </div>
+            </div>
+
+            <!-- Row 2: Department + Designation (Sub-Department) -->
+            <div class="cu-row">
+              <div class="cu-field">
+                <label class="cu-label">Department <span class="req">*</span></label>
+                <select id="deptSelect" name="department" class="cu-select searchable-dropdown" required>
+                  <option value="">— Select Department —</option>
+                  <option value="Administration Department">Administration Department</option>
+                  <option value="Production Department">Production Department</option>
+                  <option value="Quality Control (QC) Department">Quality Control (QC) Department</option>
+                  <option value="Research &amp; Development (R&amp;D)">Research &amp; Development (R&amp;D)</option>
+                  <option value="Warehouse &amp; Logistics">Warehouse &amp; Logistics</option>
+                  <option value="Regulatory Affairs">Regulatory Affairs</option>
+                </select>
+                {% if form.department.errors %}
+                  <span class="field-error">{{ form.department.errors.0 }}</span>
+                {% endif %}
+              </div>
+              <div class="cu-field">
+                <label class="cu-label">Designation (Sub-Dept) <span class="req">*</span></label>
+                <select id="subDeptSelect" name="sub_department" class="cu-select searchable-dropdown" required disabled>
+                  <option value="">— Select Department first —</option>
+                </select>
+                {% if form.sub_department.errors %}
+                  <span class="field-error">{{ form.sub_department.errors.0 }}</span>
+                {% endif %}
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ── Login Details & Security section ─────────────── -->
+        <div class="cu-section">
+          <div class="cu-section-label">Login Details<br>&amp; Security</div>
+          <div class="cu-section-fields">
+
+            <!-- Row 1: Username + hint -->
+            <div class="cu-row">
+              <div class="cu-field">
+                <label class="cu-label">User Name <span class="req">*</span></label>
+                <input type="text" name="username" class="cu-input" placeholder="Login username"
+                  value="{{ form.username.value|default:'' }}" required />
+                {% if form.username.errors %}
+                  <span class="field-error">{{ form.username.errors.0 }}</span>
+                {% endif %}
+              </div>
+              <div class="cu-field">
+                <span class="cu-hint"><i class="bi bi-info-circle" style="margin-right:5px"></i>Set a secure initial password for this user.</span>
+              </div>
+            </div>
+
+            <!-- Row 2: Password + Confirm Password -->
+            <div class="cu-row">
+              <div class="cu-field">
+                <label class="cu-label">Password <span class="req">*</span></label>
+                <input type="password" name="password" id="passwordInput" class="cu-input"
+                  placeholder="Min 8 characters" required minlength="8" />
+                {% if form.password.errors %}
+                  <span class="field-error">{{ form.password.errors.0 }}</span>
+                {% endif %}
+              </div>
+              <div class="cu-field">
+                <label class="cu-label">Confirm Password <span class="req">*</span></label>
+                <input type="password" name="confirm_password" id="confirmPasswordInput" class="cu-input"
+                  placeholder="Re-enter password" required />
+                <span class="field-error js-err" id="confirmPasswordError" style="display:none">Passwords do not match.</span>
+              </div>
+            </div>
+
+            <!-- Row 3: Role (half width) -->
+            <div class="cu-row">
+              <div class="cu-field">
+                <label class="cu-label">Role <span class="req">*</span></label>
+                <select id="roleSelect" name="role" class="cu-select searchable-dropdown" required disabled>
+                  <option value="">— Select Sub-Dept first —</option>
+                </select>
+                {% if form.role.errors %}
+                  <span class="field-error">{{ form.role.errors.0 }}</span>
+                {% endif %}
+              </div>
+              <div></div>
+            </div>
+
+            <div class="cu-row">
+              <div class="cu-field">
+                <label class="cu-label">Role-based access</label>
+                <select name="role_group" class="cu-select searchable-dropdown">
+                  <option value="">— None —</option>
+                  {% for g in form.fields.role_group.queryset %}
+                  <option value="{{ g.pk }}">{{ g.name }}</option>
+                  {% endfor %}
+                </select>
+                <span class="cu-hint">Directors, IT Executive, Accounts, etc.</span>
+              </div>
+              <div class="cu-field">
+                <label class="cu-label">Department-based access</label>
+                <select name="department_group" class="cu-select searchable-dropdown">
+                  <option value="">— None —</option>
+                  {% for g in form.fields.department_group.queryset %}
+                  <option value="{{ g.pk }}">{{ g.name }}</option>
+                  {% endfor %}
+                </select>
+                <span class="cu-hint">Stores, Production, Packing</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="cu-actions">
+          <a href="{% url 'user_list' %}" class="btn-cancel">
+            <i class="bi bi-x"></i> Cancel
+          </a>
+          <button type="submit" class="btn-save">
+            <i class="bi bi-person-check"></i> Create User Account
+          </button>
+        </div>
+
+      </form>
+    </div><!-- /cu-card-body -->
+  </div><!-- /cu-panel -->
+</div><!-- /cu-page -->
+
+{% endblock %}
+

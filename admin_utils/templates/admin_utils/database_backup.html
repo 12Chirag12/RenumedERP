@@ -1,0 +1,22 @@
+{% extends base_template %}
+{% load static %}
+
+{% block title %}Database backup — Admin{% endblock %}
+
+{% block content %}
+<div class="backup-page">
+  <header class="backup-page__masthead">
+    <div class="backup-page__masthead-text">
+      <h1 class="backup-page__title">Database backup</h1>
+      <p class="backup-page__subtitle">
+        MySQL logical dumps for disaster recovery. Configure how often backups should run, then use <strong>Backup now</strong> or the scheduled task hook.
+      </p>
+    </div>
+    <div class="backup-page__masthead-meta" aria-hidden="true">
+      <span class="backup-page__icon-wrap"><i class="bi bi-database-fill-gear"></i></span>
+    </div>
+  </header>
+
+  {% include 'admin_utils/_backup_panel.html' %}
+</div>
+{% endblock %}

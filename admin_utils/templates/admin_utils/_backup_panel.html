@@ -1,0 +1,133 @@
+<div id="backupPanel" class="backup-panel">
+  {% if show_messages %}
+  {% if messages %}
+  <div class="backup-panel__alerts" role="status">
+    {% for message in messages %}
+    <div class="backup-panel__alert backup-panel__alert--{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endif %}
+
+  <div class="backup-panel__grid">
+    <section class="backup-card">
+      <div class="backup-card__head">
+        <span class="backup-card__icon"><i class="bi bi-calendar-week"></i></span>
+        <div>
+          <h2 class="backup-card__title">Schedule</h2>
+          <p class="backup-card__lede">Enable periodic dumps and set how many days must pass between successful backups.</p>
+        </div>
+      </div>
+      <div class="backup-card__body">
+        <form class="backup-form"
+              method="post"
+              action="{% url 'admin_database_backup_settings' %}"
+              hx-post="{% url 'admin_database_backup_settings' %}"
+              hx-target="#backupPanel"
+              hx-swap="outerHTML">
+          {% csrf_token %}
+          <div class="backup-form__row backup-form__row--toggle">
+            <label class="backup-toggle">
+              <input type="checkbox" name="schedule_enabled" class="backup-toggle__input" {% if backup_settings.schedule_enabled %}checked{% endif %}>
+              <span class="backup-toggle__track" aria-hidden="true"></span>
+              <span class="backup-toggle__label">Enable periodic backups</span>
+            </label>
+          </div>
+          <div class="backup-form__row">
+            <label class="backup-field-label" for="id_interval_days">Repeat every</label>
+            <div class="backup-field-inline">
+              <input id="id_interval_days" class="backup-input" type="number" name="interval_days" min="1" max="90" value="{{ backup_settings.interval_days }}">
+              <span class="backup-field-suffix">days</span>
+            </div>
+            <p class="backup-field-hint">Between 1 and 90 days. While the app runs (Waitress or <code class="backup-code">runserver</code>), a background check runs periodically and creates a dump when this interval has passed since the last successful backup. You can still use Windows Task Scheduler or cron with <code class="backup-code">python manage.py run_scheduled_backup</code> if you prefer; set <code class="backup-code">DATABASE_BACKUP_BACKGROUND_SCHEDULER=False</code> in <code class="backup-code">.env</code> to disable the in-process scheduler.</p>
+          </div>
+          <div class="backup-form__actions">
+            <button type="submit" class="backup-btn backup-btn--secondary"><i class="bi bi-check2-circle"></i> Save schedule</button>
+          </div>
+        </form>
+        <dl class="backup-kv">
+          <div class="backup-kv__row">
+            <dt>Last successful backup</dt>
+            <dd>{% if backup_settings.last_successful_backup_at %}<span class="backup-kv__val">{{ backup_settings.last_successful_backup_at|date:"Y-m-d H:i" }}</span>{% else %}<span class="backup-kv__empty">—</span>{% endif %}</dd>
+          </div>
+          <div class="backup-kv__row">
+            <dt>Last error</dt>
+            <dd>{% if backup_settings.last_error %}<span class="backup-kv__err">{{ backup_settings.last_error }}</span>{% else %}<span class="backup-kv__empty">—</span>{% endif %}</dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="backup-card">
+      <div class="backup-card__head">
+        <span class="backup-card__icon"><i class="bi bi-lightning-charge-fill"></i></span>
+        <div>
+          <h2 class="backup-card__title">Run now</h2>
+          <p class="backup-card__lede">Create a compressed dump immediately. Files live under your configured folder.</p>
+        </div>
+      </div>
+      <div class="backup-card__body">
+        <p class="backup-path"><i class="bi bi-folder2-open"></i> <code class="backup-code">{{ backup_dir }}</code></p>
+        <p class="backup-retain">Keeping the <strong>{{ backup_retention }}</strong> newest files; older backups are removed automatically.</p>
+        <form method="post"
+              action="{% url 'admin_database_backup_run' %}"
+              hx-post="{% url 'admin_database_backup_run' %}"
+              hx-target="#backupPanel"
+              hx-swap="outerHTML">
+          {% csrf_token %}
+          <button type="submit" class="backup-btn backup-btn--primary"><i class="bi bi-cloud-arrow-down"></i> Backup database now</button>
+        </form>
+        <p class="backup-cli-hint"><span class="backup-cli-hint__label">Command line</span> <code class="backup-code">python manage.py backup_database</code></p>
+      </div>
+    </section>
+  </div>
+
+  <section class="backup-files backup-files-card">
+    <div class="backup-files-card__head backup-files__header">
+      <i class="bi bi-hdd-network"></i>
+      <h3>Backup files{% if backup_files %} <span class="backup-files__count">({{ backup_files|length }})</span>{% endif %}</h3>
+    </div>
+    {% if backup_files %}
+    <div class="backup-files__scroll">
+      <table class="backup-files__table">
+        <thead>
+          <tr>
+            <th>File</th>
+            <th>Size</th>
+            <th>Created</th>
+            <th class="backup-files__th-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in backup_files %}
+          <tr>
+            <td class="backup-files__name"><code class="backup-code backup-code--file">{{ row.name }}</code></td>
+            <td class="backup-files__size">{{ row.size_display }}</td>
+            <td class="backup-files__date">{{ row.mtime|date:"Y-m-d H:i" }}</td>
+            <td class="backup-files__actions">
+              <a class="backup-btn backup-btn--ghost backup-btn--sm"
+                 href="{% url 'admin_database_backup_download' %}?f={{ row.name|urlencode }}"
+                 hx-boost="false"
+                 download="{{ row.name }}"><i class="bi bi-download"></i> Download</a>
+              <form method="post"
+                    action="{% url 'admin_database_backup_delete' %}"
+                    hx-post="{% url 'admin_database_backup_delete' %}"
+                    hx-target="#backupPanel"
+                    hx-swap="outerHTML"
+                    class="backup-files__del-form"
+                    hx-confirm="Delete {{ row.name }}?">
+                {% csrf_token %}
+                <input type="hidden" name="name" value="{{ row.name }}">
+                <button type="submit" class="backup-btn backup-btn--danger backup-btn--sm"><i class="bi bi-trash3"></i> Delete</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="backup-files__empty">No backup files yet. Run a backup above to create the first dump.</div>
+    {% endif %}
+  </section>
+</div>

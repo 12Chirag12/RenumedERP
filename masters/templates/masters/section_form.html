@@ -1,0 +1,143 @@
+{% extends base_template %}
+{% load static %}
+{% block title %}Section Master — PharmaERP{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/masters/section.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="cu-page" data-page-init="section">
+
+  <div class="cu-heading">
+    <h1>Section Master</h1>
+    <p>Add and manage sections linked to departments.</p>
+  </div>
+
+  <div class="cu-panel">
+
+    <div class="cu-card-header">
+      <div class="icon-wrap">
+        <i class="bi bi-{% if edit_instance %}pencil-fill{% else %}diagram-3-fill{% endif %}"></i>
+      </div>
+      <div>
+        <h2>{% if edit_instance %}Edit Section{% else %}New Section Details{% endif %}</h2>
+        <p>{% if edit_instance %}Update section name or department{% else %}Select a department and enter a section name{% endif %}</p>
+      </div>
+    </div>
+
+    <div class="cu-card-body">
+
+      {% include "includes/form_errors_alert.html" with form=form %}
+
+      <form method="POST" action="{% url 'section' %}" id="sectionForm">
+        {% csrf_token %}
+
+        {% if edit_instance %}
+          <input type="hidden" name="edit_pk" value="{{ edit_instance.pk }}">
+        {% endif %}
+
+        <div class="cu-section">
+          <div class="cu-section-fields">
+            <div class="cu-row">
+
+              <div class="cu-field">
+                <label class="cu-label">Department <span class="req">*</span></label>
+                {{ form.department }}
+                {% if form.department.errors %}
+                  <span class="field-error">{{ form.department.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+              <div class="cu-field">
+                <label class="cu-label">Section Name <span class="req">*</span></label>
+                <input type="text" name="section_name" id="sectionNameInput" class="cu-input"
+                  placeholder="Enter section name"
+                  value="{{ form.section_name.value|default:'' }}"
+                  autocomplete="off" />
+                {% if form.section_name.errors %}
+                  <span class="field-error">{{ form.section_name.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <div class="cu-actions">
+          {% if edit_instance %}
+            <a href="{% url 'section' %}" class="btn-cancel">
+              <i class="bi bi-x"></i> Cancel
+            </a>
+            <button type="submit" class="btn-save">
+              <i class="bi bi-check2-circle"></i> Update Section
+            </button>
+          {% else %}
+            <button type="submit" class="btn-save">
+              <i class="bi bi-check2-circle"></i> Save Section
+            </button>
+            <button type="button" class="btn-cancel" onclick="resetForm()">
+              <i class="bi bi-x"></i> Clear
+            </button>
+          {% endif %}
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-card-header">
+      <i class="bi bi-list-ul"></i>
+      <h3>All Sections ({{ sections.count }})</h3>
+    </div>
+
+    <div class="table-scroll-body">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Section Name</th>
+            <th>Department</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for section in sections %}
+          <tr {% if edit_instance.pk == section.pk %}class="row-editing"{% endif %}>
+            <td class="col-idx">{{ forloop.counter }}</td>
+            <td><strong>{{ section.section_name }}</strong></td>
+            <td><span class="dept-badge">{{ section.department.dept_name }}</span></td>
+            <td class="col-actions">
+
+              <!-- FIXED EDIT -->
+              <a href="{% url 'section' %}?edit_pk={{ section.pk }}"
+                 class="btn-action btn-edit" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+
+              <!-- DELETE -->
+              <button type="button"
+                class="btn-action btn-delete" title="Delete"
+                data-delete-url="{% url 'section_delete' section.pk %}"
+                data-delete-name="{{ section.section_name|escapejs }}"
+                onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)">
+                <i class="bi bi-trash"></i>
+              </button>
+
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4" class="empty-row">
+              No sections found. Use the form above to add one.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

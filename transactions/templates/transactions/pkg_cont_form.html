@@ -1,0 +1,176 @@
+{% extends base_template %}
+{% block title %}Daily packing (contractors) — PharmaERP{% endblock %}
+
+{% block content %}
+<div class="cu-page pkg-cont-page" data-page-init="pkg_cont">
+
+  <header class="pkg-cont-page-heading">
+    <h1>Daily packing (contractors)</h1>
+    <p>Record contractor packing against an existing log sheet batch. Product and batch come from the log sheet; packing style must match the product type.</p>
+  </header>
+
+  {{ pkg_cont_ajax_urls|json_script:"pcAjaxUrls" }}
+  {{ grid_defaults|json_script:"pcGridDefaults" }}
+
+  <div class="cu-panel">
+    <div class="cu-card-header">
+      <div class="icon-wrap">
+        <i class="bi bi-boxes"></i>
+      </div>
+      <div>
+        <h2>Daily packing (contractors)</h2>
+        <p>Contractor, log sheet batch, packing style, and quantities</p>
+      </div>
+    </div>
+
+    <div class="cu-card-body">
+      {% include "includes/form_errors_alert.html" with form=form %}
+
+      <form method="post"
+            action="{% url 'transactions:pkg_cont' %}{% if edit_instance %}?edit_pk={{ edit_instance.pk }}{% endif %}"
+            id="pcForm"
+            class="pkg-cont-main-form"
+            novalidate>
+        {% csrf_token %}
+        {% if edit_instance %}<input type="hidden" name="edit_pk" value="{{ edit_instance.pk }}">{% endif %}
+
+        <div class="cu-section pkg-cont-section-block pkg-cont-section-no-strip">
+          <div class="cu-section-fields">
+
+            <div class="pkg-cont-row-first">
+              <div class="cu-field pkg-cont-field--compact">
+                <label class="cu-label" for="pcPkgDate">Packing date <span class="req">*</span></label>
+                {{ form.pkgcont_date }}
+                {% if form.pkgcont_date.errors %}<span class="field-error">{{ form.pkgcont_date.errors.0 }}</span>{% endif %}
+              </div>
+              <div class="cu-field pkg-cont-field--contractor">
+                <label class="cu-label" for="pcContractor">Contractor <span class="req">*</span></label>
+                {{ form.contractor }}
+                {% if form.contractor.errors %}<span class="field-error">{{ form.contractor.errors.0 }}</span>{% endif %}
+              </div>
+              <div class="cu-field pkg-cont-field--compact">
+                <label class="cu-label" for="pcGirls">No. of girls</label>
+                {{ form.no_of_girls }}
+                {% if form.no_of_girls.errors %}<span class="field-error">{{ form.no_of_girls.errors.0 }}</span>{% endif %}
+              </div>
+            </div>
+
+            <div class="pkg-cont-row-second">
+              <div class="cu-field">
+                <label class="cu-label" for="pcCustomer">Customer <span class="req">*</span></label>
+                {{ form.customer }}
+                {% if form.customer.errors %}<span class="field-error">{{ form.customer.errors.0 }}</span>{% endif %}
+              </div>
+              <div class="cu-field">
+                <label class="cu-label" for="pcProduct">Product <span class="req">*</span></label>
+                {{ form.product }}
+                {% if form.product.errors %}<span class="field-error">{{ form.product.errors.0 }}</span>{% endif %}
+              </div>
+              <div class="cu-field pkg-cont-field--batch">
+                <label class="cu-label" for="pcBatchSelect">Batch (log sheet) <span class="req">*</span></label>
+                <select id="pcBatchSelect" class="cu-select searchable-dropdown" autocomplete="off">
+                  <option value="">— Select batch —</option>
+                </select>
+                {{ form.logsheet_id }}
+                {% if form.logsheet_id.errors %}<span class="field-error">{{ form.logsheet_id.errors.0 }}</span>{% endif %}
+              </div>
+              <div class="cu-field">
+                <label class="cu-label" for="pcPkgStyle">Packing style <span class="req">*</span></label>
+                {{ form.pkg_style }}
+                {% if form.pkg_style.errors %}<span class="field-error">{{ form.pkg_style.errors.0 }}</span>{% endif %}
+              </div>
+            </div>
+
+            <div class="cu-row-3-eq">
+              <div class="cu-field">
+                <label class="cu-label" for="pcShipper">Shipper no. <span class="req">*</span></label>
+                {{ form.shipper_no }}
+                {% if form.shipper_no.errors %}<span class="field-error">{{ form.shipper_no.errors.0 }}</span>{% endif %}
+              </div>
+              <div class="cu-field">
+                <label class="cu-label" for="pcQtyNos">Qty (nos.) <span class="req">*</span></label>
+                {{ form.qty_nos }}
+                {% if form.qty_nos.errors %}<span class="field-error">{{ form.qty_nos.errors.0 }}</span>{% endif %}
+              </div>
+              <div class="cu-field">
+                <label class="cu-label" for="pcQtyLoose">Qty (loose)</label>
+                {{ form.qty_loose }}
+                {% if form.qty_loose.errors %}<span class="field-error">{{ form.qty_loose.errors.0 }}</span>{% endif %}
+              </div>
+            </div>
+
+            <div class="cu-field pkg-cont-field--remarks-full">
+              <label class="cu-label" for="pcRemarks">Remarks</label>
+              {{ form.remarks }}
+              {% if form.remarks.errors %}<span class="field-error">{{ form.remarks.errors.0 }}</span>{% endif %}
+            </div>
+
+          </div>
+        </div>
+
+        <div class="cu-actions pkg-cont-actions">
+          <div aria-hidden="true"></div>
+          <button type="submit" class="btn-save btn-save-main" id="pcSaveBtn">
+            <i class="bi bi-check2-circle"></i> {% if edit_instance %}Update entry{% else %}Save entry{% endif %}
+          </button>
+          <a href="{% url 'transactions:pkg_cont' %}" class="btn-cancel" id="pcClear">
+            <i class="bi bi-x-lg"></i> {% if edit_instance %}Cancel{% else %}Clear{% endif %}
+          </a>
+        </div>
+      </form>
+
+      <div class="pkg-cont-data-block">
+        <div class="pkg-cont-toolbar">
+          <div class="pkg-cont-toolbar-controls">
+            <span class="pkg-cont-toolbar-label">Date range (not more than 30 days):</span>
+            <div class="cu-field pkg-cont-toolbar-field">
+              <label class="cu-label sr-only" for="pcGridStart">Start</label>
+              <input type="date" id="pcGridStart" class="cu-input">
+            </div>
+            <div class="cu-field pkg-cont-toolbar-field">
+              <label class="cu-label sr-only" for="pcGridEnd">End</label>
+              <input type="date" id="pcGridEnd" class="cu-input">
+            </div>
+            <button type="button" class="btn-save pkg-cont-toolbar-btn" id="pcShowGrid">
+              <i class="bi bi-table"></i> Show data
+            </button>
+          </div>
+          <div class="pkg-cont-toolbar-err" id="pcGridErrWrap">
+            <span class="field-error" id="pcGridErr" role="alert"></span>
+          </div>
+        </div>
+
+        <div class="table-card pkg-cont-grid-table-card">
+          <div class="table-card-header">
+            <i class="bi bi-table"></i>
+            <h3>Packing entries <span class="pkg-cont-list-count" id="pcListCount"></span></h3>
+          </div>
+          <div class="table-scroll-body">
+            <table>
+              <thead>
+                <tr>
+                  <th class="col-idx">ID</th>
+                  <th>Date</th>
+                  <th>Contractor</th>
+                  <th>Product</th>
+                  <th>Batch</th>
+                  <th>Packing style</th>
+                  <th class="cu-num">Girls</th>
+                  <th class="cu-num">Shippers</th>
+                  <th class="cu-num">Qty nos</th>
+                  <th class="cu-num">Qty loose</th>
+                  <th>Remarks</th>
+                  <th class="col-actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="pcListBody">
+                <tr><td colspan="12" class="empty-row">Set a date range and choose Show data.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

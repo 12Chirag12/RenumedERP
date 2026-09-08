@@ -1,0 +1,281 @@
+{% extends base_template %}
+{% load static %}
+{% block title %}Item Master — PharmaERP{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/masters/item.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="cu-page item-page" data-page-init="item">
+
+  <!-- ── Page heading ───────────────────────────────────────── -->
+  <div class="cu-heading">
+    <h1>Item Master</h1>
+    <p>Register raw material and packing material items with batch and stock controls.</p>
+  </div>
+
+  <!-- ── FORM PANEL ─────────────────────────────────────────── -->
+  <div class="cu-panel">
+
+    <div class="cu-card-header">
+      <div class="icon-wrap">
+        <i class="bi {% if edit_instance %}bi-pencil-fill{% else %}bi-box-seam{% endif %}"></i>
+      </div>
+      <div>
+        <h2>{% if edit_instance %}Edit Item{% else %}New Item{% endif %}</h2>
+        <p>{% if edit_instance %}Update item details{% else %}Fill in item details and stock control settings{% endif %}</p>
+      </div>
+    </div>
+
+    <div class="cu-card-body">
+
+      {% include "includes/form_errors_alert.html" with form=form %}
+
+      <form method="POST"
+            action="{% url 'item' %}{% if edit_instance %}?edit_pk={{ edit_instance.pk }}{% endif %}"
+            id="itemForm">
+        {% csrf_token %}
+
+        {# Hidden: carries 2-char prod_cat_id, injected by JS on item_type change #}
+        <input type="hidden" name="item_category_id" id="itemCategoryIdHidden"
+               value="{{ form.item_category_id.value|default:'' }}">
+
+        <div class="cu-section">
+          <div class="cu-section-fields">
+
+            <!-- Row 1: Item Name (full width) -->
+            <div class="cu-field">
+              <label class="cu-label">Item Name <span class="req">*</span></label>
+              <input type="text" name="item_name" id="itemNameInput" class="cu-input"
+                placeholder="Enter item name"
+                value="{{ form.item_name.value|default:'' }}" autocomplete="off" />
+              {% if form.item_name.errors %}
+                <span class="field-error">{{ form.item_name.errors.0 }}</span>
+              {% endif %}
+            </div>
+
+            <!-- Row 2: Item Type | Item Category (auto-fill) | UOM -->
+            <div class="cu-row-3">
+
+              <div class="cu-field">
+                <label class="cu-label">Item Type <span class="req">*</span></label>
+                {{ form.item_type }}
+                {% if form.item_type.errors %}
+                  <span class="field-error">{{ form.item_type.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+              <div class="cu-field">
+                <label class="cu-label">Item Category</label>
+                <input type="text" id="itemCategoryDisplay" class="cu-input item-cat-display"
+                  placeholder="Auto-filled from Item Type"
+                  value="{% if edit_instance %}{{ edit_instance.item_category.prod_cat_name }}{% endif %}"
+                  readonly />
+                {% if form.item_category_id.errors %}
+                  <span class="field-error">{{ form.item_category_id.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+              <div class="cu-field">
+                <label class="cu-label">UOM <span class="req">*</span></label>
+                {{ form.uom }}
+                {% if form.uom.errors %}
+                  <span class="field-error">{{ form.uom.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+            </div>
+
+            <!-- Row 3: Maintain Batch | Manufacturing Date | Expiry Date | HSN Code -->
+            <div class="cu-row-4-mixed">
+
+              <div class="cu-field">
+                <label class="cu-label">Maintain Batch</label>
+                <div class="yn-radio-group" id="maintainBatchGroup">
+                  {% for val, label in form.maintain_batch.field.choices %}
+                  <label class="yn-radio-label">
+                    <input type="radio" name="maintain_batch" value="{{ val }}"
+                      {% if form.maintain_batch.value == val %}checked
+                      {% elif not form.maintain_batch.value and val == 'N' %}checked{% endif %}>
+                    <span class="yn-radio-custom"></span>
+                    {{ label }}
+                  </label>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <div class="cu-field" id="mfgDateField">
+                <label class="cu-label">Manufacturing Date</label>
+                <div class="yn-radio-group" id="mfgDateGroup">
+                  {% for val, label in form.mfg_date.field.choices %}
+                  <label class="yn-radio-label">
+                    <input type="radio" name="mfg_date" value="{{ val }}"
+                      {% if form.mfg_date.value == val %}checked
+                      {% elif not form.mfg_date.value and val == 'N' %}checked{% endif %}>
+                    <span class="yn-radio-custom"></span>
+                    {{ label }}
+                  </label>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <div class="cu-field" id="expDateField">
+                <label class="cu-label">Expiry Date</label>
+                <div class="yn-radio-group" id="expDateGroup">
+                  {% for val, label in form.exp_date.field.choices %}
+                  <label class="yn-radio-label">
+                    <input type="radio" name="exp_date" value="{{ val }}"
+                      {% if form.exp_date.value == val %}checked
+                      {% elif not form.exp_date.value and val == 'N' %}checked{% endif %}>
+                    <span class="yn-radio-custom"></span>
+                    {{ label }}
+                  </label>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <div class="cu-field">
+                <label class="cu-label">HSN Code</label>
+                <input type="text" name="hsn_code" id="hsnCodeInput" class="cu-input"
+                  placeholder="e.g. 30049099"
+                  value="{{ form.hsn_code.value|default:'' }}" autocomplete="off" />
+                {% if form.hsn_code.errors %}
+                  <span class="field-error">{{ form.hsn_code.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+            </div>
+
+            <!-- Row 4: Min Level | Max Level | Last Purchase Rate | Sample qty -->
+            <div class="cu-row-4-mixed">
+
+              <div class="cu-field">
+                <label class="cu-label">Minimum Level</label>
+                <input type="number" name="min_level" id="minLevelInput" class="cu-input"
+                  placeholder="0.000" min="0" step="0.001"
+                  value="{{ form.min_level.value|default:'' }}" />
+                {% if form.min_level.errors %}
+                  <span class="field-error">{{ form.min_level.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+              <div class="cu-field">
+                <label class="cu-label">Maximum Level</label>
+                <input type="number" name="max_level" id="maxLevelInput" class="cu-input"
+                  placeholder="0.000" min="0" step="0.001"
+                  value="{{ form.max_level.value|default:'' }}" />
+                {% if form.max_level.errors %}
+                  <span class="field-error">{{ form.max_level.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+              <div class="cu-field">
+                <label class="cu-label">Last Purchase Rate</label>
+                <input type="number" name="last_purchase_rate" id="lastPurchaseRateInput" class="cu-input"
+                  placeholder="0.00" min="0" step="0.01"
+                  value="{{ form.last_purchase_rate.value|default:'0.00' }}" />
+                {% if form.last_purchase_rate.errors %}
+                  <span class="field-error">{{ form.last_purchase_rate.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+              <div class="cu-field">
+                <label class="cu-label">Sample qty</label>
+                <input type="number" name="sample_qty" id="sampleQtyInput" class="cu-input"
+                  placeholder="0.000" min="0" step="0.001"
+                  value="{{ form.sample_qty.value|default:'0.000' }}" />
+                {% if form.sample_qty.errors %}
+                  <span class="field-error">{{ form.sample_qty.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+            </div>
+
+          </div>
+        </div><!-- /.cu-section -->
+
+        <div class="cu-actions">
+          {% if edit_instance %}
+            <a href="{% url 'item' %}" class="btn-cancel"><i class="bi bi-x"></i> Cancel</a>
+            <button type="submit" class="btn-save"><i class="bi bi-check2-circle"></i> Update Item</button>
+          {% else %}
+            <button type="submit" class="btn-save"><i class="bi bi-check2-circle"></i> Save Item</button>
+            <button type="button" class="btn-cancel" onclick="resetForm()"><i class="bi bi-x"></i> Clear</button>
+          {% endif %}
+        </div>
+
+      </form>
+    </div><!-- /.cu-card-body -->
+  </div><!-- /.cu-panel -->
+
+  <!-- ── ITEMS TABLE ────────────────────────────────────────── -->
+  <div class="table-card">
+    <div class="table-card-header">
+      <i class="bi bi-list-ul"></i>
+      <h3>All Items ({{ items.count }})</h3>
+    </div>
+    <div class="table-scroll-body">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Item Name</th>
+            <th>Item Type</th>
+            <th>Category</th>
+            <th>UOM</th>
+            <th>HSN Code</th>
+            <th>Min Level</th>
+            <th>Max Level</th>
+            <th>Batch</th>
+            <th>Mfg Date</th>
+            <th>Exp Date</th>
+            <th>Last Purchase Rate</th>
+            <th>Sample qty</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr {% if edit_instance.pk == item.pk %}class="row-editing"{% endif %}>
+            <td class="col-idx">{{ forloop.counter }}</td>
+            <td><strong>{{ item.item_name }}</strong></td>
+            <td><span class="type-badge">{{ item.item_type.item_type_name }}</span></td>
+            <td><span class="cat-badge">{{ item.item_category.prod_cat_name }}</span></td>
+            <td>{% if item.uom %}{{ item.uom.short_name }}{% else %}—{% endif %}</td>
+            <td>{{ item.hsn_code|default:"—" }}</td>
+            <td>{{ item.min_level|default:"—" }}</td>
+            <td>{{ item.max_level|default:"—" }}</td>
+            <td><span class="yn-badge yn-badge--{{ item.maintain_batch|lower }}">{{ item.maintain_batch }}</span></td>
+            <td><span class="yn-badge yn-badge--{{ item.mfg_date|lower }}">{{ item.mfg_date }}</span></td>
+            <td><span class="yn-badge yn-badge--{{ item.exp_date|lower }}">{{ item.exp_date }}</span></td>
+            <td class="col-rate">{{ item.last_purchase_rate }}</td>
+            <td class="col-rate">{{ item.sample_qty }}</td>
+            <td class="col-actions">
+              <a href="?edit_pk={{ item.pk }}" class="btn-action btn-edit" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <button type="button" class="btn-action btn-delete" title="Delete"
+                data-delete-url="{% url 'item_delete' item.pk %}"
+                data-delete-name="{{ item.item_name|escapejs }}"
+                onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)">
+                <i class="bi bi-trash"></i>
+              </button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="14" class="empty-row">No items found. Use the form above to add one.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div><!-- /.table-card -->
+
+</div><!-- /.cu-page -->
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/masters/item.js' %}"></script>
+{% endblock %}

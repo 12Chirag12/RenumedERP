@@ -1,0 +1,278 @@
+{% extends base_template %}
+<!--
+  transactions/inward_form.html
+  Inward (GRN) — create / edit with two-step wizard.
+  Edit/Delete use the global modal system from base.html + base.js (same as masters).
+-->
+{% block title %}Inward (GRN) — PharmaERP{% endblock %}
+
+{% block content %}
+<div class="cu-page inward-page" data-page-init="inward">
+
+  <header class="inw-page-heading">
+    <h1>Inward (GRN)</h1>
+    <p>{% if edit_instance %}Update header, transport, items, and batches — same as create.{% else %}Step 1 — document &amp; transport. Step 2 — items &amp; batches. Save from step 1 after items are filled.{% endif %}</p>
+  </header>
+
+  {{ products|json_script:"inwProductsData" }}
+  {{ grn_categories|json_script:"inwGrnCatData" }}
+  {{ inward_ajax_urls|json_script:"inwAjaxUrls" }}
+  {{ inward_page_data|json_script:"inwPageData" }}
+
+  <div class="cu-panel">
+    <div class="cu-card-header">
+      <div class="icon-wrap">
+        <i class="bi" id="inwHeaderIcon"></i>
+      </div>
+      <div>
+        <h2 id="inwHeaderTitle"></h2>
+        <p id="inwHeaderSub"></p>
+      </div>
+      <div class="step-indicator">
+        <span class="step-dot" id="inwDot1"></span>
+        <span class="step-line"></span>
+        <span class="step-dot" id="inwDot2"></span>
+      </div>
+    </div>
+
+    <div class="cu-card-body">
+
+      {% include "includes/form_errors_alert.html" with form=form %}
+
+      <form method="post"
+            action="{% url 'transactions:inward' %}{% if edit_instance %}?edit_pk={{ edit_instance.pk }}{% endif %}"
+            id="inwForm"
+            enctype="multipart/form-data"
+            novalidate>
+        {% csrf_token %}
+        {% if edit_instance %}<input type="hidden" name="edit_pk" value="{{ edit_instance.pk }}">{% endif %}
+        {{ form.lines_json }}
+
+        <!-- Step 1: 65% inward+transport | 35% document (tall preview) -->
+        <div id="inwStep1" class="cust-step">
+          <div class="inw-step1-grid">
+          <div class="inw-step1-main-row">
+          <div class="inw-step1-left">
+          <div class="cu-section inw-section-block inw-section-inward-details">
+            <h3 class="inw-section-title">Inward details</h3>
+            <div class="cu-section-fields">
+              <div class="cu-row-2-eq">
+                <div class="cu-field">
+                  <label class="cu-label">Inward date <span class="req">*</span></label>
+                  {{ form.inward_dt }}
+                  {% if form.inward_dt.errors %}<span class="field-error">{{ form.inward_dt.errors.0 }}</span>{% endif %}
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">Register no. <span class="req">*</span></label>
+                  {{ form.register_no }}
+                  {% if form.register_no.errors %}<span class="field-error">{{ form.register_no.errors.0 }}</span>{% endif %}
+                </div>
+              </div>
+              <div class="cu-row-2-eq">
+                <div class="cu-field">
+                  <label class="cu-label">GRN type <span class="req">*</span></label>
+                  {{ form.grn_category }}
+                  {% if form.grn_category.errors %}<span class="field-error">{{ form.grn_category.errors.0 }}</span>{% endif %}
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">GRN no. <span class="req">*</span></label>
+                  {{ form.grn_no }}
+                  {% if form.grn_no.errors %}<span class="field-error">{{ form.grn_no.errors.0 }}</span>{% endif %}
+                </div>
+              </div>
+              <div class="cu-row-2-eq">
+                <div class="cu-field">
+                  <label class="cu-label">Customer <span class="req">*</span></label>
+                  {{ form.customer }}
+                  {% if form.customer.errors %}<span class="field-error">{{ form.customer.errors.0 }}</span>{% endif %}
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">Supplier <span class="req">*</span></label>
+                  {{ form.supplier }}
+                  {% if form.supplier.errors %}<span class="field-error">{{ form.supplier.errors.0 }}</span>{% endif %}
+                </div>
+              </div>
+              <div class="cu-row-2-eq">
+                <div class="cu-field">
+                  <label class="cu-label">Invoice no. <span class="req">*</span></label>
+                  {{ form.inv_no }}
+                  {% if form.inv_no.errors %}<span class="field-error">{{ form.inv_no.errors.0 }}</span>{% endif %}
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">Invoice date <span class="req">*</span></label>
+                  {{ form.inv_dt }}
+                  {% if form.inv_dt.errors %}<span class="field-error">{{ form.inv_dt.errors.0 }}</span>{% endif %}
+                </div>
+              </div>
+              <div class="cu-field">
+                <label class="cu-label">Remarks</label>
+                {{ form.remarks }}
+              </div>
+            </div>
+          </div>
+
+          <div class="cu-section inw-section-block inw-section-transport">
+            <h3 class="inw-section-title">Transport details</h3>
+            <div class="cu-section-fields">
+              <div class="cu-row-2-eq">
+                <div class="cu-field">
+                  <label class="cu-label">Transporter </label>
+                  {{ form.transporter }}
+                  {% if form.transporter.errors %}<span class="field-error">{{ form.transporter.errors.0 }}</span>{% endif %}
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">Vehicle no. </label>
+                  {{ form.vehicle_no }}
+                  {% if form.vehicle_no.errors %}<span class="field-error">{{ form.vehicle_no.errors.0 }}</span>{% endif %}
+                </div>
+              </div>
+              <div class="cu-row-2-eq">
+                <div class="cu-field">
+                  <label class="cu-label">Driver name</label>
+                  {{ form.driver_name }}
+                  {% if form.driver_name.errors %}<span class="field-error">{{ form.driver_name.errors.0 }}</span>{% endif %}
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">Driver contact</label>
+                  {{ form.driver_no }}
+                  {% if form.driver_no.errors %}<span class="field-error">{{ form.driver_no.errors.0 }}</span>{% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+          </div>
+
+          <div class="inw-step1-right">
+          <div class="cu-section inw-section-block inw-section-doc-upload">
+            <h3 class="inw-section-title">Document</h3>
+            <div class="cu-section-fields inw-doc-upload-fields">
+              <div class="inw-doc-preview-box"
+                   id="inwDocPreviewShell"
+                   {% if edit_instance.documents %}data-existing-src="/media/{{ edit_instance.documents }}"{% endif %}>
+                <div class="inw-doc-placeholder" id="inwDocPlaceholder">
+                  <i class="bi bi-file-earmark-image"></i>
+                  <span>No preview</span>
+                </div>
+                <img id="inwDocPreviewImg" class="inw-doc-preview-img" alt="Document preview" />
+                <iframe id="inwDocPreviewPdf" class="inw-doc-preview-iframe" title="PDF preview"></iframe>
+              </div>
+              {% if edit_instance.documents %}
+              <p class="inw-doc-current">
+                <a href="/media/{{ edit_instance.documents }}" target="_blank" rel="noopener" class="inw-doc-link">
+                  <i class="bi bi-file-earmark-text"></i> Open current file
+                </a>
+              </p>
+              {% endif %}
+              <div class="inw-doc-upload-area">
+                {{ form.header_document }}
+                <button type="button" class="btn-upload inw-doc-upload-btn" id="inwDocUploadBtn">
+                  <i class="bi bi-upload"></i> Upload
+                </button>
+                <span class="upload-hint inw-doc-hint" id="inwDocHint">PDF or image — max 15 MB</span>
+              </div>
+              {% if form.header_document.errors %}<span class="field-error">{{ form.header_document.errors.0 }}</span>{% endif %}
+            </div>
+          </div>
+          </div>
+          </div>
+          </div>
+
+          <div class="cu-actions inw-step1-actions">
+            <button type="button" class="btn-save btn-item-details" id="btnInwNext"><i class="bi bi-grid-3x3-gap"></i> Items</button>
+            {% if edit_instance %}
+            <button type="submit" class="btn-save btn-save-main" id="btnInwSave"
+              {% if form.lines_json.value|default:'[]' == '[]' %}aria-disabled="true"{% endif %}>
+              <i class="bi bi-check2-circle"></i> Update Inward
+            </button>
+            <a href="{% url 'transactions:inward' %}" class="btn-cancel" id="btnInwCancel"><i class="bi bi-x-lg"></i> Cancel</a>
+            {% else %}
+            <button type="submit" class="btn-save btn-save-main" id="btnInwSave"
+              {% if form.lines_json.value|default:'[]' == '[]' %}aria-disabled="true"{% endif %}>
+              <i class="bi bi-check2-circle"></i> Save Inward
+            </button>
+            <button type="button" class="btn-cancel" id="btnInwClear" onclick="resetInwardForm()"><i class="bi bi-x-lg"></i> Clear</button>
+            {% endif %}
+          </div>
+          <span class="field-error js-err" id="err-lines_json_step1"></span>
+        </div>
+
+        <!-- Step 2: lines + batches -->
+        <div id="inwStep2" class="cust-step inw-step2" style="display: none;">
+          <span class="field-error js-err" id="err-lines_json">{% if form.lines_json.errors %}{{ form.lines_json.errors.0 }}{% endif %}</span>
+
+          <div class="prod-grid-wrap inw-items-panel">
+            <div class="prod-grid-toolbar inw-items-toolbar">
+              <span class="prod-grid-label"><i class="bi bi-box-seam"></i> Items</span>
+              <button type="button" class="btn-add-row" id="btnInwAddLine"><i class="bi bi-plus-lg"></i> Add line</button>
+            </div>
+            <div class="inw-lines-outer">
+              <div id="inwLineList" class="inw-line-list"></div>
+              <p class="prod-grid-empty inw-line-empty" id="inwLineEmpty">No items yet. Use <strong>Add line</strong> to start.</p>
+            </div>
+          </div>
+
+          <div class="cu-actions inw-step2-actions">
+            <button type="button" class="btn-cancel" id="btnInwBack"><i class="bi bi-arrow-left"></i> Back</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-card-header">
+      <i class="bi bi-list-ul"></i>
+      <h3>Recent inwards ({{ recent|length }})</h3>
+    </div>
+    <div class="table-scroll-body">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>ID</th>
+            <th>Date</th>
+            <th>GRN</th>
+            <th>Type</th>
+            <th>Customer</th>
+            <th>Supplier</th>
+            <th>Invoice</th>
+            <th>Document</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in recent %}
+          <tr {% if edit_instance and edit_instance.pk == r.inward_id %}class="row-editing"{% endif %}>
+            <td class="col-idx">{{ forloop.counter }}</td>
+            <td>{{ r.inward_id }}</td>
+            <td>{{ r.inward_dt|date:"Y-m-d" }}</td>
+            <td><strong>{{ r.grn_no }}</strong></td>
+            <td><span class="type-badge">{{ r.grn_category.prod_cat_id }}</span></td>
+            <td>{{ r.customer.cust_name }}</td>
+            <td>{{ r.supplier.supl_name }}</td>
+            <td>{{ r.inv_no }}</td>
+            <td class="col-doc">
+              {% if r.documents %}
+              <a href="/media/{{ r.documents }}" target="_blank" rel="noopener" class="inw-table-doc-link" title="{{ r.documents }}"><i class="bi bi-file-earmark"></i></a>
+              {% else %}<span class="inw-table-doc-empty">—</span>{% endif %}
+            </td>
+            <td class="col-actions">
+              <a href="{% url 'transactions:inward' %}?edit_pk={{ r.inward_id }}" class="btn-action btn-edit" title="Edit"><i class="bi bi-pencil"></i></a>
+              <button type="button" class="btn-action btn-delete" title="Delete"
+                data-delete-url="{% url 'transactions:inward_delete' r.inward_id %}"
+                data-delete-name="{{ r.grn_no|escapejs }}"
+                onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="10" class="empty-row">No inward entries yet.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

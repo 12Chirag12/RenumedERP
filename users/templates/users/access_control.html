@@ -1,0 +1,91 @@
+{% extends base_template %}
+{% load static %}
+{% block title %}Access Control — PharmaERP{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/users/access_control.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ac-page" data-page-init="access_control">
+  <div class="ac-heading">
+    <h1>Access Control</h1>
+    <p>Assign module permissions to role-based or department-based groups. Changes apply immediately.</p>
+  </div>
+
+  <div class="ac-type-tabs">
+    <a href="{% url 'access_control' %}?type=role{% if selected_group %}&group={{ selected_group.pk }}{% endif %}"
+       class="ac-type-tab {% if group_type == 'role' %}active{% endif %}">Role-based</a>
+    <a href="{% url 'access_control' %}?type=department{% if selected_group %}&group={{ selected_group.pk }}{% endif %}"
+       class="ac-type-tab {% if group_type == 'department' %}active{% endif %}">Department-based</a>
+  </div>
+
+  {% if not groups %}
+  <div class="ac-empty">
+    <p>No groups found. Run <code>python manage.py sync_access_permissions</code>.</p>
+  </div>
+  {% else %}
+
+  <div class="ac-layout">
+    <aside class="ac-groups">
+      <div class="ac-groups-title">
+        {% if group_type == 'role' %}Roles{% else %}Departments{% endif %}
+      </div>
+      <ul>
+        {% for g in groups %}
+        <li>
+          <a href="{% url 'access_control' %}?type={{ group_type }}&group={{ g.pk }}"
+             class="{% if selected_group.pk == g.pk %}active{% endif %}">{{ g.name }}</a>
+        </li>
+        {% endfor %}
+      </ul>
+      {% if group_type == 'department' %}
+      <p class="ac-hint">Department permissions are empty by default until you assign them here.</p>
+      {% endif %}
+    </aside>
+
+    <section class="ac-matrix">
+      <h2>{{ selected_group.name }}</h2>
+      <form method="post" action="{% url 'access_control_save' %}">
+        {% csrf_token %}
+        <input type="hidden" name="group_type" value="{{ group_type }}">
+        <input type="hidden" name="group_id" value="{{ selected_group.pk }}">
+
+        <div class="ac-bundles">
+          <h3>Quick grants</h3>
+          <div class="ac-bundle-row">
+            {% for b in bundles %}
+            <label class="ac-check">
+              <input type="checkbox" name="permissions" value="{{ b.codename }}"
+                {% if b.codename in selected_codenames %}checked{% endif %}>
+              <span>{{ b.label }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        {% for section in sections %}
+        <div class="ac-section">
+          <h3>{{ section.label }}</h3>
+          <div class="ac-module-grid">
+            {% for module in section.modules %}
+            <label class="ac-check">
+              <input type="checkbox" name="permissions" value="{{ module.codename }}"
+                {% if module.codename in selected_codenames %}checked{% endif %}>
+              <span>{{ module.label }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+
+        <div class="ac-actions">
+          <button type="submit" class="ac-btn-save">
+            <i class="bi bi-check-lg"></i> Save permissions
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

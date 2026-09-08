@@ -1,0 +1,402 @@
+/*
+  Log sheet — scoped under .log-sheet-page.
+  Tokens: base.css + forms_consistency.css.
+ */
+
+ .log-sheet-page {
+  --ls-table-chrome-r: 10px;
+  --ls-table-cell-pad-x: 10px;
+  --ls-table-cell-pad-y: 5px;
+  --ls-table-header-pad-x: 10px;
+  --ls-table-header-pad-y: 5px;
+  /* Max height for pending + grid scrollports (internal vertical scroll) */
+  --ls-table-y-max: min(52vh, 480px);
+  --table-header-fz: 11px;  /* up from default token (typically 10–11px) */
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  box-sizing: border-box;
+  gap: 14px;
+  padding-bottom: 24px;
+  align-items: stretch;
+  min-height: 0;
+}
+
+/* Page title — left aligned like other transaction forms */
+.log-sheet-page .ls-page-heading {
+  width: 100%;
+  flex-shrink: 0;
+  text-align: left;
+  align-self: flex-start;
+}
+
+.log-sheet-page .ls-page-heading h1 {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.02em;
+  margin: 0 0 4px;
+  text-align: left;
+}
+
+.log-sheet-page .ls-page-heading p {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-mid);
+  margin: 0;
+  max-width: 52rem;
+  text-align: left;
+}
+
+/* Top row: entry fields (left) + pending batches (right), equal height */
+.log-sheet-page .ls-top-row {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 0;
+}
+
+.log-sheet-page .ls-fields-col {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.log-sheet-page .ls-fields-col > .cu-section {
+  flex: 0 0 auto;
+}
+
+/* Pending column — fixed flex basis; table fills the column */
+.log-sheet-page .ls-pending-col {
+  flex: 0 0 clamp(280px, 38vw, 440px);
+  min-width: 260px;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  border-left: 1px solid var(--border, #e2e8f0);
+  padding-left: 16px;
+}
+
+.log-sheet-page .ls-side-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.log-sheet-page .ls-pending-section {
+  margin-bottom: 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Form body (not table-only fields — those use .ls-pending-fields / .ls-grid-fields flush rules) */
+.log-sheet-page .ls-section-no-strip .cu-section-fields {
+  padding-top: 0;
+}
+
+/* Save / clear directly under fields block */
+.log-sheet-page .ls-actions--after-fields {
+  margin-top: 0;
+  padding-top: 4px;
+}
+
+/* Full-width "Show data" block */
+.log-sheet-page .ls-data-block {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.log-sheet-page .ls-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 0 4px;
+  border-top: 1px solid var(--border, #e2e8f0);
+}
+
+.log-sheet-page .ls-toolbar-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.log-sheet-page .ls-toolbar-err {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.log-sheet-page .ls-toolbar-err .field-error {
+  display: block;
+}
+
+.log-sheet-page .ls-toolbar-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-mid);
+  margin-right: 4px;
+}
+
+.log-sheet-page .ls-toolbar-field {
+  margin-bottom: 0;
+  min-width: 140px;
+}
+
+.log-sheet-page .ls-toolbar-btn {
+  margin-bottom: 2px;
+}
+
+/* Primary action: sits at the end of the toolbar row when space allows */
+.log-sheet-page .ls-show-data-btn {
+  margin-left: auto;
+  align-self: flex-end;
+  min-width: 9rem;
+  font-weight: 600;
+}
+
+.log-sheet-page .ls-grid-section {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* Inner shell: layout-only border (section chrome comes from .cu-section) */
+.log-sheet-page .ls-section-no-strip .ls-panel-shell {
+  display: flex;
+  flex-direction: column;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  overflow: visible;
+}
+
+.log-sheet-page .ls-pending-panel,
+.log-sheet-page .ls-grid-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Table-only fields: flush padding inside strip-less sections */
+.log-sheet-page.cu-page[data-page-init] .ls-section-no-strip .cu-section-fields.ls-pending-fields,
+.log-sheet-page.cu-page[data-page-init] .ls-section-no-strip .cu-section-fields.ls-grid-fields {
+  padding: 0 !important;
+  gap: 0;
+}
+
+.log-sheet-page .ls-pending-fields {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.log-sheet-page .ls-grid-fields {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scroll viewport: horizontal + vertical inside capped height */
+.log-sheet-page .ls-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  border-radius: var(--ls-table-chrome-r);
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Pending batches + saved data grid: same cap, internal Y (and X) scroll */
+.log-sheet-page .ls-table-wrap--pending,
+.log-sheet-page .ls-table-wrap--grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: var(--ls-table-y-max);
+}
+
+/* Rounded header corners when flush inside section */
+.log-sheet-page .ls-section-no-strip .ls-table thead th:first-child {
+  border-top-left-radius: var(--ls-table-chrome-r);
+}
+
+.log-sheet-page .ls-section-no-strip .ls-table thead th:last-child {
+  border-top-right-radius: var(--ls-table-chrome-r);
+}
+
+/* Shared compact data table */
+.log-sheet-page .ls-inline-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.log-sheet-page .ls-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: var(--ls-table-header-pad-y) var(--ls-table-header-pad-x);
+  font-size: var(--table-header-fz);
+  font-weight: var(--table-header-fw);
+  letter-spacing: var(--table-header-ls);
+  text-transform: uppercase;
+  color: var(--text-mid);
+  background: var(--table-header-bg);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+  white-space: normal;
+  line-height: 1.25;
+  word-break: break-word;
+  hyphens: auto;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.06);
+}
+
+.log-sheet-page .ls-table tbody td {
+  padding: calc(var(--ls-table-cell-pad-y) + var(--form-field-row-gap, 8px) * 0.35)
+    var(--ls-table-cell-pad-x);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-dark);
+  border-bottom: 1px solid var(--table-row-line);
+  vertical-align: middle;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.log-sheet-page .ls-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.log-sheet-page .ls-table tbody tr:hover {
+  background: #fafcff;
+}
+
+.log-sheet-page .ls-table tbody tr.ls-pending-row--active:hover {
+  background: #eef2ff;
+}
+
+/* ─── Pending table: compact columns, no x-scroll ───────────────────────────
+   Override pad tokens scoped to this table only, then clamp cell text so
+   nothing overflows the fixed-layout column boundaries.
+   ─────────────────────────────────────────────────────────────────────────── */
+.log-sheet-page .ls-table--pending {
+  --ls-table-cell-pad-x: 4px;
+  --ls-table-header-pad-x: 4px;
+  /* Force the table to stay within the wrapper — never wider than 100% */
+  table-layout: fixed;
+  width: 100%;
+  min-width: 0;
+}
+
+.log-sheet-page .ls-table--pending th:nth-child(1),
+.log-sheet-page .ls-table--pending td:nth-child(1) {
+  width: 26%;
+}
+
+.log-sheet-page .ls-table--pending th:nth-child(2),
+.log-sheet-page .ls-table--pending td:nth-child(2),
+.log-sheet-page .ls-table--pending th:nth-child(3),
+.log-sheet-page .ls-table--pending td:nth-child(3) {
+  width: 37%;
+}
+
+/* Clamp td text: max-width:0 activates ellipsis on fixed-layout tables */
+.log-sheet-page .ls-table--pending td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 0;
+}
+
+/* Header labels can still wrap (they're short) */
+.log-sheet-page .ls-table--pending th {
+  white-space: normal;
+  word-break: break-word;
+}
+
+.log-sheet-page .ls-pending-row {
+  cursor: pointer;
+}
+
+.log-sheet-page .ls-pending-row--active {
+  background: #eef2ff;
+}
+
+/* Grid: equal columns (count must match thead in log_sheet_form.html) */
+.log-sheet-page .ls-table--grid th,
+.log-sheet-page .ls-table--grid td {
+  width: calc(100% / 7);
+}
+
+.log-sheet-page .ls-muted {
+  color: var(--text-light, var(--text-mid));
+  font-style: italic;
+  text-align: center;
+  font-size: var(--table-cell-fz);
+}
+
+/* Card body padding on this page (forms_consistency load order) */
+.log-sheet-page.cu-page[data-page-init] .cu-card-body {
+  padding: 12px 16px 16px;
+}
+
+.log-sheet-page .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 960px) {
+  .log-sheet-page .ls-top-row {
+    flex-direction: column;
+  }
+  .log-sheet-page .ls-pending-col {
+    flex: 1 1 auto;
+    max-width: none;
+    min-width: 0;
+    border-left: none;
+    padding-left: 0;
+    border-top: 1px solid var(--border, #e2e8f0);
+    padding-top: 14px;
+  }
+}

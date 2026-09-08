@@ -1,0 +1,11 @@
+{# Reusable non-field error alert (uses same alert UI as Django messages) #}
+{% if form and form.non_field_errors %}
+  <div class="messages-container">
+    <div class="alert alert-error">
+      <i class="bi bi-exclamation-circle"></i>
+      {% for e in form.non_field_errors %}<span>{{ e }}</span>{% endfor %}
+      <button class="alert-dismiss" onclick="this.parentElement.remove()" title="Dismiss">&times;</button>
+    </div>
+  </div>
+{% endif %}
+

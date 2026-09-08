@@ -1,0 +1,437 @@
+/* Daily production report — layout mirrors log sheet (fields + status + grid). */
+
+.dpr-page {
+  --dpr-table-chrome-r: 10px;
+  --dpr-table-y-max: min(48vh, 420px);
+  /* Match typical single-line control height for remark sizing */
+  --dpr-control-line-h: 40px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  box-sizing: border-box;
+  gap: 14px;
+  padding-bottom: 24px;
+  min-height: 0;
+}
+
+.dpr-page .dpr-page-heading {
+  width: 100%;
+  flex-shrink: 0;
+  text-align: left;
+  align-self: flex-start;
+}
+
+.dpr-page .dpr-page-heading h1 {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.02em;
+  margin: 0 0 4px;
+}
+
+.dpr-page .dpr-page-heading p {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-mid);
+  margin: 0;
+  max-width: 52rem;
+}
+
+/* Row 1: tighter date, machine status, shift; wider section and machine */
+.dpr-page .dpr-row-first {
+  display: grid;
+  grid-template-columns:
+    minmax(6.25rem, 8rem)
+    minmax(8rem, 1fr)
+    minmax(10rem, 1.35fr)
+    minmax(5.5rem, 7.25rem)
+    minmax(4.75rem, 6.25rem);
+  gap: 10px;
+  align-items: start;
+}
+
+/* Lot nos., qty kg, qty nos, section qty */
+.dpr-page .dpr-row-qty-line {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  align-items: start;
+}
+
+.dpr-page .dpr-field--compact .cu-input,
+.dpr-page .dpr-field--compact .cu-select {
+  width: 100%;
+  max-width: 100%;
+}
+
+.dpr-page .dpr-field--wide .cu-select,
+.dpr-page .dpr-field--wide .select2-container {
+  width: 100% !important;
+  max-width: 100%;
+}
+
+/* Batch no. + MFG + EXP + batch size */
+.dpr-page .dpr-row-batch-meta {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1.45fr) minmax(6rem, 1fr) minmax(6rem, 1fr) minmax(8rem, 1.1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.dpr-page .dpr-row-batch-meta.dpr-row-batch-meta--multi {
+  grid-template-columns: 1fr;
+}
+
+.dpr-page .dpr-multi-batch-wrap {
+  width: 100%;
+  min-width: 0;
+}
+
+.dpr-page .dpr-multi-batch-row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1.25fr) minmax(8rem, 1fr) minmax(6.5rem, 0.95fr);
+  gap: 10px;
+  align-items: start;
+  width: 100%;
+}
+
+/* Wrapper uses display:contents so MFG/EXP/batch size stay in the parent 4-column grid. */
+.dpr-page .dpr-batch-detail-cols {
+  display: contents;
+}
+
+.dpr-page .dpr-field-batch-select .cu-select,
+.dpr-page .dpr-field-batch-select .select2-container {
+  width: 100% !important;
+}
+
+/* Layer, colour, batch remark */
+.dpr-page .dpr-row-layer-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-items: start;
+}
+
+/* Operators: helpers column narrower */
+.dpr-page .dpr-row-operators {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(4.5rem, 6.5rem);
+  gap: 10px;
+  align-items: start;
+}
+
+.dpr-page .dpr-field--helpers .cu-input,
+.dpr-page .dpr-field--helpers .cu-select {
+  max-width: 100%;
+}
+
+.dpr-page .dpr-field--remarks-full {
+  width: 100%;
+}
+
+.dpr-page .dpr-field--remarks-full .cu-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: calc(var(--dpr-control-line-h) * 1.5);
+  max-height: calc(var(--dpr-control-line-h) * 1.5);
+  height: calc(var(--dpr-control-line-h) * 1.5);
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
+  line-height: 1.35;
+  resize: none;
+  overflow-y: auto;
+}
+
+/* Row 1: main form | status (same row height = form height). Row 2: actions under form only. */
+.dpr-top-row {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) clamp(220px, 26vw, 320px);
+  grid-auto-rows: auto;
+  column-gap: 16px;
+  row-gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 0;
+}
+
+/* Explicit placement: DOM = form, actions, status — tab order preserved */
+.dpr-fields-main {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}
+
+.dpr-top-row > .dpr-actions {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+}
+
+.dpr-status-col {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  box-sizing: border-box;
+  align-self: stretch;
+}
+
+.dpr-side-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--navy);
+  letter-spacing: 0.01em;
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+
+.dpr-section-block.dpr-section-no-strip {
+  border-radius: var(--dpr-table-chrome-r);
+}
+
+/* Status chrome only — width follows parent; inner table is width-constrained */
+.dpr-panel-shell {
+  border: 1px solid var(--border-subtle, #d8e8ef);
+  border-radius: var(--dpr-table-chrome-r);
+  background: var(--surface-elevated, #f8fcfd);
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.dpr-table-wrap {
+  max-height: var(--dpr-table-y-max);
+  overflow: auto;
+}
+
+/* Strip-less status card: fills aside height beside main column; no horizontal scroll */
+.dpr-page .dpr-status-section.dpr-section-no-strip.cu-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.dpr-page .dpr-status-fields.cu-section-fields {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.dpr-page .dpr-status-panel-inner {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Grows with the row so panel height tracks the entry column; many rows scroll inside */
+.dpr-page .dpr-status-scroll {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.dpr-page .dpr-table--status {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 10.5px;
+  box-sizing: border-box;
+}
+
+/* Column widths apply to the table grid (reliable with table-layout: fixed) */
+.dpr-page .dpr-table--status col.dpr-status-col-section {
+  width: 52%;
+}
+
+.dpr-page .dpr-table--status col.dpr-status-col-qty {
+  width: 48%;
+}
+
+.dpr-page .dpr-table--status thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, #e8f6fb 0%, #dff2f9 100%);
+  color: var(--navy);
+  font-weight: 700;
+  text-align: left;
+  padding: 5px 5px;
+  border-bottom: 1px solid var(--border-subtle, #c9dce6);
+  white-space: normal;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.dpr-page .dpr-table--status td {
+  padding: 4px 5px;
+  border-bottom: 1px solid #edf4f8;
+  vertical-align: top;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+.dpr-page .dpr-table--status tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.dpr-page .dpr-status-col-qty {
+  text-align: right;
+}
+
+.dpr-page .dpr-status-numeric {
+  text-align: right;
+}
+
+/* Master-style list: qty column left-aligned */
+.dpr-page .dpr-grid-table-card .dpr-col-qty-left {
+  text-align: left;
+}
+
+.dpr-page .dpr-grid-table-card {
+  margin-top: 4px;
+}
+
+.dpr-muted {
+  color: var(--text-light);
+  text-align: center;
+  padding: 14px 10px !important;
+}
+
+.dpr-multi-row {
+  padding-top: 2px;
+}
+
+.dpr-check-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--text-mid);
+  cursor: pointer;
+}
+
+.dpr-check-label input {
+  margin-top: 3px;
+}
+
+.dpr-data-block {
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-subtle, #d8e8ef);
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+}
+
+.dpr-toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  gap: 0px;
+}
+
+.dpr-toolbar-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+}
+
+.dpr-toolbar-label {
+  flex: 1 0 100%;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-mid);
+  margin: 0 0 2px;
+  width: 100%;
+  text-align: left;
+}
+
+.dpr-toolbar-field {
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+.dpr-toolbar-field .cu-input {
+  width: 8.25rem;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.dpr-toolbar-btn {
+  margin-bottom: 1px;
+  white-space: nowrap;
+  align-self: flex-end;
+}
+
+@media (max-width: 1024px) {
+  .dpr-top-row {
+    grid-template-columns: 1fr;
+  }
+
+  .dpr-fields-main {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .dpr-top-row > .dpr-actions {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .dpr-status-col {
+    grid-column: 1;
+    grid-row: 3;
+    max-width: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .dpr-page .dpr-row-first,
+  .dpr-page .dpr-row-batch-meta,
+  .dpr-page .dpr-row-layer-row,
+  .dpr-page .dpr-row-operators,
+  .dpr-page .dpr-row-qty-line {
+    grid-template-columns: 1fr;
+  }
+
+  .dpr-page .dpr-multi-batch-row {
+    grid-template-columns: 1fr;
+  }
+}

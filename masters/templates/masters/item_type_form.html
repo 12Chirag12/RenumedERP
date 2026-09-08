@@ -1,0 +1,113 @@
+{% extends base_template %}
+{% load static %}
+{% block title %}Item Type Master — PharmaERP{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/masters/item_type.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="cu-page" data-page-init="item_type">
+
+  <div class="cu-heading">
+    <h1>Item Type Master</h1>
+    <p>Define item types linked to product categories.</p>
+  </div>
+
+  <!-- ── FORM PANEL ─────────────────────────────────────────── -->
+  <div class="cu-panel">
+
+    <div class="cu-card-header">
+      <div class="icon-wrap">
+        <i class="bi {% if edit_instance %}bi-pencil-fill{% else %}bi-card-list{% endif %}"></i>
+      </div>
+      <div>
+        <h2>{% if edit_instance %}Edit Item Type{% else %}New Item Type{% endif %}</h2>
+        <p>{% if edit_instance %}Update item type details{% else %}Select a category and enter item type name{% endif %}</p>
+      </div>
+    </div>
+
+    <div class="cu-card-body">
+
+      {% include "includes/form_errors_alert.html" with form=form %}
+
+      <form method="POST" id="itemTypeForm" action="{% url 'item_type' %}{% if edit_instance %}?edit_pk={{ edit_instance.pk }}{% endif %}">
+        {% csrf_token %}
+
+        <div class="cu-section">
+          <div class="cu-section-fields">
+            <div class="cu-row-2">
+
+              <div class="cu-field">
+                <label class="cu-label">Item Category <span class="req">*</span></label>
+                {{ form.item_category }}
+                {% if form.item_category.errors %}
+                  <span class="field-error">{{ form.item_category.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+              <div class="cu-field">
+                <label class="cu-label">Item Type Name <span class="req">*</span></label>
+                <input type="text" name="item_type_name" id="itemTypeNameInput" class="cu-input"
+                  placeholder="Enter item type name"
+                  value="{{ form.item_type_name.value|default:'' }}"
+                  autocomplete="off" />
+                {% if form.item_type_name.errors %}
+                  <span class="field-error">{{ form.item_type_name.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <div class="cu-actions">
+          {% if edit_instance %}
+            <a href="{% url 'item_type' %}" class="btn-cancel"><i class="bi bi-x"></i> Cancel</a>
+            <button type="submit" class="btn-save"><i class="bi bi-check2-circle"></i> Update Item Type</button>
+          {% else %}
+            <button type="submit" class="btn-save"><i class="bi bi-check2-circle"></i> Save Item Type</button>
+            <button type="button" class="btn-cancel" onclick="resetForm()"><i class="bi bi-x"></i> Clear</button>
+          {% endif %}
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- ── RECORDS TABLE ────────────────────────────────────────── -->
+  <div class="table-card">
+    <div class="table-card-header">
+      <i class="bi bi-list-ul"></i>
+      <h3>All Item Types ({{ item_types.count }})</h3>
+    </div>
+    <div class="table-scroll-body">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Item Type Name</th><th>Category</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          {% for it in item_types %}
+          <tr {% if edit_instance.pk == it.pk %}class="row-editing"{% endif %}>
+            <td class="col-idx">{{ forloop.counter }}</td>
+            <td><strong>{{ it.item_type_name }}</strong></td>
+            <td><span class="cat-badge">{{ it.item_category.prod_cat_id }}</span> {{ it.item_category.prod_cat_name }}</td>
+            <td class="col-actions">
+              <a href="?edit_pk={{ it.pk }}" class="btn-action btn-edit" title="Edit"><i class="bi bi-pencil"></i></a>
+              <button type="button" class="btn-action btn-delete"
+                data-delete-url="{% url 'item_type_delete' it.pk %}"
+                data-delete-name="{{ it.item_type_name|escapejs }}"
+                onclick="openDeleteModal(this.dataset.deleteUrl,this.dataset.deleteName)"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="empty-row">No item types found. Use the form above to add one.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+

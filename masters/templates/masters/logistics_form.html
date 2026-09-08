@@ -1,0 +1,191 @@
+{% extends base_template %}
+{% load static %}
+{% block title %}Logistics Master — PharmaERP{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/masters/logistics.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="cu-page" data-page-init="logistics">
+
+  <div class="cu-heading">
+    <h1>Logistics Master</h1>
+    <p>Manage transporters and states from one place.</p>
+  </div>
+
+  <!-- ── TYPE SELECTOR CARDS ─────────────────────────────────── -->
+  <div class="attr-selector logistics-selector">
+
+    <div class="attr-card {% if ltype == 'transporter' %}active{% endif %}" data-type="transporter">
+      <i class="bi bi-truck"></i>
+      <span>Transporter</span>
+    </div>
+
+    <div class="attr-card {% if ltype == 'state' %}active{% endif %}" data-type="state">
+      <i class="bi bi-geo-alt-fill"></i>
+      <span>State</span>
+    </div>
+
+  </div>
+
+  <!-- ── FORM PANEL ─────────────────────────────────────────── -->
+  <div class="cu-panel">
+
+    <div class="cu-card-header">
+      <div class="icon-wrap">
+        <i id="headerIcon" class="bi {% if ltype == 'transporter' %}bi-truck{% else %}bi-geo-alt-fill{% endif %}"></i>
+      </div>
+      <div>
+        <h2 id="headerTitle">
+          {% if edit_instance %}Edit{% else %}New{% endif %}
+          {% if ltype == 'transporter' %}Transporter{% else %}State{% endif %}
+        </h2>
+        <p id="headerSubtitle">
+          {% if ltype == 'transporter' %}Enter transporter name{% else %}Enter state name and GST code{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <div class="cu-card-body">
+
+      {% include "includes/form_errors_alert.html" with form=form %}
+
+      <form method="POST" action="{% url 'logistics' %}?type={{ ltype }}" id="logForm">
+        {% csrf_token %}
+        <input type="hidden" name="ltype"   id="ltypeInput"   value="{{ ltype }}">
+        <input type="hidden" name="edit_pk" id="editPkField"  value="{{ edit_instance.pk|default:'' }}">
+
+        <div class="cu-section">
+          <div class="cu-section-fields">
+
+            <!-- TRANSPORTER -->
+            <div id="rowTransporter" {% if ltype != 'transporter' %}style="display:none"{% endif %}>
+              <div class="cu-field">
+                <label class="cu-label">Transporter Name <span class="req">*</span></label>
+                <input type="text" name="transport_name" id="transporterNameInput" class="cu-input"
+                  placeholder="Enter transporter name"
+                  value="{{ form.transport_name.value|default:'' }}"
+                  autocomplete="off" />
+                {% if form.transport_name.errors %}
+                  <span class="field-error">{{ form.transport_name.errors.0 }}</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- STATE -->
+            <div id="rowState" {% if ltype != 'state' %}style="display:none"{% endif %}>
+              <div class="cu-row-state">
+                <div class="cu-field">
+                  <label class="cu-label">State Name <span class="req">*</span></label>
+                  <input type="text" name="state_name" id="stateNameInput" class="cu-input"
+                    placeholder="e.g. Maharashtra"
+                    value="{{ form.state_name.value|default:'' }}"
+                    autocomplete="off" />
+                  {% if form.state_name.errors %}
+                    <span class="field-error">{{ form.state_name.errors.0 }}</span>
+                  {% endif %}
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">GST Code <span class="req">*</span></label>
+                  <input type="text" name="gst_code" id="gstCodeInput" class="cu-input"
+                    placeholder="e.g. 27"
+                    maxlength="2"
+                    value="{{ form.gst_code.value|default:'' }}"
+                    autocomplete="off" />
+                  {% if form.gst_code.errors %}
+                    <span class="field-error">{{ form.gst_code.errors.0 }}</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="cu-actions">
+          {% if edit_instance %}
+            <a href="{% url 'logistics' %}?type={{ ltype }}" class="btn-cancel">
+              <i class="bi bi-x"></i> Cancel
+            </a>
+            <button type="submit" class="btn-save">
+              <i class="bi bi-check2-circle"></i> Update Record
+            </button>
+          {% else %}
+            <button type="submit" class="btn-save">
+              <i class="bi bi-check2-circle"></i> Save Record
+            </button>
+            <button type="button" class="btn-cancel" onclick="resetForm()">
+              <i class="bi bi-x"></i> Clear
+            </button>
+          {% endif %}
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- ── RECORDS TABLE ────────────────────────────────────────── -->
+  <div class="table-card">
+    <div class="table-card-header">
+      <i class="bi bi-list-ul"></i>
+      <h3 id="tableTitle">All Records ({{ records|length }})</h3>
+    </div>
+    <div class="table-scroll-body">
+      <table>
+        <thead id="logTableHead">
+          <tr>
+            {% if ltype == 'transporter' %}
+              <th>#</th><th>Transporter Name</th><th>Actions</th>
+            {% else %}
+              <th>#</th><th>State Name</th><th>GST Code</th><th>Actions</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody id="logTableBody">
+          {% for r in records %}
+          <tr {% if edit_instance and edit_instance.pk|stringformat:"s" == r.transport_id|default:r.state_id|stringformat:"s" %}class="row-editing"{% endif %}>
+            <td class="col-idx">{{ forloop.counter }}</td>
+            {% if ltype == 'transporter' %}
+              <td><strong>{{ r.transport_name }}</strong></td>
+              <td class="col-actions">
+                <a href="?type=transporter&edit_pk={{ r.transport_id }}"
+                   hx-get="?type=transporter&edit_pk={{ r.transport_id }}"
+                   hx-target="#mainContent"
+                   hx-swap="innerHTML"
+                   hx-push-url="true"
+                   hx-indicator="#page-loader"
+                   class="btn-action btn-edit" title="Edit"><i class="bi bi-pencil"></i></a>
+                <button type="button" class="btn-action btn-delete"
+                  data-delete-url="{% url 'logistics_delete' 'transporter' r.transport_id %}"
+                  data-delete-name="{{ r.transport_name|escapejs }}"
+                  onclick="openDeleteModal(this.dataset.deleteUrl,this.dataset.deleteName)"><i class="bi bi-trash"></i></button>
+              </td>
+            {% else %}
+              <td><strong>{{ r.state_name }}</strong></td>
+              <td><span class="gst-badge">{{ r.gst_code }}</span></td>
+              <td class="col-actions">
+                <a href="?type=state&edit_pk={{ r.state_id }}"
+                   hx-get="?type=state&edit_pk={{ r.state_id }}"
+                   hx-target="#mainContent"
+                   hx-swap="innerHTML"
+                   hx-push-url="true"
+                   hx-indicator="#page-loader"
+                   class="btn-action btn-edit" title="Edit"><i class="bi bi-pencil"></i></a>
+                <button type="button" class="btn-action btn-delete"
+                  data-delete-url="{% url 'logistics_delete' 'state' r.state_id %}"
+                  data-delete-name="{{ r.state_name|escapejs }}"
+                  onclick="openDeleteModal(this.dataset.deleteUrl,this.dataset.deleteName)"><i class="bi bi-trash"></i></button>
+              </td>
+            {% endif %}
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="empty-row">No records found. Use the form above to add one.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

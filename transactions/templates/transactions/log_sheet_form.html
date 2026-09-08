@@ -1,0 +1,204 @@
+{% extends base_template %}
+{% block title %}Log sheet — PharmaERP{% endblock %}
+
+{% block content %}
+<div class="cu-page log-sheet-page" data-page-init="log_sheet">
+
+  <header class="ls-page-heading">
+    <h1>Log sheet</h1>
+    <p>Create a granulation log entry for a pending batch. Single-layer products: one log sheet per batch line. Double-layer products: two log sheets (first and second colour), each with half the batch quantity.</p>
+  </header>
+
+  {{ logsheet_ajax_urls|json_script:"lsAjaxUrls" }}
+  {{ grid_defaults|json_script:"lsGridDefaults" }}
+
+  <div class="cu-panel">
+    <div class="cu-card-header">
+      <div class="icon-wrap">
+        <i class="bi bi-journal-text"></i>
+      </div>
+      <div>
+        <h2>Log sheet</h2>
+        <p>Granulation details, pending batches, and saved entries</p>
+      </div>
+    </div>
+
+    <div class="cu-card-body">
+      {% include "includes/form_errors_alert.html" with form=form %}
+
+      <form method="post" action="{% url 'transactions:log_sheet' %}" id="lsForm" novalidate>
+        {% csrf_token %}
+
+        <div class="ls-top-row">
+          <div class="ls-fields-col">
+            <div class="cu-section ls-section-block ls-section-no-strip">
+              <div class="cu-section-fields">
+
+                <div class="cu-row-3-eq">
+                  <div class="cu-field">
+                    <label class="cu-label" for="lsGranDt">Granulation date <span class="req">*</span></label>
+                    {{ form.gran_dt }}
+                    {% if form.gran_dt.errors %}<span class="field-error">{{ form.gran_dt.errors.0 }}</span>{% endif %}
+                  </div>
+                  <div class="cu-field">
+                    <label class="cu-label" for="lsSection">Section <span class="req">*</span></label>
+                    {{ form.section }}
+                    {% if form.section.errors %}<span class="field-error">{{ form.section.errors.0 }}</span>{% endif %}
+                  </div>
+                  <div class="cu-field">
+                    <label class="cu-label" for="lsShift">Shift <span class="req">*</span></label>
+                    {{ form.shift }}
+                    {% if form.shift.errors %}<span class="field-error">{{ form.shift.errors.0 }}</span>{% endif %}
+                  </div>
+                </div>
+
+                <div class="cu-row-2-eq">
+                  <div class="cu-field">
+                    <label class="cu-label" for="lsCustomer">Customer name <span class="req">*</span></label>
+                    {{ form.customer }}
+                    {% if form.customer.errors %}<span class="field-error">{{ form.customer.errors.0 }}</span>{% endif %}
+                  </div>
+                  <div class="cu-field">
+                    <label class="cu-label" for="lsOrdDisplay">Ord no. / date</label>
+                    <input type="text" id="lsOrdDisplay" class="cu-input" readonly tabindex="-1" placeholder="—" autocomplete="off">
+                  </div>
+                </div>
+
+                <div class="cu-field">
+                  <label class="cu-label" for="lsProduct">Product name <span class="req">*</span></label>
+                  {{ form.product }}
+                  {% if form.product.errors %}<span class="field-error">{{ form.product.errors.0 }}</span>{% endif %}
+                </div>
+
+                <div class="cu-row-3-eq">
+                  <div class="cu-field">
+                    <label class="cu-label" for="lsBatchNoDisplay">Batch no.</label>
+                    <input type="text" id="lsBatchNoDisplay" class="cu-input" readonly tabindex="-1" placeholder="Select from pending list" autocomplete="off">
+                    {{ form.batch_dtl_id }}
+                    {{ form.layer_slot }}
+                    {% if form.batch_dtl_id.errors %}<span class="field-error">{{ form.batch_dtl_id.errors.0 }}</span>{% endif %}
+                    {% if form.layer_slot.errors %}<span class="field-error">{{ form.layer_slot.errors.0 }}</span>{% endif %}
+                  </div>
+                  <div class="cu-field">
+                    <label class="cu-label" for="lsMfgDisplay">MFG date</label>
+                    <input type="text" id="lsMfgDisplay" class="cu-input" readonly tabindex="-1" placeholder="—" autocomplete="off">
+                  </div>
+                  <div class="cu-field">
+                    <label class="cu-label" for="lsExpDisplay">EXP date</label>
+                    <input type="text" id="lsExpDisplay" class="cu-input" readonly tabindex="-1" placeholder="—" autocomplete="off">
+                  </div>
+                </div>
+
+                <div class="cu-row-3-eq">
+                  <div class="cu-field">
+                    <label class="cu-label" for="lsBatchSizeL">Batch size (IN LAKHS)</label>
+                    <input type="text" id="lsBatchSizeL" class="cu-input cu-num" readonly tabindex="-1" placeholder="—" autocomplete="off">
+                  </div>
+                  <div class="cu-field">
+                    <label class="cu-label" for="lsTabletLayer">Tablet layer</label>
+                    <input type="text" id="lsTabletLayer" class="cu-input" readonly tabindex="-1" placeholder="—" autocomplete="off">
+                  </div>
+                  <div class="cu-field">
+                    <label class="cu-label" for="lsColour">Colour</label>
+                    <select id="lsColour" class="cu-select" autocomplete="off" aria-describedby="lsColourHint">
+                      <option value="">—</option>
+                    </select>
+                    <span class="sr-only" id="lsColourHint">For double-layer tablets, choose the colour for this log sheet after selecting a batch.</span>
+                  </div>
+                </div>
+
+                <div class="cu-field ls-blend-row">
+                  <label class="cu-label" for="lsBlendDt">Blending date</label>
+                  {{ form.blend_dt }}
+                  {% if form.blend_dt.errors %}<span class="field-error">{{ form.blend_dt.errors.0 }}</span>{% endif %}
+                </div>
+
+              </div>
+            </div>
+
+            <div class="cu-actions ls-actions ls-actions--after-fields">
+              <div aria-hidden="true"></div>
+              <button type="submit" class="btn-save btn-save-main" id="lsSaveBtn">
+                <i class="bi bi-check2-circle"></i> Save log sheet
+              </button>
+              <a href="{% url 'transactions:log_sheet' %}" class="btn-cancel" id="lsClear"><i class="bi bi-x-lg"></i> Clear</a>
+            </div>
+          </div>
+
+          <aside class="ls-pending-col">
+            <div class="ls-side-title">Pending batches for log sheet</div>
+            <div class="cu-section ls-section-block ls-section-no-strip ls-pending-section">
+              <div class="cu-section-fields ls-pending-fields">
+                <div class="ls-panel-shell ls-pending-panel">
+                  <div class="ls-table-wrap ls-table-wrap--pending">
+                    <table class="ls-inline-table ls-table ls-table--pending">
+                      <thead>
+                        <tr>
+                          <th>Batch</th>
+                          <th>MFG</th>
+                          <th>EXP</th>
+                        </tr>
+                      </thead>
+                      <tbody id="lsPendingBody">
+                        <tr><td colspan="3" class="ls-muted">Select customer and product…</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        <div class="ls-data-block">
+          <div class="ls-toolbar">
+            <div class="ls-toolbar-controls">
+              <span class="ls-toolbar-label">Date range (not more than 90 days):</span>
+              <div class="cu-field ls-toolbar-field">
+                <label class="cu-label sr-only" for="lsGridStart">Start</label>
+                <input type="date" id="lsGridStart" class="cu-input">
+              </div>
+              <div class="cu-field ls-toolbar-field">
+                <label class="cu-label sr-only" for="lsGridEnd">End</label>
+                <input type="date" id="lsGridEnd" class="cu-input">
+              </div>
+              <button type="button" class="btn-save ls-toolbar-btn ls-show-data-btn" id="lsShowGrid">
+                <i class="bi bi-table"></i> Show data
+              </button>
+            </div>
+            <div class="ls-toolbar-err" id="lsGridErrWrap">
+              <span class="field-error" id="lsGridErr" role="alert"></span>
+            </div>
+          </div>
+
+          <div class="cu-section ls-section-block ls-section-no-strip ls-grid-section">
+            <div class="cu-section-fields ls-grid-fields">
+              <div class="ls-panel-shell ls-grid-panel">
+                <div class="ls-table-wrap ls-table-wrap--grid">
+                  <table class="ls-inline-table ls-table ls-table--grid">
+                    <thead>
+                      <tr>
+                        <th>Section</th>
+                        <th>Date / shift</th>
+                        <th>Product</th>
+                        <th>Batch (nos.)</th>
+                        <th>Colour</th>
+                        <th>MFG → EXP</th>
+                        <th>Blending date</th>
+                        <th>Customer</th>
+                      </tr>
+                    </thead>
+                    <tbody id="lsGridBody">
+                      <tr><td colspan="8" class="ls-muted">Set a date range and choose Show data.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

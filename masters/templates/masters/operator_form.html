@@ -1,0 +1,169 @@
+{% extends base_template %}
+{% load static %}
+{% block title %}Operator Master — PharmaERP{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/masters/operator.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="cu-page operator-page" data-page-init="operator">
+
+  <div class="cu-heading">
+    <h1>Operator Master</h1>
+    <p>Add operators and assign them to one or more sections for DPR and production use.</p>
+  </div>
+
+  <div class="cu-panel">
+
+    <div class="cu-card-header">
+      <div class="icon-wrap">
+        <i class="bi bi-{% if edit_instance %}pencil-fill{% else %}person-badge{% endif %}"></i>
+      </div>
+      <div>
+        <h2>{% if edit_instance %}Edit Operator{% else %}New Operator{% endif %}</h2>
+        <p>{% if edit_instance %}Update name, designation, or section assignments{% else %}Enter details and select every section this operator can work in{% endif %}</p>
+      </div>
+    </div>
+
+    <div class="cu-card-body">
+
+      {% include "includes/form_errors_alert.html" with form=form %}
+
+      <form method="POST" action="{% url 'operator' %}" id="operatorForm">
+        {% csrf_token %}
+
+        {% if edit_instance %}
+          <input type="hidden" name="edit_pk" value="{{ edit_instance.pk }}">
+        {% endif %}
+
+        <div class="cu-section">
+          <div class="cu-section-fields">
+
+            <div class="cu-row-3">
+              <div class="cu-field">
+                <label class="cu-label" for="operatorNameInput">Operator name <span class="req">*</span></label>
+                {{ form.opt_name }}
+                {% if form.opt_name.errors %}
+                  <span class="field-error">{{ form.opt_name.errors.0 }}</span>
+                {% endif %}
+              </div>
+              <div class="cu-field">
+                <label class="cu-label" for="operatorDesignationInput">Designation</label>
+                {{ form.designation }}
+                {% if form.designation.errors %}
+                  <span class="field-error">{{ form.designation.errors.0 }}</span>
+                {% endif %}
+              </div>
+              <div class="cu-field">
+                <span class="cu-label" id="operatorSectionDdLabelStatic">Sections <span class="req">*</span></span>
+                <div class="operator-section-dd" id="operatorSectionDd">
+                  <button type="button" class="operator-section-dd__toggle" id="operatorSectionDdToggle"
+                    aria-expanded="false" aria-haspopup="listbox" aria-labelledby="operatorSectionDdLabelStatic operatorSectionDdLabel">
+                    <span class="operator-section-dd__label" id="operatorSectionDdLabel">— Select sections —</span>
+                    <i class="bi bi-chevron-down operator-section-dd__chev" aria-hidden="true"></i>
+                  </button>
+                  <div class="operator-section-dd__panel" id="operatorSectionDdPanel" hidden role="listbox"
+                    aria-multiselectable="true">
+                    <div class="operator-section-dd__scroll">
+                      {% regroup form.operator_section_list by department.dept_name as dept_list %}
+                      {% for dept in dept_list %}
+                        <div class="operator-section-dd__group">{{ dept.grouper }}</div>
+                        {% for s in dept.list %}
+                        <label class="operator-section-dd__row">
+                          <input type="checkbox" name="sections" value="{{ s.section_id }}"
+                            {% if s.section_id in form.selected_section_id_set %}checked{% endif %}>
+                          <span>{{ s.section_name }}</span>
+                        </label>
+                        {% endfor %}
+                      {% endfor %}
+                    </div>
+                  </div>
+                </div>
+                <p class="cu-hint">Open the list and tick every section this operator can work in.</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="cu-actions">
+          {% if edit_instance %}
+            <a href="{% url 'operator' %}" class="btn-cancel">
+              <i class="bi bi-x"></i> Cancel
+            </a>
+            <button type="submit" class="btn-save">
+              <i class="bi bi-check2-circle"></i> Update Operator
+            </button>
+          {% else %}
+            <button type="submit" class="btn-save">
+              <i class="bi bi-check2-circle"></i> Save Operator
+            </button>
+            <button type="button" class="btn-cancel" onclick="resetForm()">
+              <i class="bi bi-x"></i> Clear
+            </button>
+          {% endif %}
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-card-header">
+      <i class="bi bi-list-ul"></i>
+      <h3>All Operators ({{ operators.count }})</h3>
+    </div>
+
+    <div class="table-scroll-body">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th>Designation</th>
+            <th>Sections</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for op in operators %}
+          <tr {% if edit_instance and edit_instance.pk == op.pk %}class="row-editing"{% endif %}>
+            <td class="col-idx">{{ forloop.counter }}</td>
+            <td><strong>{{ op.opt_name }}</strong></td>
+            <td>{{ op.designation|default:"—" }}</td>
+            <td>
+              {% for link in op.section_links.all %}
+                <span class="section-badge">{{ link.section.section_name }}</span>{% if not forloop.last %} {% endif %}
+              {% empty %}
+                —
+              {% endfor %}
+            </td>
+            <td class="col-actions">
+              <a href="{% url 'operator' %}?edit_pk={{ op.pk }}"
+                 class="btn-action btn-edit" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <button type="button"
+                class="btn-action btn-delete" title="Delete"
+                data-delete-url="{% url 'operator_delete' op.pk %}"
+                data-delete-name="{{ op.opt_name|escapejs }}"
+                onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)">
+                <i class="bi bi-trash"></i>
+              </button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="empty-row">
+              No operators found. Use the form above to add one.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

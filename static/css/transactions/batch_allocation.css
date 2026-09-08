@@ -1,0 +1,437 @@
+/*
+  Batch allocation — scoped under .batch-allocation-page only.
+  Shared spacing/tokens: base.css + forms_consistency.css (data-page-init).
+ */
+
+.batch-allocation-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  box-sizing: border-box;
+  gap: 14px;
+  padding-bottom: 24px;
+}
+
+.batch-allocation-page .ba-page-heading {
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.batch-allocation-page .ba-page-heading h1 {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.02em;
+  margin: 0 0 4px;
+}
+
+.batch-allocation-page .ba-page-heading p {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-mid);
+  margin: 0;
+  max-width: 52rem;
+}
+
+.batch-allocation-page .ba-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.batch-allocation-page .ba-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.batch-allocation-page .ba-layout__main {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.batch-allocation-page .ba-layout__col--primary {
+  flex: 0 0 calc((100% - 14px) * 0.6);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.batch-allocation-page .ba-layout__col--primary > .cu-section {
+  margin-bottom: 0;
+}
+
+.batch-allocation-page .ba-layout__col--side {
+  flex: 0 0 calc((100% - 14px) * 0.4);
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.batch-allocation-page .ba-layout__col--side > .cu-section {
+  margin-bottom: 0;
+}
+
+.batch-allocation-page .ba-section-block {
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+/* Inner shell is layout-only: one visible frame from parent .cu-section (option 3) */
+.batch-allocation-page .ba-section-no-strip .ba-panel-shell {
+  display: flex;
+  flex-direction: column;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  overflow: visible;
+}
+
+.batch-allocation-page .cu-section {
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(11, 31, 58, 0.04);
+}
+
+.batch-allocation-page .cu-actions.ba-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2.2fr) minmax(0, 1fr);
+  gap: 10px;
+  width: 100%;
+  flex-shrink: 0;
+  margin-top: 16px;
+}
+
+.batch-allocation-page .ba-actions .btn-cancel,
+.batch-allocation-page .ba-actions .btn-save-main {
+  width: 100%;
+  justify-content: center;
+  min-width: 0;
+  height: 34px;
+  border-radius: 8px;
+}
+
+.batch-allocation-page .ba-actions .btn-save-main {
+  flex: 0 0 auto;
+  font-weight: 700;
+  box-shadow: 0 2px 10px rgba(0, 180, 216, 0.25);
+}
+
+@media (max-width: 768px) {
+  .batch-allocation-page .cu-actions.ba-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Sub-blocks wrap stacked .cu-row / .cu-field; parent .cu-section-fields gap only
+   applies between sub-blocks — restore row rhythm inside each block. */
+.batch-allocation-page .ba-subblock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--form-field-row-gap);
+  min-width: 0;
+}
+
+/* Single left section: sub-blocks separated like grouped rows */
+.batch-allocation-page .ba-entry-section .ba-subblock + .ba-subblock {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.batch-allocation-page .ba-input-with-action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  width: 100%;
+}
+
+.batch-allocation-page .ba-select-full {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.batch-allocation-page .ba-input-with-action .cu-select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.batch-allocation-page .ba-input-with-action .ba-mmm-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.batch-allocation-page .ba-input-with-action .ba-month-input {
+  flex: 0 0 auto;
+  width: auto;
+  max-width: 140px;
+}
+
+.batch-allocation-page .ba-partial-row {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.batch-allocation-page .ba-partial-row .cu-label {
+  margin: 0;
+}
+
+.batch-allocation-page .ba-abbr-readonly {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+/* Four-up metrics row: drop to 2×2 when the primary column is tight */
+@media (max-width: 1180px) {
+  .batch-allocation-page .ba-readonly-metrics.cu-row-4-eq {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Sections without vertical strip (single full-width body) */
+.batch-allocation-page .ba-section-no-strip.cu-section {
+  flex-direction: column;
+}
+
+.batch-allocation-page .ba-section-no-strip .cu-section-fields {
+  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--form-field-row-gap);
+  padding: 8px 12px;
+}
+
+/* Table-only sections: no inset — table fills the card (beats forms_consistency padding) */
+.batch-allocation-page.cu-page[data-page-init] .ba-section-no-strip .cu-section-fields.ba-prev-fields,
+.batch-allocation-page.cu-page[data-page-init] .ba-section-no-strip .cu-section-fields.ba-preview-fields {
+  --ba-table-chrome-r: 10px;
+  padding: 0 !important;
+  gap: 0;
+}
+
+.batch-allocation-page .ba-section-no-strip .ba-prev-table thead th:first-child,
+.batch-allocation-page .ba-section-no-strip .ba-inline-table thead th:first-child {
+  border-top-left-radius: var(--ba-table-chrome-r);
+}
+
+.batch-allocation-page .ba-section-no-strip .ba-prev-table thead th:last-child,
+.batch-allocation-page .ba-section-no-strip .ba-inline-table thead th:last-child {
+  border-top-right-radius: var(--ba-table-chrome-r);
+}
+
+/* Preview block: gap/padding handled by flush rule above */
+.batch-allocation-page .ba-preview-fields {
+  gap: 0;
+}
+
+.batch-allocation-page .ba-preview-outer {
+  margin-top: var(--form-field-row-gap);
+}
+
+/* Load order: this file before forms_consistency — match specificity so padding wins */
+.batch-allocation-page.cu-page[data-page-init] .cu-card-body {
+  padding: 12px 16px 16px;
+}
+
+/* Horizontal section headings (Previous batches, preview) */
+.batch-allocation-page .ba-h-section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 2px;
+  padding: 0 2px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--navy);
+  letter-spacing: -0.01em;
+}
+
+.batch-allocation-page .ba-h-section-title i {
+  color: var(--accent2);
+  font-size: 15px;
+}
+
+.batch-allocation-page .ba-prev-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--form-field-row-gap);
+  min-width: 0;
+}
+
+/* Previous-batches column: section full width; table scrolls inside */
+.batch-allocation-page .ba-prev-section {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.batch-allocation-page .ba-prev-fields {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.batch-allocation-page .ba-prev-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.batch-allocation-page .ba-prev-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  min-height: 200px;
+  max-height: min(520px, 58vh);
+  border-radius: var(--ba-table-chrome-r, 10px);
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.batch-allocation-page .ba-prev-table {
+  width: max-content;
+  min-width: 100%;
+}
+
+.batch-allocation-page .ba-prev-table th,
+.batch-allocation-page .ba-prev-table td {
+  white-space: nowrap;
+  font-size: var(--table-cell-fz);
+  line-height: 1.35;
+  color: var(--text-dark);
+  vertical-align: middle;
+}
+
+.batch-allocation-page .ba-prev-table thead th {
+  padding: var(--table-header-pad-y) var(--table-header-pad-x);
+  font-size: var(--table-header-fz);
+  font-weight: var(--table-header-fw);
+  letter-spacing: var(--table-header-ls);
+  text-transform: uppercase;
+  color: var(--text-mid);
+  background: var(--table-header-bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.batch-allocation-page .ba-prev-table tbody td {
+  padding: calc(var(--table-cell-pad-y) + var(--form-field-row-gap) * 0.5)
+    var(--table-cell-pad-x);
+  border-bottom: 1px solid var(--table-row-line);
+}
+
+.batch-allocation-page .ba-prev-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.batch-allocation-page .ba-prev-table tbody tr:hover {
+  background: #fafcff;
+}
+
+.batch-allocation-page .ba-prev-table th:nth-child(1),
+.batch-allocation-page .ba-prev-table td:nth-child(1) {
+  min-width: 6.5rem;
+}
+
+.batch-allocation-page .ba-prev-table th:nth-child(2),
+.batch-allocation-page .ba-prev-table td:nth-child(2),
+.batch-allocation-page .ba-prev-table th:nth-child(3),
+.batch-allocation-page .ba-prev-table td:nth-child(3) {
+  min-width: 4.25rem;
+}
+
+.batch-allocation-page .ba-prev-table th:nth-child(4),
+.batch-allocation-page .ba-prev-table td:nth-child(4) {
+  min-width: 7rem;
+}
+
+/* Full-width preview table below main row */
+.batch-allocation-page .ba-preview-scroll {
+  min-height: 120px;
+  max-height: min(360px, 40vh);
+  border-radius: var(--ba-table-chrome-r, 10px);
+  overflow: auto;
+  padding: 0 !important;
+}
+
+.batch-allocation-page .ba-inline-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.batch-allocation-page .ba-inline-table thead th {
+  padding: var(--table-header-pad-y) var(--table-header-pad-x);
+  font-size: var(--table-header-fz);
+  font-weight: var(--table-header-fw);
+  text-transform: uppercase;
+  letter-spacing: var(--table-header-ls);
+  color: var(--text-mid);
+  background: var(--table-header-bg);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.batch-allocation-page .ba-inline-table tbody td {
+  padding: calc(var(--table-cell-pad-y) + var(--form-field-row-gap) * 0.5)
+    var(--table-cell-pad-x);
+  font-size: var(--table-cell-fz);
+  line-height: 1.35;
+  color: var(--text-dark);
+  border-bottom: 1px solid var(--table-row-line);
+  vertical-align: middle;
+}
+
+.batch-allocation-page .ba-inline-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.batch-allocation-page .ba-inline-table tbody tr:hover {
+  background: #fafcff;
+}
+
+.ba-muted {
+  color: var(--text-light);
+  font-style: italic;
+  text-align: center;
+  font-size: var(--table-cell-fz);
+}
+
+.ba-section-disabled {
+  /* Keep layout readable; rely on disabled controls instead of "blurring" the whole block */
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.batch-allocation-page .ba-section-disabled :disabled {
+  cursor: not-allowed;
+}
+
+.batch-allocation-page .ba-section-disabled .select2-container--disabled .select2-selection {
+  cursor: not-allowed;
+}
+
+.batch-allocation-page .ba-checkbox {
+  accent-color: var(--accent2);
+}

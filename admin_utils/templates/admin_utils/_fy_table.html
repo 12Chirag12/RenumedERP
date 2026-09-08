@@ -1,0 +1,94 @@
+<div id="fyTable">
+  <div class="fy-toolbar">
+    <div class="fy-muted">
+      Showing {% if show_all %}all{% else %}current + previous{% endif %} financial years.
+    </div>
+    <div class="fy-actions">
+      {% if has_history and not show_all %}
+      <a class="cu-btn cu-btn--sm"
+         hx-get="{% url 'admin_fy_management' %}?all=1"
+         hx-target="#fyTable"
+         hx-swap="outerHTML">
+        Show history
+      </a>
+      {% elif show_all %}
+      <a class="cu-btn cu-btn--sm"
+         hx-get="{% url 'admin_fy_management' %}"
+         hx-target="#fyTable"
+         hx-swap="outerHTML">
+        Hide history
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <table class="fy-table">
+    <thead>
+      <tr>
+        <th>FY</th>
+        <th>Period</th>
+        <th>Status</th>
+        <th>Actions (prev FY only)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for fy in financial_years %}
+      <tr>
+        <td><strong>{{ fy.fy_display }}</strong></td>
+        <td>{{ fy.start_date }} – {{ fy.end_date }}</td>
+        <td>
+          {% if fy.is_current %}
+            <span class="fy-pill fy-pill--open">Current • Open</span>
+          {% else %}
+            {% if fy.is_open %}
+              <span class="fy-pill fy-pill--open">Open</span>
+            {% else %}
+              <span class="fy-pill fy-pill--closed">Closed</span>
+            {% endif %}
+          {% endif %}
+        </td>
+        <td>
+          <div class="fy-actions">
+            {% if not fy.is_current and fy.fy_start_year == current_fy.fy_start_year|add:"-1" %}
+              {% if fy.is_open %}
+                <form method="POST"
+                      hx-post="{% url 'admin_fy_toggle_status' %}"
+                      hx-target="#fyTable"
+                      hx-swap="outerHTML"
+                      style="margin:0;">
+                  {% csrf_token %}
+                  <input type="hidden" name="fy_id" value="{{ fy.fy_id }}">
+                  <input type="hidden" name="action" value="close">
+                  <input type="hidden" name="show_all" value="{% if show_all %}1{% else %}0{% endif %}">
+                  <button type="submit" class="cu-btn cu-btn--sm">Close</button>
+                </form>
+              {% else %}
+                <form method="POST"
+                      hx-post="{% url 'admin_fy_toggle_status' %}"
+                      hx-target="#fyTable"
+                      hx-swap="outerHTML"
+                      style="margin:0;">
+                  {% csrf_token %}
+                  <input type="hidden" name="fy_id" value="{{ fy.fy_id }}">
+                  <input type="hidden" name="action" value="open">
+                  <input type="hidden" name="show_all" value="{% if show_all %}1{% else %}0{% endif %}">
+                  <button type="submit" class="cu-btn cu-btn--sm">Open</button>
+                </form>
+              {% endif %}
+            {% else %}
+              <span class="fy-muted">—</span>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="4" class="fy-muted" style="padding: 14px;">
+          No financial years. Run <code>python manage.py seed_financial_years</code>.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+

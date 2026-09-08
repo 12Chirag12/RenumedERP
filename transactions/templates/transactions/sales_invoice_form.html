@@ -1,0 +1,239 @@
+﻿{% extends base_template %}
+{% block title %}Sales invoice — PharmaERP{% endblock %}
+
+{% block content %}
+<div class="cu-page sinv-page" data-page-init="sales_invoice">
+
+  <header class="inw-page-heading">
+    <h1>Sales invoice</h1>
+    <p>{% if edit_instance %}Update invoice details, product batches, and charges.{% else %}Step 1 — invoice details and charges. Step 2 — products and FG batches. Save from step 1 after lines are filled.{% endif %}</p>
+  </header>
+
+  {{ sales_invoice_ajax_urls|json_script:"siAjaxUrls" }}
+  {{ sales_invoice_page_data|json_script:"siPageData" }}
+
+  <div class="cu-panel">
+    <div class="cu-card-header">
+      <div class="icon-wrap">
+        <i class="bi" id="siHeaderIcon"></i>
+      </div>
+      <div>
+        <h2 id="siHeaderTitle"></h2>
+        <p id="siHeaderSub"></p>
+      </div>
+      <div class="step-indicator">
+        <span class="step-dot" id="siDot1"></span>
+        <span class="step-line"></span>
+        <span class="step-dot" id="siDot2"></span>
+      </div>
+    </div>
+
+    <div class="cu-card-body">
+
+      {% include "includes/form_errors_alert.html" with form=form %}
+
+      <form method="post"
+            action="{% url 'transactions:sales_invoice' %}{% if edit_instance %}?edit_pk={{ edit_instance.pk }}{% endif %}"
+            id="siForm"
+            hx-boost="false"
+            novalidate>
+        {% csrf_token %}
+        {% if edit_instance %}<input type="hidden" name="edit_pk" value="{{ edit_instance.pk }}">{% endif %}
+        {{ form.lines_json }}
+
+        <div id="siStep1" class="cust-step"{% if start_step == 2 %} style="display: none;"{% else %} style="display: flex; flex-direction: column;"{% endif %}>
+          <div class="inw-step1-grid">
+          <div class="inw-step1-main-row">
+          <div class="inw-step1-left">
+          <div class="cu-section inw-section-block inw-section-inward-details">
+            <h3 class="inw-section-title">Invoice details</h3>
+            <div class="cu-section-fields">
+              <div class="cu-row-2-eq">
+                <div class="cu-field">
+                  <label class="cu-label">Invoice date <span class="req">*</span></label>
+                  {{ form.invoice_dt }}
+                  {% if form.invoice_dt.errors %}<span class="field-error">{{ form.invoice_dt.errors.0 }}</span>{% endif %}
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">Invoice no. <span class="req">*</span></label>
+                  {{ form.invoice_no }}
+                  {% if form.invoice_no.errors %}<span class="field-error">{{ form.invoice_no.errors.0 }}</span>{% endif %}
+                </div>
+              </div>
+              <div class="cu-row-2-eq">
+                <div class="cu-field">
+                  <label class="cu-label">Customer <span class="req">*</span></label>
+                  {{ form.customer }}
+                  {% if form.customer.errors %}<span class="field-error">{{ form.customer.errors.0 }}</span>{% endif %}
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">Transporter <span class="req">*</span></label>
+                  {{ form.transporter }}
+                  {% if form.transporter.errors %}<span class="field-error">{{ form.transporter.errors.0 }}</span>{% endif %}
+                </div>
+              </div>
+              <div class="cu-field">
+                <label class="cu-label">Sales order <span class="req">*</span></label>
+                {{ form.reference_order }}
+                {% if form.reference_order.errors %}<span class="field-error">{{ form.reference_order.errors.0 }}</span>{% endif %}
+                <p class="sinv-field-hint">Products and batches in step 2 come from this order.</p>
+              </div>
+              <div class="cu-field">
+                <label class="cu-label">Delivery address <span class="req">*</span></label>
+                {{ form.delivery_add }}
+                {% if form.delivery_add.errors %}<span class="field-error">{{ form.delivery_add.errors.0 }}</span>{% endif %}
+              </div>
+              <div class="cu-field">
+                <label class="cu-label">Remarks</label>
+                {{ form.remarks }}
+              </div>
+            </div>
+          </div>
+
+          <div class="cu-section inw-section-block inw-section-transport">
+            <h3 class="inw-section-title">Charges and totals</h3>
+            <div class="cu-section-fields">
+              <div class="cu-row-3-eq sinv-step1-charges-row">
+                <div class="cu-field">
+                  <label class="cu-label">Packing / forwarding</label>
+                  {{ form.pkg_fwd_amt }}
+                  {% if form.pkg_fwd_amt.errors %}<span class="field-error">{{ form.pkg_fwd_amt.errors.0 }}</span>{% endif %}
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">Freight</label>
+                  {{ form.freight_amt }}
+                  {% if form.freight_amt.errors %}<span class="field-error">{{ form.freight_amt.errors.0 }}</span>{% endif %}
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">Other charges</label>
+                  {{ form.oth_charges }}
+                  {% if form.oth_charges.errors %}<span class="field-error">{{ form.oth_charges.errors.0 }}</span>{% endif %}
+                </div>
+              </div>
+              <div class="cu-row-4-eq">
+                <div class="cu-field">
+                  <label class="cu-label">Taxable value</label>
+                  <input type="text" class="cu-input cu-num si-ro-taxable" readonly tabindex="-1" value="0.00">
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">CGST</label>
+                  <input type="text" class="cu-input cu-num si-ro-cgst" readonly tabindex="-1" value="0.00">
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">SGST</label>
+                  <input type="text" class="cu-input cu-num si-ro-sgst" readonly tabindex="-1" value="0.00">
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">IGST</label>
+                  <input type="text" class="cu-input cu-num si-ro-igst" readonly tabindex="-1" value="0.00">
+                </div>
+              </div>
+              <div class="cu-row-2-eq">
+                <div class="cu-field">
+                  <label class="cu-label">Round off (-1 to +1)</label>
+                  {{ form.round_off }}
+                  {% if form.round_off.errors %}<span class="field-error">{{ form.round_off.errors.0 }}</span>{% endif %}
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">Total amount</label>
+                  <input type="text" class="cu-input cu-num si-ro-total" readonly tabindex="-1" value="0.00">
+                </div>
+              </div>
+              <p class="sinv-field-hint">Pre-filled from the sales order when selected; amounts remain editable.</p>
+            </div>
+          </div>
+          </div>
+          </div>
+          </div>
+
+          <div class="cu-actions inw-step1-actions">
+            <button type="button" class="btn-save btn-item-details" id="btnSiNext"><i class="bi bi-grid-3x3-gap"></i> Products &amp; batches</button>
+            {% if edit_instance %}
+            <button type="submit" class="btn-save btn-save-main si-save-btn" id="btnSiSave"
+              {% if form.lines_json.value|default:'[]' == '[]' %}aria-disabled="true"{% endif %}>
+              <i class="bi bi-check2-circle"></i> Update invoice
+            </button>
+            <a href="{% url 'transactions:sales_invoice' %}" class="btn-cancel" id="btnSiCancel"><i class="bi bi-x-lg"></i> Cancel</a>
+            {% else %}
+            <button type="submit" class="btn-save btn-save-main si-save-btn" id="btnSiSave"
+              {% if form.lines_json.value|default:'[]' == '[]' %}aria-disabled="true"{% endif %}>
+              <i class="bi bi-check2-circle"></i> Save invoice
+            </button>
+            <button type="button" class="btn-cancel si-clear-btn" id="btnSiClear" onclick="resetSalesInvoiceForm()"><i class="bi bi-x-lg"></i> Clear</button>
+            {% endif %}
+          </div>
+          <span class="field-error js-err" id="err-step1"></span>
+          <span class="field-error js-err" id="err-lines_json_step1"></span>
+        </div>
+
+        <div id="siStep2" class="cust-step inw-step2"{% if start_step == 2 %} style="display: flex; flex-direction: column;"{% else %} style="display: none;"{% endif %}>
+          <span class="field-error js-err" id="err-lines_json">{% if form.lines_json.errors %}{{ form.lines_json.errors.0 }}{% endif %}</span>
+
+          <div class="prod-grid-wrap inw-items-panel">
+            <div class="prod-grid-toolbar inw-items-toolbar">
+              <span class="prod-grid-label"><i class="bi bi-box-seam"></i> Products &amp; batches</span>
+              <button type="button" class="btn-add-row" id="btnSiAddLine"><i class="bi bi-plus-lg"></i> Add line</button>
+            </div>
+            <div class="inw-lines-outer">
+              <div id="siLineList" class="inw-line-list"></div>
+              <p class="prod-grid-empty inw-line-empty" id="siLineEmpty">No products yet. Use <strong>Add line</strong> to start.</p>
+            </div>
+          </div>
+
+          <div class="cu-actions inw-step2-actions">
+            <button type="button" class="btn-cancel" id="btnSiBack"><i class="bi bi-arrow-left"></i> Back</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-card-header">
+      <i class="bi bi-list-ul"></i>
+      <h3>Recent sales invoices ({{ recent|length }})</h3>
+    </div>
+    <div class="table-scroll-body">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>ID</th>
+            <th>Date</th>
+            <th>Invoice no.</th>
+            <th>Customer</th>
+            <th>Taxable</th>
+            <th>Total</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in recent %}
+          <tr {% if edit_instance and edit_instance.pk == r.invoice_id %}class="row-editing"{% endif %}>
+            <td class="col-idx">{{ forloop.counter }}</td>
+            <td>{{ r.invoice_id }}</td>
+            <td>{{ r.invoice_dt|date:"Y-m-d" }}</td>
+            <td><strong>{{ r.invoice_no }}</strong></td>
+            <td>{{ r.customer.cust_name }}</td>
+            <td>{{ r.taxable_val }}</td>
+            <td>{{ r.total_amt }}</td>
+            <td class="col-actions">
+              <a href="{% url 'transactions:sales_invoice' %}?edit_pk={{ r.invoice_id }}" class="btn-action btn-edit" title="Edit"><i class="bi bi-pencil"></i></a>
+              <button type="button" class="btn-action btn-delete" title="Delete"
+                data-delete-url="{% url 'transactions:sales_invoice_delete' r.invoice_id %}"
+                data-delete-name="{{ r.invoice_no|escapejs }}"
+                onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="empty-row">No sales invoices yet.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,119 @@
+{% extends base_template %}
+{% block title %}Stock adjustment — PharmaERP{% endblock %}
+
+{% block content %}
+<div
+  id="stkAdjRoot"
+  class="cu-page stk-adj-page"
+  data-page-init="stock_adj"
+  data-ajax-masters="{% url 'inventory:stock_adj_masters_ajax' %}"
+  data-ajax-sku-meta="{% url 'inventory:stock_adj_sku_meta_ajax' %}"
+  data-ajax-inv-defaults="{% url 'inventory:stock_adj_inv_defaults_ajax' %}"
+  data-today="{{ today }}"
+>
+  {% if initial_doc %}{{ initial_doc|json_script:"stkAdjInitialDoc" }}{% endif %}
+
+  <header class="inw-page-heading stk-adj-heading">
+    <h1>Stock Adjustment</h1>
+    <p>
+      <strong>Opening balance</strong> — establishes stock or carries it forward: 
+      <strong>Stock Adjustment</strong> — changes existing ledger balances only (positive or negative batch qty).
+    </p>
+  </header>
+
+  <div class="cu-panel stk-adj-panel">
+    <div class="cu-card-header stk-adj-card-head">
+      <div class="icon-wrap"><i class="bi bi-sliders2-vertical"></i></div>
+      <div>
+        <h2>Document</h2>
+        <p>Add lines, then click a line to edit <strong>batch details</strong> below (quantities are saved when you save the document).</p>
+      </div>
+    </div>
+
+    <div class="cu-card-body stk-adj-body">
+      <form method="post" class="stk-adj-form" id="stkAdjMainForm" novalidate hx-boost="false">
+        {% csrf_token %}
+        <input type="hidden" name="edit_pk" id="stkAdjEditPk" value="{{ edit_pk|default:'' }}">
+        <input type="hidden" name="stk_adj_document" id="stkAdjDocField" value="">
+
+        <div class="stk-adj-header-grid">
+          <div class="cu-field">
+            <label class="cu-label" for="stkAdjCustomer">Customer</label>
+            <select id="stkAdjCustomer" class="cu-select searchable-dropdown" required>
+              <option value="">— Select —</option>
+              {% for c in customers %}
+                <option value="{{ c.pk }}">{{ c.cust_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="cu-field">
+            <label class="cu-label" for="stkAdjDate">Document date</label>
+            <input type="date" id="stkAdjDate" class="cu-input" required>
+          </div>
+          <div class="cu-field stk-adj-radio-field">
+            <span class="cu-label">Type</span>
+            <div class="stk-adj-radio-row">
+              <label><input type="radio" name="stk_adj_type_ui" value="O"> Opening balance</label>
+              <label><input type="radio" name="stk_adj_type_ui" value="A" checked> Stock adjustment</label>
+            </div>
+          </div>
+          <div class="cu-field">
+            <label class="cu-label" for="stkAdjItemType">Item type</label>
+            <select id="stkAdjItemType" class="cu-select searchable-dropdown" required>
+              <option value="">— Select —</option>
+              {% for t in item_types %}
+                <option value="{{ t.pk }}">{{ t.item_type_name }} ({{ t.item_category.prod_cat_id }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="cu-field stk-adj-remarks-field">
+            <label class="cu-label" for="stkAdjRemarks">Remarks</label>
+            <textarea id="stkAdjRemarks" class="cu-input" rows="2" maxlength="2000"></textarea>
+          </div>
+        </div>
+
+        <div class="stk-adj-toolbar">
+          <button type="button" class="btn-secondary" id="stkAdjBtnAddLine">Add line</button>
+          <span class="stk-adj-hint" id="stkAdjModeHint"></span>
+        </div>
+
+        <div class="stk-adj-grid-wrap">
+          <table class="stk-adj-table" id="stkAdjLineTable">
+            <thead>
+              <tr>
+                <th>Product / item</th>
+                <th class="num">Qty</th>
+                <th>Remarks</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="stkAdjLineTbody"></tbody>
+          </table>
+          <p class="stk-adj-empty" id="stkAdjLineEmpty">No lines yet. Choose customer and item type, then <strong>Add line</strong>.</p>
+        </div>
+
+        <div class="stk-adj-batch-panel" id="stkAdjBatchPanel">
+          <h3>Batch details <span id="stkAdjBatchTitle"></span></h3>
+          <table class="stk-adj-table stk-adj-batch-table">
+            <thead>
+              <tr>
+                <th>Batch no.</th>
+                <th>Mfg date</th>
+                <th>Exp date</th>
+                <th class="num">Batch qty</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="stkAdjBatchTbody"></tbody>
+          </table>
+          <button type="button" class="btn-secondary stk-adj-btn-batch" id="stkAdjBtnAddBatch">Add batch row</button>
+        </div>
+
+        <div class="stk-adj-actions">
+          <button type="submit" class="btn-primary" id="stkAdjBtnSave">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

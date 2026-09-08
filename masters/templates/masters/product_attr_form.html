@@ -1,0 +1,340 @@
+{% extends base_template %}
+{% load static %}
+{% block title %}Product Attributes — PharmaERP{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/masters/product_attr.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="cu-page product-attr-page" data-page-init="product_attr">
+
+  <!-- ── Heading ──────────────────────────────────────────────── -->
+  <div class="cu-heading">
+    <h1>Product Attribute Master</h1>
+    <p>Manage colours, shapes, coating types, product categories and capsule types from one place.</p>
+  </div>
+
+  <!-- ── TYPE SELECTOR CARDS ──────────────────────────────────── -->
+  <div class="attr-selector">
+
+    <div class="attr-card {% if attr_type == 'colour' %}active{% endif %}" data-type="colour">
+      <i class="bi bi-palette"></i>
+      <span>Product<br>Colour</span>
+    </div>
+
+    <div class="attr-card {% if attr_type == 'shape' %}active{% endif %}" data-type="shape">
+      <i class="bi bi-pentagon"></i>
+      <span>Product<br>Shape</span>
+    </div>
+
+    <div class="attr-card {% if attr_type == 'coating' %}active{% endif %}" data-type="coating">
+      <i class="bi bi-layers"></i>
+      <span>Coating<br>Type</span>
+    </div>
+
+    <div class="attr-card {% if attr_type == 'category' %}active{% endif %}" data-type="category">
+      <i class="bi bi-tag"></i>
+      <span>Product<br>Category</span>
+    </div>
+
+    <div class="attr-card {% if attr_type == 'capsule' %}active{% endif %}" data-type="capsule">
+      <i class="bi bi-capsule"></i>
+      <span>Capsule<br>Types</span>
+    </div>
+
+  </div>
+
+  <!-- ── FORM PANEL ─────────────────────────────────────────── -->
+  <div class="cu-panel" id="formPanel">
+
+    <div class="cu-card-header">
+      <div class="icon-wrap">
+        <i id="headerIcon" class="bi
+          {% if attr_type == 'colour' %}bi-palette
+          {% elif attr_type == 'shape' %}bi-pentagon
+          {% elif attr_type == 'coating' %}bi-layers
+          {% elif attr_type == 'category' %}bi-tag
+          {% elif attr_type == 'capsule' %}bi-capsule
+          {% endif %}"></i>
+      </div>
+      <div>
+        <h2 id="headerTitle">
+          {% if edit_instance %}Edit{% else %}New{% endif %}
+          {% if attr_type == 'colour' %}Colour Name
+          {% elif attr_type == 'shape' %}Shape Name
+          {% elif attr_type == 'coating' %}Coating Type
+          {% elif attr_type == 'category' %}Category Name
+          {% elif attr_type == 'capsule' %}Capsule Type
+          {% endif %}
+        </h2>
+        <p id="headerSubtitle">
+          {% if edit_instance %}Update the record below{% else %}
+            Fill in the details and click Save
+          {% endif %}
+        </p>
+      </div>
+    </div>
+
+    <div class="cu-card-body">
+
+      {% include "includes/form_errors_alert.html" with form=form %}
+
+      <form method="POST" action="{% url 'product_attr' %}?type={{ attr_type }}" id="attrForm">
+        {% csrf_token %}
+      
+        <!-- Hidden: which attribute type is being submitted -->
+        <input type="hidden" name="attr_type" id="attrTypeInput" value="{{ attr_type }}">
+        <!-- Hidden: pk for edit mode -->
+        <input type="hidden" name="edit_pk"   id="editPkField"   value="{{ edit_instance.pk|default:'' }}">
+
+        <div class="cu-section">
+          <div class="cu-section-fields">
+
+            <!-- ── SINGLE-FIELD TYPES: colour, shape, coating ─── -->
+            <div id="rowSingle"
+              {% if attr_type == 'category' or attr_type == 'capsule' %}style="display:none"{% endif %}>
+              <div class="cu-field">
+                <label class="cu-label" id="singleLabel" for="attrNameInput">
+                  {% if attr_type == 'colour' %}Colour Name
+                  {% elif attr_type == 'shape' %}Shape Name
+                  {% elif attr_type == 'coating' %}Coating Type
+                  {% else %}Name
+                  {% endif %} <span class="req">*</span>
+                </label>
+                <input type="text" name="name"
+                  id="attrNameInput"
+                  class="cu-input"
+                  placeholder="Enter name"
+                  value="{{ form.name.value|default:'' }}"
+                  autocomplete="off" />
+                {% if form.name.errors %}
+                  <span class="field-error">{{ form.name.errors.0 }}</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- ── PRODUCT CATEGORY (id + name) ─────────────── -->
+            <div id="rowCategory"
+              {% if attr_type != 'category' %}style="display:none"{% endif %}>
+              <div class="cu-row-cat">
+
+                <div class="cu-field">
+                  <label class="cu-label" for="prodCatIdInput">Category ID <span class="req">*</span> <span style="font-weight:400;color:var(--text-light)">(2 chars)</span></label>
+                  <input type="text" name="prod_cat_id" id="prodCatIdInput"
+                    class="cu-input" placeholder="e.g. TB"
+                    value="{{ form.prod_cat_id.value|default:'' }}"
+                    maxlength="2" autocomplete="off"
+                    style="text-transform:uppercase" />
+                  {% if form.prod_cat_id.errors %}
+                    <span class="field-error">{{ form.prod_cat_id.errors.0 }}</span>
+                  {% endif %}
+                </div>
+
+                <div class="cu-field">
+                  <label class="cu-label" for="prodCatNameInput">Category Name <span class="req">*</span></label>
+                  <input type="text" name="prod_cat_name" id="prodCatNameInput"
+                    class="cu-input" placeholder="Enter category name"
+                    value="{{ form.prod_cat_name.value|default:'' }}"
+                    autocomplete="off" />
+                  {% if form.prod_cat_name.errors %}
+                    <span class="field-error">{{ form.prod_cat_name.errors.0 }}</span>
+                  {% endif %}
+                </div>
+
+              </div>
+            </div>
+
+            <!-- ── CAPSULE (size + colour + preview) ────────── -->
+            <div id="rowCapsule"
+              {% if attr_type != 'capsule' %}style="display:none"{% endif %}>
+
+              <div class="cu-row-2">
+
+                <div class="cu-field">
+                  <label class="cu-label" for="capsuleSizeInput">Capsule Size <span class="req">*</span></label>
+                  <input type="text" name="capsule_size" id="capsuleSizeInput"
+                    class="cu-input" placeholder="e.g. Size 0"
+                    value="{{ form.capsule_size.value|default:'' }}"
+                    autocomplete="off" />
+                  {% if form.capsule_size.errors %}
+                    <span class="field-error">{{ form.capsule_size.errors.0 }}</span>
+                  {% endif %}
+                </div>
+
+                <div class="cu-field">
+                  <label class="cu-label" for="capsuleColorInput">Capsule Colour <span class="req">*</span></label>
+                  <input type="text" name="capsule_color" id="capsuleColorInput"
+                    class="cu-input" placeholder="e.g. Clear"
+                    value="{{ form.capsule_color.value|default:'' }}"
+                    autocomplete="off" />
+                  {% if form.capsule_color.errors %}
+                    <span class="field-error">{{ form.capsule_color.errors.0 }}</span>
+                  {% endif %}
+                </div>
+
+              </div>
+
+              <!-- Auto-generated name preview -->
+              <div id="capsulePreview" class="capsule-preview
+                {% if form.capsule_size.value or form.capsule_color.value %}show{% endif %}">
+                Auto-generated name: <strong>{{ form.capsule_size.value|default:'' }}{% if form.capsule_size.value and form.capsule_color.value %} {% endif %}{{ form.capsule_color.value|default:'' }}</strong>
+              </div>
+
+            </div>
+
+          </div>
+        </div><!-- /.cu-section -->
+
+        <!-- Action Buttons -->
+        <div class="cu-actions">
+          {% if edit_instance %}
+            <a href="{% url 'product_attr' %}?type={{ attr_type }}" class="btn-cancel">
+              <i class="bi bi-x"></i> Cancel
+            </a>
+            <button type="submit" class="btn-save">
+              <i class="bi bi-check2-circle"></i> Update Record
+            </button>
+          {% else %}
+            <button type="submit" class="btn-save">
+              <i class="bi bi-check2-circle"></i> Save Record
+            </button>
+            <button type="button" class="btn-cancel" onclick="resetForm()">
+              <i class="bi bi-x"></i> Clear
+            </button>
+          {% endif %}
+        </div>
+
+      </form>
+    </div>
+  </div><!-- /.cu-panel -->
+
+  <!-- ── RECORDS TABLE ────────────────────────────────────────── -->
+  <div class="table-card">
+    <div class="table-card-header">
+      <div class="table-card-header-left">
+        <i class="bi bi-list-ul"></i>
+        <h3 id="tableTitle">All Records ({{ records|length }})</h3>
+      </div>
+    </div>
+
+    <div class="table-scroll-body">
+      <table>
+        <thead id="attrTableHead">
+          <tr>
+            {% if attr_type == 'colour' %}
+              <th>#</th><th>Colour Name</th><th>Actions</th>
+            {% elif attr_type == 'shape' %}
+              <th>#</th><th>Shape Name</th><th>Actions</th>
+            {% elif attr_type == 'coating' %}
+              <th>#</th><th>Coating Type</th><th>Actions</th>
+            {% elif attr_type == 'category' %}
+              <th>#</th><th>ID</th><th>Category Name</th><th>Actions</th>
+            {% elif attr_type == 'capsule' %}
+              <th>#</th><th>Capsule Name</th><th>Size</th><th>Colour</th><th>Actions</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody id="attrTableBody">
+          {% for r in records %}
+          <tr {% if edit_instance and edit_instance.pk|stringformat:"s" == r.color_id|default:r.shape_id|default:r.coating_id|default:r.prod_cat_id|default:r.capsule_id|stringformat:"s" %}class="row-editing"{% endif %}>
+            <td class="col-idx">{{ forloop.counter }}</td>
+
+            {% if attr_type == 'colour' %}
+              <td><strong>{{ r.color_name }}</strong></td>
+              <td class="col-actions">
+                <a href="?type=colour&edit_pk={{ r.color_id }}"
+                   hx-get="?type=colour&edit_pk={{ r.color_id }}"
+                   hx-target="#mainContent"
+                   hx-swap="innerHTML"
+                   hx-push-url="true"
+                   hx-indicator="#page-loader"
+                   class="btn-action btn-edit" title="Edit"><i class="bi bi-pencil"></i></a>
+                <button type="button" class="btn-action btn-delete" title="Delete"
+                  data-delete-url="{% url 'product_attr_delete' 'colour' r.color_id %}"
+                  data-delete-name="{{ r.color_name|escapejs }}"
+                  onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)"><i class="bi bi-trash"></i></button>
+              </td>
+
+            {% elif attr_type == 'shape' %}
+              <td><strong>{{ r.shape_name }}</strong></td>
+              <td class="col-actions">
+                <a href="?type=shape&edit_pk={{ r.shape_id }}"
+                   hx-get="?type=shape&edit_pk={{ r.shape_id }}"
+                   hx-target="#mainContent"
+                   hx-swap="innerHTML"
+                   hx-push-url="true"
+                   hx-indicator="#page-loader"
+                   class="btn-action btn-edit" title="Edit"><i class="bi bi-pencil"></i></a>
+                <button type="button" class="btn-action btn-delete" title="Delete"
+                  data-delete-url="{% url 'product_attr_delete' 'shape' r.shape_id %}"
+                  data-delete-name="{{ r.shape_name|escapejs }}"
+                  onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)"><i class="bi bi-trash"></i></button>
+              </td>
+
+            {% elif attr_type == 'coating' %}
+              <td><strong>{{ r.coating_name }}</strong></td>
+              <td class="col-actions">
+                <a href="?type=coating&edit_pk={{ r.coating_id }}"
+                   hx-get="?type=coating&edit_pk={{ r.coating_id }}"
+                   hx-target="#mainContent"
+                   hx-swap="innerHTML"
+                   hx-push-url="true"
+                   hx-indicator="#page-loader"
+                   class="btn-action btn-edit" title="Edit"><i class="bi bi-pencil"></i></a>
+                <button type="button" class="btn-action btn-delete" title="Delete"
+                  data-delete-url="{% url 'product_attr_delete' 'coating' r.coating_id %}"
+                  data-delete-name="{{ r.coating_name|escapejs }}"
+                  onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)"><i class="bi bi-trash"></i></button>
+              </td>
+
+            {% elif attr_type == 'category' %}
+              <td><span class="attr-badge">{{ r.prod_cat_id }}</span></td>
+              <td><strong>{{ r.prod_cat_name }}</strong></td>
+              <td class="col-actions">
+                <a href="?type=category&edit_pk={{ r.prod_cat_id }}"
+                   hx-get="?type=category&edit_pk={{ r.prod_cat_id }}"
+                   hx-target="#mainContent"
+                   hx-swap="innerHTML"
+                   hx-push-url="true"
+                   hx-indicator="#page-loader"
+                   class="btn-action btn-edit" title="Edit"><i class="bi bi-pencil"></i></a>
+                <button type="button" class="btn-action btn-delete" title="Delete"
+                  data-delete-url="{% url 'product_attr_delete' 'category' r.prod_cat_id %}"
+                  data-delete-name="{{ r.prod_cat_name|escapejs }}"
+                  onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)"><i class="bi bi-trash"></i></button>
+              </td>
+
+            {% elif attr_type == 'capsule' %}
+              <td><strong>{{ r.capsule_name }}</strong></td>
+              <td>{{ r.capsule_size }}</td>
+              <td>{{ r.capsule_color }}</td>
+              <td class="col-actions">
+                <a href="?type=capsule&edit_pk={{ r.capsule_id }}"
+                   hx-get="?type=capsule&edit_pk={{ r.capsule_id }}"
+                   hx-target="#mainContent"
+                   hx-swap="innerHTML"
+                   hx-push-url="true"
+                   hx-indicator="#page-loader"
+                   class="btn-action btn-edit" title="Edit"><i class="bi bi-pencil"></i></a>
+                <button type="button" class="btn-action btn-delete" title="Delete"
+                  data-delete-url="{% url 'product_attr_delete' 'capsule' r.capsule_id %}"
+                  data-delete-name="{{ r.capsule_name|escapejs }}"
+                  onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)"><i class="bi bi-trash"></i></button>
+              </td>
+            {% endif %}
+
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="empty-row">No records found. Use the form above to add one.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div><!-- /.table-card -->
+
+</div><!-- /.cu-page -->
+{% endblock %}
+

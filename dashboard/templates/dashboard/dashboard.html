@@ -1,0 +1,48 @@
+{% extends base_template %}
+<!--
+  dashboard/dashboard.html
+  Main dashboard page shown after login.
+  Extends base.html which provides the navbar and sidebar.
+-->
+
+{% block title %}Dashboard — PharmaERP{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<div class="page-header">
+  <h1>Dashboard</h1>
+  <p>Welcome back, {{ request.user.get_full_name|default:request.user.username }}. Here's an overview of your system.
+  </p>
+</div>
+
+<!-- Welcome Banner -->
+<div class="welcome-banner">
+  <div class="welcome-text">
+    <h2>
+      Good day,
+      {% if request.user.get_full_name %}
+      {{ request.user.get_full_name }}
+      {% else %}
+      {{ request.user.username }}
+      {% endif %}!
+    </h2>
+    <p>
+      Logged in as
+      {% if request.user.profile.role %}
+      {{ request.user.profile.role }}
+      {% else %}
+      User
+      {% endif %}
+      &nbsp;|&nbsp; RenumedERP v1.0
+    </p>
+  </div>
+  <i class="bi bi-capsule-pill welcome-icon"></i>
+</div>
+
+{% endblock %}

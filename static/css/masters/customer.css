@@ -1,0 +1,600 @@
+/*
+  static/css/masters/customer.css
+  Customer Master — two-step wizard (single panel) + bottom table.
+  Fully scoped under .customer-page. No page scroll.
+*/
+
+/* ── Page shell ──────────────────────────────────────────────── */
+.customer-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: auto;
+  box-sizing: border-box;
+  gap: 8px;
+}
+.customer-page .cu-heading {
+  width: 100%;
+  flex-shrink: 0;
+}
+.customer-page .cu-heading h1 {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-dark);
+  margin: 0 0 1px;
+}
+.customer-page .cu-heading p {
+  font-size: 12px;
+  color: var(--text-mid);
+  margin: 0;
+}
+
+/* ── Single form panel ──────────────────────────────────────── */
+.customer-page .cu-panel {
+  width: 100%;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.09);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+/* ── Card header ────────────────────────────────────────────── */
+.customer-page .cu-card-header {
+  background: var(--navy);
+  padding: 7px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.customer-page .cu-card-header .icon-wrap {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #fff;
+  flex-shrink: 0;
+}
+.customer-page .cu-card-header h2 {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 1px;
+}
+.customer-page .cu-card-header p {
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.65);
+  margin: 0;
+}
+
+/* Step indicator dots */
+.step-indicator {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  transition: background 0.2s;
+}
+.step-dot.active {
+  background: #fff;
+}
+.step-dot.done {
+  background: rgba(255, 255, 255, 0.6);
+}
+.step-line {
+  width: 20px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ── Card body ──────────────────────────────────────────────── */
+.customer-page .cu-card-body {
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Error banner ───────────────────────────────────────────── */
+.customer-page .cu-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff0f0;
+  border: 1px solid #f5c0c0;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 11.5px;
+  color: #c0392b;
+}
+.customer-page .cu-error-banner i {
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+/* ── Steps ──────────────────────────────────────────────────── */
+.cust-step {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Section wrapper ────────────────────────────────────────── */
+.customer-page .cu-section {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.customer-page .cu-section-fields {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--form-field-row-gap);
+}
+
+/* ── Grid rows ──────────────────────────────────────────────── */
+.customer-page .cu-row-2-eq {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--form-field-grid-gap);
+}
+.customer-page .cu-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--form-field-grid-gap);
+}
+
+/* ── Fields ─────────────────────────────────────────────────── */
+.customer-page .cu-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--form-field-inner-gap);
+}
+.customer-page .cu-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+.customer-page .cu-label .req {
+  color: #e84040;
+  margin-left: 2px;
+}
+/* .field-error + validation borders: forms_consistency.css */
+.customer-page .js-err:empty {
+  display: none;
+}
+
+/* ── Input ──────────────────────────────────────────────────── */
+.customer-page .cu-input {
+  height: 29px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  color: var(--text-dark);
+  background: var(--off-white);
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    background 0.15s;
+}
+.customer-page .cu-input::placeholder {
+  color: var(--text-light);
+}
+.customer-page .cu-input:focus {
+  border-color: var(--accent);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.12);
+}
+
+/* ── Textarea ───────────────────────────────────────────────── */
+.customer-page .cu-textarea {
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  color: var(--text-dark);
+  background: var(--off-white);
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  resize: none;
+  height: 42px;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+.customer-page .cu-textarea::placeholder {
+  color: var(--text-light);
+}
+.customer-page .cu-textarea:focus {
+  border-color: var(--accent);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.12);
+}
+
+/* ── Select ─────────────────────────────────────────────────── */
+.customer-page .cu-select {
+  height: 29px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  padding: 0 26px 0 8px;
+  font-size: 12px;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  color: var(--text-dark);
+  background: var(--off-white);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  appearance: none;
+  outline: none;
+  cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+.customer-page .cu-select:focus {
+  border-color: var(--accent);
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.12);
+}
+
+/* ── Actions ────────────────────────────────────────────────── */
+.customer-page .cu-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+/* BOM-style header step: primary save + auxiliary grid (same layout as bom.css) */
+.customer-page .btn-item-details {
+  flex: 0 0 auto;
+  background: #e8f8fc;
+  color: #0b5872;
+  border: 1px solid #9bdff0;
+}
+.customer-page .btn-save-main {
+  flex: 0 0 auto;
+  min-width: 150px;
+  font-weight: 700;
+  box-shadow: 0 2px 10px rgba(0, 180, 216, 0.25);
+}
+.customer-page #step1 .cu-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 3fr) minmax(0, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+.customer-page #step1 .cu-actions .btn-cancel,
+.customer-page #step1 .cu-actions .btn-save-main,
+.customer-page #step1 .cu-actions .btn-item-details {
+  width: 100%;
+  justify-content: center;
+  min-width: 0;
+}
+.customer-page #step1 .cu-actions .btn-save-main {
+  min-width: 0;
+}
+/* Step 1 uses CSS grid like BOM — do not stretch Save with generic flex:1 */
+.customer-page #step1 .cu-actions .btn-save {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.customer-page .btn-save[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.customer-page #err-products_json:empty {
+  display: none;
+}
+.customer-page #err-products_json:not(:empty) {
+  display: block;
+  font-size: 10px;
+  color: #e84040;
+  margin-top: 4px;
+}
+.customer-page .btn-cancel {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 14px;
+  height: 30px;
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--text-mid);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.customer-page .btn-cancel:hover {
+  background: var(--off-white);
+  border-color: #94a3b8;
+}
+.customer-page .btn-save {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  border: none;
+  border-radius: 7px;
+  background: linear-gradient(135deg, var(--primary-action), var(--primary-action-hover));
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.customer-page .btn-save:hover {
+  background: linear-gradient(135deg, var(--primary-action-hover), var(--primary-action-active));
+  box-shadow: var(--shadow-primary);
+}
+
+/* ══ STEP 2: Product grid ════════════════════════════════════ */
+.prod-grid-wrap {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 6px;
+  display: flex;
+  flex-direction: column;
+}
+.prod-grid-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px;
+  background: var(--off-white);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.prod-grid-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+.btn-add-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px;
+  height: 24px;
+  border-radius: 5px;
+  border: 1.5px solid var(--accent2);
+  color: var(--accent2);
+  background: rgba(0, 180, 216, 0.06);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.btn-add-row:hover {
+  background: var(--accent2);
+  color: #fff;
+}
+
+.prod-grid-scroll {
+  overflow-y: auto;
+  max-height: 180px;
+}
+
+.prod-grid-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 20px;
+  font-size: 11.5px;
+  color: var(--text-light);
+  margin: 0;
+}
+
+.prod-grid-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.prod-grid-table thead th {
+  padding: 5px 8px;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--text-mid);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--off-white);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.prod-grid-table .col-prod {
+  width: 28%;
+}
+.prod-grid-table .col-lic {
+  width: 12%;
+}
+.prod-grid-table .col-licdet {
+  width: 36%;
+}
+.prod-grid-table .col-batch {
+  width: 14%;
+}
+.prod-grid-table .col-del {
+  width: 10%;
+  text-align: center;
+}
+.prod-grid-table thead th .req {
+  color: #e84040;
+}
+
+.prod-grid-table tbody td {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--off-white);
+  vertical-align: top;
+}
+.prod-grid-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.prod-grid-table tbody tr:hover {
+  background: #fafcff;
+}
+
+/* Grid inputs, lic toggle, delete row: forms_consistency.css (.cu-page[data-page-init] …) */
+
+/* ── Bottom display table ────────────────────────────────────── */
+.customer-page .table-card {
+  width: 100%;
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.customer-page .table-card-header {
+  padding: 7px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.customer-page .table-card-header i {
+  color: var(--accent2);
+  font-size: 15px;
+}
+.customer-page .table-card-header h3 {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+.customer-page table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.customer-page thead th {
+  padding: 6px 12px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-mid);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  background: var(--off-white);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.customer-page tbody td {
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-dark);
+  border-bottom: 1px solid var(--off-white);
+  vertical-align: middle;
+}
+.customer-page tbody tr:last-child td {
+  border-bottom: none;
+}
+.customer-page .col-idx {
+  width: 36px;
+  color: var(--text-light);
+  font-size: 11px;
+}
+.customer-page .col-actions {
+  width: 72px;
+}
+.customer-page .short-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  background: rgba(0, 180, 216, 0.1);
+  color: var(--accent2);
+}
+.customer-page .prod-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(11, 31, 58, 0.08);
+  color: var(--navy);
+  font-size: 11px;
+  font-weight: 700;
+}
+.customer-page .empty-row {
+  text-align: center;
+  color: var(--text-light);
+  padding: 24px !important;
+  font-size: 12.5px;
+}
+.customer-page .btn-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  text-decoration: none;
+}
+.customer-page .btn-edit {
+  background: rgba(0, 180, 216, 0.1);
+  color: var(--accent2);
+}
+.customer-page .btn-edit:hover {
+  background: var(--accent2);
+  color: #fff;
+}
+.customer-page .btn-delete {
+  background: rgba(232, 64, 64, 0.1);
+  color: #e84040;
+  margin-left: 3px;
+}
+.customer-page .btn-delete:hover {
+  background: #e84040;
+  color: #fff;
+}
+
+

@@ -1,0 +1,237 @@
+/*
+  RM dispensing — scoped under .rm-dispensing-page.
+  Uses base tokens + forms_consistency.css.
+*/
+
+.rm-dispensing-page {
+  --rm-table-chrome-r: 10px;
+  --rm-table-y-max: min(52vh, 520px);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: none;
+  gap: 14px;
+  padding-bottom: 24px;
+  align-items: stretch;
+  min-height: 0;
+}
+
+.rm-dispensing-page .rm-page-heading {
+  width: 100%;
+  text-align: left;
+}
+
+.rm-dispensing-page .rm-page-heading h1 {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.02em;
+  margin: 0 0 4px;
+}
+
+.rm-dispensing-page .rm-page-heading p {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-mid);
+  margin: 0;
+  max-width: 56rem;
+}
+
+.rm-dispensing-page .rm-grid-block {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-height: 0;
+}
+
+.rm-dispensing-page .rm-grid-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.rm-dispensing-page.cu-page[data-page-init] .rm-section-no-strip .cu-section-fields.rm-grid-fields {
+  padding: 0 !important;
+  gap: 0;
+}
+
+.rm-dispensing-page .rm-panel-shell {
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.rm-dispensing-page .rm-table-wrap {
+  width: 100%;
+  border-radius: var(--rm-table-chrome-r);
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: var(--rm-table-y-max);
+  -webkit-overflow-scrolling: touch;
+}
+
+.rm-dispensing-page .rm-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.rm-dispensing-page .rm-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 6px 10px;
+  font-size: var(--table-header-fz);
+  font-weight: var(--table-header-fw);
+  letter-spacing: var(--table-header-ls);
+  text-transform: uppercase;
+  color: var(--text-mid);
+  background: var(--table-header-bg);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.06);
+}
+
+.rm-dispensing-page .rm-table tbody td {
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-dark);
+  border-bottom: 1px solid var(--table-row-line);
+  vertical-align: middle;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.rm-dispensing-page td.rm-stdqty {
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-mid);
+}
+
+.rm-dispensing-page .rm-stage-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rm-dispensing-page .rm-stage-check input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+.rm-dispensing-page .rm-qty-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rm-dispensing-page .rm-qty-cell .rm-uom {
+  font-size: 12px;
+  color: var(--text-mid);
+  white-space: nowrap;
+}
+
+.rm-dispensing-page .rm-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.rm-dispensing-page .rm-muted {
+  color: var(--text-light, var(--text-mid));
+  font-style: italic;
+  text-align: center;
+}
+
+.rm-dispensing-page .rm-ro {
+  color: var(--text-mid);
+}
+
+.rm-dispensing-page .rm-num {
+  text-align: right;
+}
+
+.rm-dispensing-page td.rm-perlakh {
+  text-align: left;
+}
+
+.rm-dispensing-page .rm-table input.cu-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.rm-dispensing-page .rm-grid-error-wrap {
+  padding: 8px 10px 0;
+}
+
+.rm-dispensing-page .rm-actions {
+  margin-top: 10px;
+}
+
+/* Records list toolbar + table (reuse log-sheet-like layout) */
+.rm-dispensing-page .rm-data-block {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  min-height: 0;
+}
+
+.rm-dispensing-page .rm-list-panel {
+  margin-top: 14px;
+}
+
+.rm-dispensing-page .rm-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rm-dispensing-page .rm-toolbar-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.rm-dispensing-page .rm-toolbar-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-mid);
+  margin-right: 4px;
+}
+
+.rm-dispensing-page .rm-toolbar-field {
+  margin-bottom: 0;
+  min-width: 140px;
+}
+
+.rm-dispensing-page .rm-toolbar-btn {
+  margin-bottom: 2px;
+}
+
+.rm-dispensing-page .rm-toolbar-err {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.rm-dispensing-page .rm-toolbar-err .field-error {
+  display: block;
+}
+
+.rm-dispensing-page .rm-table-wrap--list {
+  max-height: min(46vh, 460px);
+}
+
+.rm-dispensing-page .rm-table--list th,
+.rm-dispensing-page .rm-table--list td {
+  width: calc(100% / 9);
+}
+

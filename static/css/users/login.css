@@ -1,0 +1,369 @@
+/* ── Reset & Base ─────────────────────────────── */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --navy: #0B1F3A;
+      --navy-mid: #132D52;
+      --accent: #00B4D8;
+      --accent2: #005A72;
+      --white: #FFFFFF;
+      --off-white: #F4F7FB;
+      --text-dark: #0F1B2E;
+      --text-mid: #3A4F62;
+      --text-light: #5A6B7C;
+      --border: #C5D4E6;
+      --border-interactive: #8FA6BC;
+      --primary-action: #055A72;
+      --primary-action-hover: #044357;
+      --primary-action-active: #033945;
+      --shadow-primary: 0 3px 12px rgba(5, 72, 90, 0.35);
+      --error: #B71C1C;
+      --success: #0D5C2E;
+      --radius: 10px;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--off-white);
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* ── Outer Card ───────────────────────────────── */
+    .login-card {
+      display: flex;
+      width: 960px;
+      height: 580px;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 24px 80px rgba(11, 31, 58, 0.25);
+    }
+
+    /* ── LEFT PANEL — Branding ────────────────────── */
+    .left-panel {
+      width: 45%;
+      /* Soft blue — darker than before, still enough contrast for dark logo */
+      background: linear-gradient(145deg, #C8DCF0 0%, #B0D0E8 45%, #9ABED8 100%);
+      padding: 50px 44px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Decorative background circles */
+    .left-panel::before {
+      content: '';
+      position: absolute;
+      width: 320px;
+      height: 320px;
+      border-radius: 50%;
+      border: 40px solid rgba(11, 31, 58, 0.08);
+      top: -80px;
+      right: -80px;
+    }
+
+    .left-panel::after {
+      content: '';
+      position: absolute;
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      border: 30px solid rgba(11, 31, 58, 0.06);
+      bottom: -40px;
+      left: -40px;
+    }
+
+    /* Logo / Brand area */
+    .brand-area {
+      position: relative;
+      z-index: 1;
+    }
+
+    .brand-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: nowrap;
+    }
+
+    .brand-icon {
+      width: 64px;
+      height: 64px;
+      background: transparent;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex: 0 0 64px;
+    }
+
+    .brand-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .brand-org-name {
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--navy);
+      line-height: 1.2;
+      flex: 1 1 auto;
+      min-width: 0;
+      max-width: none;
+    }
+
+    .brand-name {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--navy);
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+    }
+
+    .brand-name span {
+      color: var(--accent2);
+    }
+
+    .brand-tagline {
+      font-size: 14px;
+      font-weight:bold; 
+      color: var(--navy);
+      margin-top: 6px;
+      letter-spacing: 0.3px;
+    }
+
+    /* Feature list */
+    .features {
+      position: relative;
+      z-index: 1;
+    }
+
+    .features-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--navy-mid);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-top: 10px;
+      margin-bottom: 16px;
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .feature-item i {
+      font-size: 12px;
+      color: var(--accent2);
+      flex-shrink: 0;
+    }
+
+    .feature-item span {
+      font-size: 13.5px;
+      font-weight: 400;
+      color: var(--text-dark);
+    }
+
+    /* Version badge at bottom */
+    .version-badge {
+      position: relative;
+      z-index: 1;
+      font-size: 12px;
+      font-weight:bold;
+      font-style:italic;
+      color: var(--text-dark);
+    }
+
+
+    /* ── RIGHT PANEL — Login Form ─────────────────── */
+    .right-panel {
+      width: 55%;
+      background: var(--white);
+      padding: 52px 50px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .login-heading {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text-dark);
+      margin-bottom: 6px;
+      letter-spacing: -0.5px;
+    }
+
+    .login-subheading {
+      font-size: 13.5px;
+      font-weight: 400;
+      color: var(--text-mid);
+      margin-bottom: 36px;
+    }
+
+    /* Django messages (error/success) */
+    .alert {
+      padding: 11px 15px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .alert-error {
+      background: #FFF0F0;
+      color: var(--error);
+      border-left: 3px solid var(--error);
+    }
+
+    .alert-success {
+      background: #F0FFF4;
+      color: var(--success);
+      border-left: 3px solid var(--success);
+    }
+
+    .alert-info {
+      background: #F0F8FF;
+      color: #0077A8;
+      border-left: 3px solid #0077A8;
+    }
+
+    /* Form fields */
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-dark);
+      margin-bottom: 7px;
+      letter-spacing: 0.2px;
+    }
+
+    /* Wrapper for input + icon */
+    .input-wrapper {
+      position: relative;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 16px;
+      color: var(--text-light);
+      pointer-events: none;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px 14px 12px 42px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 14px;
+      color: var(--text-dark);
+      background: var(--off-white);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    }
+
+    .form-input:focus {
+      border-color: var(--accent);
+      background: var(--white);
+      box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.12);
+    }
+
+    /* Password toggle button */
+    .pwd-toggle {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      color: var(--text-light);
+      font-size: 16px;
+      transition: color 0.2s;
+    }
+
+    .pwd-toggle:hover {
+      color: var(--accent2);
+    }
+
+    /* Login button */
+    .btn-login {
+      width: 100%;
+      padding: 13px;
+      background: linear-gradient(135deg, var(--primary-action) 0%, var(--primary-action-hover) 100%);
+      color: var(--white);
+      border: none;
+      border-radius: var(--radius);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-login:hover {
+      background: linear-gradient(135deg, var(--primary-action-hover) 0%, var(--primary-action-active) 100%);
+      box-shadow: var(--shadow-primary);
+    }
+
+    .btn-login:active {
+      transform: scale(0.99);
+    }
+
+
+    /* Footer note */
+    .login-footer {
+      margin-top: 28px;
+      text-align: center;
+      font-size: 11.5px;
+      color: var(--text-light);
+    }
+
+    .login-footer i {
+      color: var(--accent);
+    }
+
+    /* Field error */
+    .field-error {
+      font-size: 11.5px;
+      color: var(--error);
+      margin-top: 5px;
+      display: block;
+    }

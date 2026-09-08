@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<!--
+  base.html — Full-page shell. Loaded ONCE on first visit.
+  HTMX then intercepts sidebar links and form submits, swapping only
+  #mainContent. Topbar and sidebar never reload.
+-->
+{% load static %}
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}PharmaERP{% endblock %}</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/vendors/bootstrap-icons/bootstrap-icons.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/base/base.css' %}">
+
+  <!-- All page CSS preloaded once — no flash of unstyled content on HTMX swaps -->
+  <link rel="stylesheet" href="{% static 'css/dashboard/dashboard.css' %}">
+  <link rel="stylesheet" href="{% static 'css/masters/section.css' %}">
+  <link rel="stylesheet" href="{% static 'css/masters/machine.css' %}">
+  <link rel="stylesheet" href="{% static 'css/masters/operator.css' %}">
+  <link rel="stylesheet" href="{% static 'css/masters/uom.css' %}">
+  <link rel="stylesheet" href="{% static 'css/masters/state.css' %}">
+  <link rel="stylesheet" href="{% static 'css/masters/product_attr.css' %}">
+  <link rel="stylesheet" href="{% static 'css/masters/logistics.css' %}">
+  <link rel="stylesheet" href="{% static 'css/masters/prod_stage.css' %}">
+  <link rel="stylesheet" href="{% static 'css/masters/item_type.css' %}">
+  <link rel="stylesheet" href="{% static 'css/masters/pkg_style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/masters/expenses.css' %}">
+  <link rel="stylesheet" href="{% static 'css/masters/product.css' %}">
+  <link rel="stylesheet" href="{% static 'css/masters/item.css' %}">
+  <link rel="stylesheet" href="{% static 'css/masters/customer.css' %}">
+  <link rel="stylesheet" href="{% static 'css/masters/supplier.css' %}">
+  <link rel="stylesheet" href="{% static 'css/masters/bom.css' %}">
+  <link rel="stylesheet" href="{% static 'css/transactions/inward.css' %}">
+  <link rel="stylesheet" href="{% static 'css/transactions/sales_order.css' %}">
+  <link rel="stylesheet" href="{% static 'css/transactions/sales_invoice.css' %}">
+  <link rel="stylesheet" href="{% static 'css/transactions/batch_allocation.css' %}">
+  <link rel="stylesheet" href="{% static 'css/transactions/logsheet.css' %}">
+  <link rel="stylesheet" href="{% static 'css/transactions/rm_dispensing.css' %}">
+  <link rel="stylesheet" href="{% static 'css/transactions/dpr.css' %}">
+  <link rel="stylesheet" href="{% static 'css/transactions/pkg_cont.css' %}">
+  <link rel="stylesheet" href="{% static 'css/masters/forms_consistency.css' %}">
+  <link rel="stylesheet" href="{% static 'css/users/user_list.css' %}">
+  <link rel="stylesheet" href="{% static 'css/users/create_user.css' %}">
+  <link rel="stylesheet" href="{% static 'css/users/change_password.css' %}">
+  <link rel="stylesheet" href="{% static 'css/users/change_user_password.css' %}">
+  <link rel="stylesheet" href="{% static 'css/users/access_control.css' %}">
+  <link rel="stylesheet" href="{% static 'css/admin_utils/financial_year.css' %}">
+  <link rel="stylesheet" href="{% static 'css/admin_utils/database_backup.css' %}">
+  <link rel="stylesheet" href="{% static 'css/reports/master_reports.css' %}">
+  <link rel="stylesheet" href="{% static 'css/reports/transaction_reports.css' %}">
+  <link rel="stylesheet" href="{% static 'css/inventory/inventory_stock_view.css' %}">
+  <link rel="stylesheet" href="{% static 'css/inventory/stock_adjustment.css' %}">
+  {% block extra_css %}{% endblock %}
+  <link rel="stylesheet" href="{% static 'vendor/select2/select2.min.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/vendors/select2_pharmaerp.css' %}">
+
+  <script src="{% static 'vendor/jquery/jquery.min.js' %}"></script>
+  <script src="{% static 'vendor/select2/select2.min.js' %}"></script>
+  <script src="{% static 'js/searchable_dropdown.js' %}"></script>
+
+  <!-- HTMX -->
+  <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js"></script>
+  <script>
+    // Send Django CSRF token as X-CSRFToken header on every HTMX request.
+    // Forms with {% csrf_token %} already include it in POST body, but this
+    // covers hx-post on non-form elements and is belt-and-suspenders safe.
+    document.addEventListener('htmx:configRequest', function (e) {
+      var token = (document.cookie.split(';')
+        .map(function (c) { return c.trim(); })
+        .filter(function (c) { return c.startsWith('csrftoken='); })[0] || '').split('=')[1];
+      if (token) e.detail.headers['X-CSRFToken'] = token;
+    });
+  </script>
+
+  <!-- Base JS -->
+  <script src="{% static 'js/base.js' %}"></script>
+
+  <!-- All page JS preloaded once so HTMX swaps can call named init functions -->
+  <script src="{% static 'js/masters/section.js' %}"></script>
+  <script src="{% static 'js/masters/machine.js' %}"></script>
+  <script src="{% static 'js/masters/operator.js' %}"></script>
+  <script src="{% static 'js/masters/uom.js' %}"></script>
+  <script src="{% static 'js/masters/state.js' %}"></script>
+  <script src="{% static 'js/masters/product_attr.js' %}"></script>
+  <script src="{% static 'js/masters/logistics.js' %}"></script>
+  <script src="{% static 'js/masters/prod_stage.js' %}"></script>
+  <script src="{% static 'js/masters/item_type.js' %}"></script>
+  <script src="{% static 'js/masters/pkg_style.js' %}"></script>
+  <script src="{% static 'js/masters/expenses.js' %}"></script>
+  <script src="{% static 'js/masters/product.js' %}"></script>
+  <script src="{% static 'js/masters/customer.js' %}"></script>
+  <script src="{% static 'js/masters/supplier.js' %}"></script>
+  <script src="{% static 'js/masters/bom.js' %}"></script>
+  <script src="{% static 'js/masters/item.js' %}"></script>
+  <script src="{% static 'js/transactions/prefixed_serial_no_input.js' %}"></script>
+  <script src="{% static 'js/transactions/inward.js' %}"></script>
+  <script src="{% static 'js/transactions/sales_order.js' %}"></script>
+  <script src="{% static 'js/transactions/sales_invoice.js' %}"></script>
+  <script src="{% static 'js/transactions/batch_allocation.js' %}"></script>
+  <script src="{% static 'js/transactions/logsheet.js' %}"></script>
+  <script src="{% static 'js/transactions/rm_dispensing.js' %}"></script>
+  <script src="{% static 'js/transactions/dpr.js' %}"></script>
+  <script src="{% static 'js/transactions/pkg_cont.js' %}"></script>
+  <script src="{% static 'js/reports/master_reports.js' %}"></script>
+  <script src="{% static 'js/reports/transaction_reports.js' %}"></script>
+  <script src="{% static 'js/inventory/stock_adjustment.js' %}"></script>
+  <script src="{% static 'js/inventory/inventory_stock_view.js' %}"></script>
+  <script src="{% static 'js/create_user.js' %}"></script>
+
+  <!-- Slim progress bar shown while HTMX fetches -->
+  <style>
+    #page-loader {
+      display: none;
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 3px;
+      background: linear-gradient(90deg, #4f46e5 0%, #818cf8 100%);
+      z-index: 9999;
+      animation: loader-slide 1s ease infinite;
+    }
+    #page-loader.htmx-request { display: block; }
+    @keyframes loader-slide {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="page-loader"></div>
+
+  <!-- TOP NAVBAR -->
+  <nav class="topbar">
+    <div class="topbar-left">
+      <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">
+        <i class="bi bi-list"></i>
+      </button>
+      <a href="{% url 'dashboard' %}"
+         hx-get="{% url 'dashboard' %}"
+         hx-target="#mainContent"
+         hx-swap="innerHTML"
+         hx-push-url="true"
+         hx-indicator="#page-loader"
+         class="topbar-logo">
+        <div class="logo-icon">
+          <img src="{% static 'images/RPL_Logo.jpg' %}" alt="RPL Logo">
+        </div>
+        <div class="brand-lockup">
+          <div class="brand-name">RENUMED Pharmaceuticals Labs.</div>
+          <div class="brand-slogan">(Better Nutrition, Better Life, in service since 1984)</div>
+        </div>
+      </a>
+    </div>
+    <div class="topbar-right">
+      <div class="user-info">
+        <div class="user-details">
+          <div class="user-name">
+            {% if request.user.get_full_name %}{{ request.user.get_full_name }}{% else %}{{ request.user.username }}{% endif %}
+          </div>
+          <div class="user-role">
+            {% if request.user.profile.role %}{{ request.user.profile.role }}{% else %}User{% endif %}
+          </div>
+        </div>
+        <div class="user-avatar">{{ request.user.username|first|upper }}</div>
+      </div>
+      <div class="topbar-divider"></div>
+      <form method="POST" action="{% url 'logout' %}" style="margin:0">
+        {% csrf_token %}
+        <button type="submit" class="btn-logout">
+          <i class="bi bi-box-arrow-right"></i> Logout
+        </button>
+      </form>
+    </div>
+  </nav>
+
+  <!-- LEFT SIDEBAR
+       hx-boost  : intercepts every <a> click inside
+       hx-target : swaps into #mainContent, not the sidebar
+       hx-push-url: browser URL bar stays in sync (back/forward work)
+  -->
+  <aside class="sidebar" id="sidebar"
+         hx-boost="true"
+         hx-target="#mainContent"
+         hx-swap="innerHTML"
+         hx-push-url="true"
+         hx-indicator="#page-loader">
+
+    {% include 'includes/erp_sidebar_menu.html' %}
+
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-footer">PharmaERP v1.0 &nbsp;|&nbsp; Internal</div>
+  </aside>
+
+
+  <!-- MAIN CONTENT
+       hx-boost  : intercepts form submits inside this area
+       Result swaps back into #mainContent (target="this" semantics via id)
+  -->
+  <main class="main-content" id="mainContent"
+        hx-boost="true"
+        hx-target="#mainContent"
+        hx-swap="innerHTML"
+        hx-push-url="true"
+        hx-indicator="#page-loader">
+
+    {% if messages %}
+    <div class="messages-container">
+      {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">
+        <i class="bi bi-{% if message.tags == 'error' %}exclamation-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+        {{ message }}
+        <button class="alert-dismiss" onclick="this.parentElement.remove()" title="Dismiss">&times;</button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+
+  </main>
+
+  {% block extra_js %}{% endblock %}
+
+  <!-- GLOBAL DELETE MODAL — outside #mainContent so it persists across swaps -->
+  <div id="globalDeleteModal" class="modal-overlay" style="display:none">
+    <div class="modal-box">
+      <div class="modal-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+      <h3 class="modal-title">Confirm Delete</h3>
+      <p class="modal-msg">You are about to delete <strong id="deleteModalItemName"></strong>. This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeDeleteModal()">
+          <i class="bi bi-x"></i> Cancel
+        </button>
+        <form id="globalDeleteForm" method="POST" action=""
+              hx-post=""
+              hx-target="#mainContent"
+              hx-swap="innerHTML"
+              hx-push-url="true"
+              hx-indicator="#page-loader">
+          {% csrf_token %}
+          <button type="submit" class="btn-danger">
+            <i class="bi bi-trash"></i> Yes, Delete
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

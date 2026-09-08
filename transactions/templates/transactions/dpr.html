@@ -1,0 +1,318 @@
+{% extends base_template %}
+{% block title %}Daily production report (DPR) — PharmaERP{% endblock %}
+
+{% block content %}
+<div class="cu-page dpr-page" data-page-init="dpr">
+
+  <header class="dpr-page-heading">
+    <h1>Daily production report (DPR)</h1>
+    <p>Record production by section, machine, and shift. Choose a customer and product from sales orders, then a batch that already has a log sheet.</p>
+  </header>
+
+  {{ dpr_ajax_urls|json_script:"dprAjaxUrls" }}
+  {{ grid_defaults|json_script:"dprGridDefaults" }}
+  {{ dpr_edit_payload|json_script:"dprEditPayload" }}
+  {{ dpr_multi_batch_section_ids|json_script:"dprMultiSectionIds" }}
+
+  <div class="cu-panel">
+    <div class="cu-card-header">
+      <div class="icon-wrap">
+        <i class="bi bi-clipboard-data"></i>
+      </div>
+      <div>
+        <h2>Daily production report</h2>
+        <p>Entry, section-wise batch status, and saved DPR lines</p>
+      </div>
+    </div>
+
+    <div class="cu-card-body">
+      {% include "includes/form_errors_alert.html" with form=form %}
+
+      <form method="post" action="{% url 'transactions:dpr' %}" id="dprForm" class="dpr-main-form" novalidate>
+        {% csrf_token %}
+        {% if edit_instance %}<input type="hidden" name="edit_pk" value="{{ edit_instance.pk }}">{% endif %}
+
+        <div class="dpr-top-row">
+          <div class="dpr-fields-main">
+            <div class="cu-section dpr-section-block dpr-section-no-strip">
+              <div class="cu-section-fields">
+
+                <div class="dpr-row-first">
+                  <div class="cu-field dpr-field--compact">
+                    <label class="cu-label" for="dprDt">DPR date <span class="req">*</span></label>
+                    {{ form.trn_dpr_dt }}
+                    {% if form.trn_dpr_dt.errors %}<span class="field-error">{{ form.trn_dpr_dt.errors.0 }}</span>{% endif %}
+                  </div>
+                  <div class="cu-field dpr-field--wide">
+                    <label class="cu-label" for="dprSection">Section <span class="req">*</span></label>
+                    {{ form.section }}
+                    {% if form.section.errors %}<span class="field-error">{{ form.section.errors.0 }}</span>{% endif %}
+                  </div>
+                  <div class="cu-field dpr-field--wide">
+                    <label class="cu-label" for="dprMachine">Machine <span class="req">*</span></label>
+                    {{ form.machine }}
+                    {% if form.machine.errors %}<span class="field-error">{{ form.machine.errors.0 }}</span>{% endif %}
+                  </div>
+                  <div class="cu-field dpr-field--compact">
+                    <label class="cu-label" for="dprMachineWorking">Machine status <span class="req">*</span></label>
+                    {{ form.machine_working }}
+                    {% if form.machine_working.errors %}<span class="field-error">{{ form.machine_working.errors.0 }}</span>{% endif %}
+                  </div>
+                  <div class="cu-field dpr-field--compact">
+                    <label class="cu-label" for="dprShift">Shift <span class="req">*</span></label>
+                    {{ form.shift }}
+                    {% if form.shift.errors %}<span class="field-error">{{ form.shift.errors.0 }}</span>{% endif %}
+                  </div>
+                </div>
+
+                <div class="cu-row-2-eq">
+                  <div class="cu-field">
+                    <label class="cu-label" for="dprCustomer">Customer name <span class="req">*</span></label>
+                    {{ form.customer }}
+                    {% if form.customer.errors %}<span class="field-error">{{ form.customer.errors.0 }}</span>{% endif %}
+                  </div>
+                  <div id="dprOrdFieldWrap" class="cu-field">
+                    <label class="cu-label" for="dprOrdDisplay">Ord no. / date</label>
+                    <input type="text" id="dprOrdDisplay" class="cu-input" readonly tabindex="-1" placeholder="—" autocomplete="off">
+                  </div>
+                </div>
+
+                <div class="cu-field">
+                  <label class="cu-label" for="dprProduct">Product name <span class="req">*</span></label>
+                  {{ form.product }}
+                  {% if form.product.errors %}<span class="field-error">{{ form.product.errors.0 }}</span>{% endif %}
+                </div>
+
+                <div class="dpr-row-batch-meta">
+                  <div id="dprBatchSingleWrap" class="cu-field dpr-field-batch-select">
+                    <label class="cu-label" for="dprBatchSelect">Batch no. <span class="req">*</span></label>
+                    <select id="dprBatchSelect" class="cu-select searchable-dropdown" autocomplete="off">
+                      <option value="">— Select batch —</option>
+                    </select>
+                    {{ form.batch_dtl_id }}
+                    {{ form.log_sheet_id }}
+                    {% if form.batch_dtl_id.errors %}<span class="field-error">{{ form.batch_dtl_id.errors.0 }}</span>{% endif %}
+                    {% if form.log_sheet_id.errors %}<span class="field-error">{{ form.log_sheet_id.errors.0 }}</span>{% endif %}
+                  </div>
+                  <div id="dprBatchMultiWrap" class="dpr-multi-batch-wrap" style="display: none;">
+                    <div class="dpr-multi-batch-row">
+                      <div class="cu-field dpr-field-batch-display">
+                        <label class="cu-label" for="dprBatchDisplay">Selected batches <span class="req">*</span></label>
+                        <input type="text" id="dprBatchDisplay" class="cu-input" readonly tabindex="-1" autocomplete="off" placeholder="BATCH01 — 1st (…) / BATCH02 — Single — double-click to clear">
+                      </div>
+                      <div class="cu-field">
+                        <label class="cu-label" for="dprBatchAddSelect">Add log sheet row <span class="req">*</span></label>
+                        <select id="dprBatchAddSelect" class="cu-select" autocomplete="off">
+                          <option value="">Choose batch / colour slot to add…</option>
+                        </select>
+                      </div>
+                      <div class="cu-field">
+                        <label class="cu-label" for="dprBatchSizeLakh">Batch size (Lakh) <span class="req">*</span></label>
+                        {{ form.batch_size_lakh }}
+                        {% if form.batch_size_lakh.errors %}<span class="field-error">{{ form.batch_size_lakh.errors.0 }}</span>{% endif %}
+                      </div>
+                    </div>
+                    {{ form.log_sheet_ids }}
+                    {% if form.log_sheet_ids.errors %}<span class="field-error">{{ form.log_sheet_ids.errors.0 }}</span>{% endif %}
+                  </div>
+                  <div id="dprBatchDetailStrip" class="dpr-batch-detail-cols">
+                    <div class="cu-field">
+                      <label class="cu-label" for="dprMfgDisplay">MFG date</label>
+                      <input type="text" id="dprMfgDisplay" class="cu-input" readonly tabindex="-1" placeholder="—" autocomplete="off">
+                    </div>
+                    <div class="cu-field">
+                      <label class="cu-label" for="dprExpDisplay">EXP date</label>
+                      <input type="text" id="dprExpDisplay" class="cu-input" readonly tabindex="-1" placeholder="—" autocomplete="off">
+                    </div>
+                    <div class="cu-field">
+                      <label class="cu-label" for="dprBatchSizeDisplay">Batch size</label>
+                      <input type="text" id="dprBatchSizeDisplay" class="cu-input cu-num" readonly tabindex="-1" placeholder="—" autocomplete="off">
+                    </div>
+                  </div>
+                </div>
+
+                <div id="dprLayerDetailStrip" class="dpr-row-layer-row">
+                  <div class="cu-field">
+                    <label class="cu-label" for="dprTabletLayer">Layer</label>
+                    <input type="text" id="dprTabletLayer" class="cu-input" readonly tabindex="-1" placeholder="—" autocomplete="off">
+                  </div>
+                  <div class="cu-field">
+                    <label class="cu-label" for="dprLayerColour">Layer colour</label>
+                    <input type="text" id="dprLayerColour" class="cu-input" readonly tabindex="-1" placeholder="—" autocomplete="off">
+                  </div>
+                  <div class="cu-field">
+                    <label class="cu-label" for="dprBatchRem">Batch remarks</label>
+                    {{ form.batch_rem }}
+                    {% if form.batch_rem.errors %}<span class="field-error">{{ form.batch_rem.errors.0 }}</span>{% endif %}
+                  </div>
+                </div>
+
+                <div class="cu-field">
+                  <label class="cu-label" for="dprSpecSelect">Specification <span class="req">*</span></label>
+                  <select id="dprSpecSelect" class="cu-select searchable-dropdown" autocomplete="off">
+                    <option value="">— Select specification —</option>
+                  </select>
+                  {{ form.specification_id }}
+                  {% if form.specification_id.errors %}<span class="field-error">{{ form.specification_id.errors.0 }}</span>{% endif %}
+                </div>
+
+                <div class="dpr-row-qty-line" id="dprRowQtyLine">
+                  <div class="cu-field" id="dprFieldLotNoWrap">
+                    <label class="cu-label" for="dprLotNo">Lot nos. <span class="req">*</span></label>
+                    {{ form.lot_no }}
+                    {% if form.lot_no.errors %}<span class="field-error">{{ form.lot_no.errors.0 }}</span>{% endif %}
+                  </div>
+                  <div class="cu-field" id="dprFieldQtyKgWrap">
+                    <label class="cu-label" for="dprQtyKg">Qty (kg) <span class="req">*</span></label>
+                    {{ form.qty_kg }}
+                    {% if form.qty_kg.errors %}<span class="field-error">{{ form.qty_kg.errors.0 }}</span>{% endif %}
+                  </div>
+                  <div class="cu-field" id="dprFieldQtyNosWrap">
+                    <label class="cu-label" for="dprQtyNos">Qty (nos.) <span class="req">*</span></label>
+                    {{ form.qty_nos }}
+                    {% if form.qty_nos.errors %}<span class="field-error">{{ form.qty_nos.errors.0 }}</span>{% endif %}
+                  </div>
+                  <div class="cu-field" id="dprFieldSectionQtyWrap">
+                    <label class="cu-label" for="dprSectionQty"><span id="dprSectionQtyLabelText">Section qty (optional)</span></label>
+                    {{ form.section_qty }}
+                    {% if form.section_qty.errors %}<span class="field-error">{{ form.section_qty.errors.0 }}</span>{% endif %}
+                  </div>
+                </div>
+
+                <div class="cu-row-3-eq">
+                  <div class="cu-field">
+                    <label class="cu-label" for="dprStartTime">Start time <span class="req">*</span></label>
+                    {{ form.start_time }}
+                    {% if form.start_time.errors %}<span class="field-error">{{ form.start_time.errors.0 }}</span>{% endif %}
+                  </div>
+                  <div class="cu-field">
+                    <label class="cu-label" for="dprEndTime">End time <span class="req">*</span></label>
+                    {{ form.end_time }}
+                    {% if form.end_time.errors %}<span class="field-error">{{ form.end_time.errors.0 }}</span>{% endif %}
+                  </div>
+                  <div class="cu-field">
+                    <label class="cu-label" for="dprTotalTime">Total time</label>
+                    <input type="text" id="dprTotalTime" class="cu-input" readonly tabindex="-1" placeholder="—" autocomplete="off">
+                  </div>
+                </div>
+
+                <div class="dpr-row-operators">
+                  <div class="cu-field dpr-field--op">
+                    <label class="cu-label" for="dprOp1">Operator (1) <span class="req">*</span></label>
+                    {{ form.operator1 }}
+                    {% if form.operator1.errors %}<span class="field-error">{{ form.operator1.errors.0 }}</span>{% endif %}
+                  </div>
+                  <div class="cu-field dpr-field--op">
+                    <label class="cu-label" for="dprOp2">Operator (2)</label>
+                    {{ form.operator2 }}
+                    {% if form.operator2.errors %}<span class="field-error">{{ form.operator2.errors.0 }}</span>{% endif %}
+                  </div>
+                  <div class="cu-field dpr-field--helpers">
+                    <label class="cu-label" for="dprHelpers">No. of helpers <span class="req">*</span></label>
+                    {{ form.no_of_helper }}
+                    {% if form.no_of_helper.errors %}<span class="field-error">{{ form.no_of_helper.errors.0 }}</span>{% endif %}
+                  </div>
+                </div>
+
+                <div class="cu-field dpr-field--remarks-full">
+                  <label class="cu-label" for="dprRemarks">Remarks</label>
+                  {{ form.remarks }}
+                  {% if form.remarks.errors %}<span class="field-error">{{ form.remarks.errors.0 }}</span>{% endif %}
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <div class="cu-actions dpr-actions">
+            <div aria-hidden="true"></div>
+            <button type="submit" class="btn-save btn-save-main" id="dprSaveBtn">
+              <i class="bi bi-check2-circle"></i> {% if edit_instance %}Update DPR{% else %}Save DPR{% endif %}
+            </button>
+            <a href="{% url 'transactions:dpr' %}" class="btn-cancel" id="dprClear"><i class="bi bi-x-lg"></i> {% if edit_instance %}Cancel{% else %}Clear{% endif %}</a>
+          </div>
+
+          <aside class="dpr-status-col">
+            <div class="dpr-side-title">Section-wise selected batch production status</div>
+            <div class="cu-section dpr-section-block dpr-section-no-strip dpr-status-section">
+              <div class="cu-section-fields dpr-status-fields">
+                <div class="dpr-panel-shell dpr-status-panel-inner">
+                  <div class="dpr-status-scroll">
+                    <table class="dpr-table dpr-table--status">
+                      <colgroup>
+                        <col class="dpr-status-col-section">
+                        <col class="dpr-status-col-qty">
+                      </colgroup>
+                      <thead>
+                        <tr>
+                          <th class="dpr-status-col-section">Section</th>
+                          <th class="dpr-status-col-qty">Qty (nos.)</th>
+                        </tr>
+                      </thead>
+                      <tbody id="dprStatusBody">
+                        <tr><td colspan="2" class="dpr-muted">Select a batch to load totals…</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        <div class="dpr-data-block">
+          <div class="dpr-toolbar">
+            <div class="dpr-toolbar-controls">
+              <span class="dpr-toolbar-label">Date range (not more than 30 days):</span>
+              <div class="cu-field dpr-toolbar-field">
+                <label class="cu-label sr-only" for="dprGridStart">Start</label>
+                <input type="date" id="dprGridStart" class="cu-input">
+              </div>
+              <div class="cu-field dpr-toolbar-field">
+                <label class="cu-label sr-only" for="dprGridEnd">End</label>
+                <input type="date" id="dprGridEnd" class="cu-input">
+              </div>
+              <button type="button" class="btn-save dpr-toolbar-btn" id="dprShowGrid">
+                <i class="bi bi-table"></i> Show data
+              </button>
+            </div>
+            <div class="dpr-toolbar-err" id="dprGridErrWrap">
+              <span class="field-error" id="dprGridErr" role="alert"></span>
+            </div>
+          </div>
+
+          <div class="table-card dpr-grid-table-card">
+            <div class="table-card-header">
+              <i class="bi bi-table"></i>
+              <h3>Saved DPR entries</h3>
+            </div>
+            <div class="table-scroll-body">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="col-idx">#</th>
+                    <th>Date</th>
+                    <th>Section</th>
+                    <th>Machine</th>
+                    <th>Shift</th>
+                    <th>Status</th>
+                    <th>Customer</th>
+                    <th>Product</th>
+                    <th>Batch</th>
+                    <th class="dpr-col-qty-left">Qty (nos.)</th>
+                    <th>Total time</th>
+                    <th class="col-actions">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="dprGridBody">
+                  <tr><td colspan="12" class="dpr-muted">Set a date range and choose Show data.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,238 @@
+{% extends base_template %}
+{% load static %}
+{% block title %}Product Master — PharmaERP{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/masters/product.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="cu-page product-page" data-page-init="product">
+
+  <!-- ── Page heading ───────────────────────────────────────── -->
+  <div class="cu-heading">
+    <h1>Product Master</h1>
+    <p>Register products with type, category, UOM, tablet layer and image.</p>
+  </div>
+
+  <!-- ── FORM PANEL ─────────────────────────────────────────── -->
+  <div class="cu-panel">
+
+    <div class="cu-card-header">
+      <div class="icon-wrap">
+        <i class="bi {% if edit_instance %}bi-pencil-fill{% else %}bi-capsule{% endif %}"></i>
+      </div>
+      <div>
+        <h2>{% if edit_instance %}Edit Product{% else %}New Product{% endif %}</h2>
+        <p>{% if edit_instance %}Update product details{% else %}Fill in product details and upload an image{% endif %}</p>
+      </div>
+    </div>
+
+    <div class="cu-card-body">
+
+      {% include "includes/form_errors_alert.html" with form=form %}
+
+      <form method="POST"
+            action="{% url 'product' %}{% if edit_instance %}?edit_pk={{ edit_instance.pk }}{% endif %}"
+            enctype="multipart/form-data"
+            id="productForm">
+        {% csrf_token %}
+        <input type="hidden" name="prod_category_id" id="prodCategoryIdHidden"
+               value="{{ form.prod_category_id.value|default:'' }}">
+
+        <div class="cu-section">
+          <div class="product-form-grid">
+            <div class="cu-section-fields">
+
+              <div class="cu-field">
+                <label class="cu-label">Product Name <span class="req">*</span></label>
+                <input type="text" name="prod_name" id="prodNameInput" class="cu-input"
+                  placeholder="Enter product name"
+                  value="{{ form.prod_name.value|default:'' }}" autocomplete="off" />
+                {% if form.prod_name.errors %}<span class="field-error">{{ form.prod_name.errors.0 }}</span>{% endif %}
+              </div>
+
+              <div class="cu-field">
+                <label class="cu-label">Generic Name <span class="req">*</span></label>
+                <textarea name="generic_name" id="genericNameInput" class="cu-textarea"
+                  placeholder="Enter generic / chemical name..." rows="3">{{ form.generic_name.value|default:'' }}</textarea>
+                {% if form.generic_name.errors %}<span class="field-error">{{ form.generic_name.errors.0 }}</span>{% endif %}
+              </div>
+
+              <div class="cu-row-2">
+                <div class="cu-field">
+                  <label class="cu-label">Product Type <span class="req">*</span></label>
+                  {{ form.prod_type }}
+                  {% if form.prod_type.errors %}<span class="field-error">{{ form.prod_type.errors.0 }}</span>{% endif %}
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">Product Category</label>
+                  <input type="text" id="prodCategoryDisplay" class="cu-input prod-cat-display"
+                    placeholder="Auto-filled from Type"
+                    value="{% if edit_instance %}{{ edit_instance.prod_category.prod_cat_name }}{% endif %}"
+                    readonly />
+                  {% if form.prod_category_id.errors %}<span class="field-error">{{ form.prod_category_id.errors.0 }}</span>{% endif %}
+                </div>
+              </div>
+
+              <div class="cu-row-2">
+                <div class="cu-field">
+                  <label class="cu-label">UOM <span class="req">*</span></label>
+                  {{ form.uom }}
+                  {% if form.uom.errors %}<span class="field-error">{{ form.uom.errors.0 }}</span>{% endif %}
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">HSN Code</label>
+                  <input type="text" name="hsn_code" id="hsnCodeInput" class="cu-input"
+                    placeholder="e.g. 30049099"
+                    value="{{ form.hsn_code.value|default:'' }}" autocomplete="off" />
+                  {% if form.hsn_code.errors %}<span class="field-error">{{ form.hsn_code.errors.0 }}</span>{% endif %}
+                </div>
+              </div>
+
+              <div class="cu-row-3-colors">
+                <div class="cu-field">
+                  <label class="cu-label">Tablet Layers <span class="req">*</span></label>
+                  <div class="layer-radio-group">
+                    {% for choice_val, choice_label in form.tablet_layer.field.choices %}
+                    <label class="layer-radio-label">
+                      <input type="radio" name="tablet_layer" value="{{ choice_val }}"
+                        {% if form.tablet_layer.value == choice_val %}checked
+                        {% elif not form.tablet_layer.value and choice_val == 'Single' %}checked{% endif %}>
+                      <span class="layer-radio-custom"></span>
+                      {{ choice_label }}
+                    </label>
+                    {% endfor %}
+                  </div>
+                  {% if form.tablet_layer.errors %}<span class="field-error">{{ form.tablet_layer.errors.0 }}</span>{% endif %}
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">First Color</label>
+                  <div id="firstColorField">
+                    {{ form.first_color }}
+                  </div>
+                  {% if form.first_color.errors %}<span class="field-error">{{ form.first_color.errors.0 }}</span>{% endif %}
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">Second Color</label>
+                  <div id="secondColorField">
+                    {{ form.second_color }}
+                  </div>
+                  {% if form.second_color.errors %}<span class="field-error">{{ form.second_color.errors.0 }}</span>{% endif %}
+                </div>
+              </div>
+
+            </div>
+
+            <aside class="product-image-side">
+              <h4>Image Preview</h4>
+              <div class="prod-image-preview-box" id="imagePreviewBox">
+                {% if edit_instance and edit_instance.image_path %}
+                  <img id="imgPreview" src="/media/{{ edit_instance.image_path }}" alt="Product image" />
+                {% else %}
+                  <img id="imgPreview" src="" alt="Product image" style="display:none;" />
+                  <span class="img-placeholder" id="imgPlaceholder">
+                    <i class="bi bi-image"></i>
+                    <span>No image</span>
+                  </span>
+                {% endif %}
+              </div>
+              <div class="prod-upload-area">
+                <input type="file" name="product_image" id="productImageInput"
+                  class="prod-image-input" accept="image/*" />
+                <button type="button" class="btn-upload"
+                  onclick="document.getElementById('productImageInput').click()">
+                  <i class="bi bi-upload"></i> Upload Image
+                </button>
+                <span class="upload-hint" id="uploadHint">JPG, PNG - max 5 MB</span>
+              </div>
+            </aside>
+          </div>
+        </div>
+
+        <div class="cu-actions">
+          {% if edit_instance %}
+            <a href="{% url 'product' %}" class="btn-cancel"><i class="bi bi-x"></i> Cancel</a>
+            <button type="submit" class="btn-save"><i class="bi bi-check2-circle"></i> Update Product</button>
+          {% else %}
+            <button type="submit" class="btn-save"><i class="bi bi-check2-circle"></i> Save Product</button>
+            <button type="button" class="btn-cancel" onclick="resetForm()"><i class="bi bi-x"></i> Clear</button>
+          {% endif %}
+        </div>
+
+      </form>
+    </div><!-- /.cu-card-body -->
+  </div><!-- /.cu-panel -->
+
+  <!-- ── PRODUCTS TABLE ─────────────────────────────────────── -->
+  <div class="table-card">
+    <div class="table-card-header">
+      <i class="bi bi-list-ul"></i>
+      <h3>All Products ({{ products.count }})</h3>
+    </div>
+    <div class="table-scroll-body">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Product Name</th>
+            <th>Generic Name</th>
+            <th>Type</th>
+            <th>Category</th>
+            <th>UOM</th>
+            <th>HSN Code</th>
+            <th>Layer</th>
+            <th>1st Color</th>
+            <th>2nd Color</th>
+            <th>Image</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for prod in products %}
+          <tr {% if edit_instance.pk == prod.pk %}class="row-editing"{% endif %}>
+            <td class="col-idx">{{ forloop.counter }}</td>
+            <td><strong>{{ prod.prod_name }}</strong></td>
+            <td class="col-generic">{{ prod.generic_name|truncatechars:35 }}</td>
+            <td><span class="type-badge">{{ prod.prod_type.item_type_name }}</span></td>
+            <td><span class="cat-badge">{{ prod.prod_category.prod_cat_name }}</span></td>
+            <td>{{ prod.uom.short_name }}</td>
+            <td>{{ prod.hsn_code|default:"—" }}</td>
+            <td><span class="layer-badge layer-badge--{{ prod.tablet_layer|lower }}">{{ prod.tablet_layer }}</span></td>
+            <td>{{ prod.first_color.color_name|default:"—" }}</td>
+            <td>{{ prod.second_color.color_name|default:"—" }}</td>
+            <td>
+              {% if prod.image_path %}
+                <a href="/media/{{ prod.image_path }}" target="_blank">
+                  <img src="/media/{{ prod.image_path }}" class="img-thumb" alt="{{ prod.prod_name }}" />
+                </a>
+              {% else %}—{% endif %}
+            </td>
+            <td class="col-actions">
+              <a href="?edit_pk={{ prod.pk }}" class="btn-action btn-edit" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <button type="button" class="btn-action btn-delete" title="Delete"
+                data-delete-url="{% url 'product_delete' prod.pk %}"
+                data-delete-name="{{ prod.prod_name|escapejs }}"
+                onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)">
+                <i class="bi bi-trash"></i>
+              </button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="12" class="empty-row">No products found. Use the form above to add one.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div><!-- /.table-card -->
+
+</div><!-- /.cu-page -->
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/masters/product.js' %}"></script>
+{% endblock %}

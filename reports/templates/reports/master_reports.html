@@ -1,0 +1,75 @@
+{% extends base_template %}
+{% block title %}Master Reports — PharmaERP{% endblock %}
+
+{% block content %}
+<div class="mr-page" id="masterReportsRoot" data-page-init="master_reports"
+     data-api-options="{{ api_options_url|escape }}"
+     data-api-data="{{ api_data_url|escape }}"
+     data-api-excel="{{ api_excel_url|escape }}"
+     data-company-header="{{ company_header|escape }}">
+
+  <div class="mr-heading cu-heading">
+    <h1>Master Reports</h1>
+    <p>Select a master module, apply filters, preview data, then export or print.</p>
+  </div>
+
+  <div class="mr-toolbar cu-panel">
+    <div class="mr-toolbar-row">
+      <label class="mr-label" for="mrReportSelect">Report</label>
+      <select id="mrReportSelect" class="mr-select">
+        {% for r in reports_catalogue %}
+        <option value="{{ r.slug }}" data-config-url="{{ r.config_url|escape }}">{{ r.label }}</option>
+        {% endfor %}
+      </select>
+      <button type="button" class="mr-btn mr-btn-primary" id="mrBtnPreview">
+        <i class="bi bi-table"></i> Preview
+      </button>
+      <button type="button" class="mr-btn" id="mrBtnExcel" title="Export current preview settings to Excel">
+        <i class="bi bi-file-earmark-spreadsheet"></i> Excel
+      </button>
+      <button type="button" class="mr-btn" id="mrBtnPrint">
+        <i class="bi bi-printer"></i> Print
+      </button>
+    </div>
+    <div class="mr-toolbar-row mr-meta-row" id="mrMetaBar" hidden>
+      <span class="mr-meta" id="mrMetaText"></span>
+    </div>
+  </div>
+
+  <div class="mr-stack">
+    <section class="mr-filters cu-panel" id="mrFilterPanel">
+      <div class="mr-filters-header">
+        <h2>Filters &amp; layout</h2>
+        <p id="mrReportDescription">—</p>
+      </div>
+      <div class="mr-filters-body">
+        <div id="mrFiltersHost" class="mr-filters-host">
+          <div id="mrFiltersDynamic"></div>
+          <div class="mr-columns-block" id="mrColumnsBlock" hidden>
+            <h3 class="mr-subhead">Columns</h3>
+            <div class="mr-radio-row">
+              <label><input type="radio" name="mr_col_mode" value="all" checked> All</label>
+              <label><input type="radio" name="mr_col_mode" value="select"> Select</label>
+            </div>
+            <div class="mr-check-scroll" id="mrColumnsHost"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mr-preview cu-panel">
+      <div class="mr-preview-header">
+        <h2>Preview</h2>
+      </div>
+      <div class="mr-print-header" id="mrPrintHeader">
+        <div class="mr-print-company">{{ company_header }}</div>
+        <div class="mr-print-title" id="mrPrintTitle"></div>
+      </div>
+      <div id="mrError" class="mr-error" hidden></div>
+      <div id="mrLoading" class="mr-loading" hidden>Loading…</div>
+      <div class="mr-preview-wrap" id="mrPreviewWrap"></div>
+      <div class="mr-pagination" id="mrPagination" hidden></div>
+    </section>
+  </div>
+</div>
+{% endblock %}

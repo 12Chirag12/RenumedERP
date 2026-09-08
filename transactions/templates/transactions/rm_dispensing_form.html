@@ -1,0 +1,222 @@
+{% extends base_template %}
+{% block title %}RM dispensing — PharmaERP{% endblock %}
+
+{% block content %}
+<div class="cu-page rm-dispensing-page" data-page-init="rm_dispensing">
+
+  <header class="rm-page-heading">
+    <h1>Raw material dispensing</h1>
+    <p>Allocate and issue RM against the selected BOM specification and production batch. Standard quantities are capped by BOM; use Additional Qty for extra issue.</p>
+  </header>
+
+  {{ rm_dispensing_ajax_urls|json_script:"rmAjaxUrls" }}
+  {% if rm_edit_payload %}{{ rm_edit_payload|json_script:"rmEditPayload" }}{% endif %}
+
+  <div class="cu-panel">
+    <div class="cu-card-header">
+      <div class="icon-wrap">
+        <i class="bi bi-box-seam"></i>
+      </div>
+      <div>
+        <h2>RM Dispensing Entry</h2>
+        <p>Header details and BOM grid</p>
+      </div>
+    </div>
+
+    <div class="cu-card-body">
+      {% include "includes/form_errors_alert.html" with form=form %}
+
+      <form method="post"
+            action="{% url 'transactions:rm_dispensing' %}{% if edit_instance %}?edit_pk={{ edit_instance.pk }}{% endif %}"
+            id="rmForm"
+            novalidate>
+        {% csrf_token %}
+        {% if edit_instance %}<input type="hidden" name="edit_pk" value="{{ edit_instance.pk }}">{% endif %}
+
+        <div class="cu-section rm-section-block rm-section-no-strip">
+          <div class="cu-section-fields">
+
+            <div class="cu-row-2-eq">
+              <div class="cu-field">
+                <label class="cu-label" for="rmDispDt">Dispensing date <span class="req">*</span></label>
+                {{ form.dispensing_dt }}
+                {% if form.dispensing_dt.errors %}<span class="field-error">{{ form.dispensing_dt.errors.0 }}</span>{% endif %}
+              </div>
+              <div class="cu-field">
+                <label class="cu-label" for="rmCustomer">Customer name <span class="req">*</span></label>
+                {{ form.customer }}
+                {% if form.customer.errors %}<span class="field-error">{{ form.customer.errors.0 }}</span>{% endif %}
+              </div>
+            </div>
+
+            <div class="cu-row-2-eq rm-product-row">
+              <div class="cu-field">
+                <label class="cu-label" for="rmProduct">Product name <span class="req">*</span></label>
+                {{ form.product }}
+                {% if form.product.errors %}<span class="field-error">{{ form.product.errors.0 }}</span>{% endif %}
+              </div>
+              <div class="cu-field">
+                <label class="cu-label" for="rmLayerDisplay">Layer</label>
+                <input type="text" id="rmLayerDisplay" class="cu-input" readonly tabindex="-1" placeholder="—" autocomplete="off">
+              </div>
+            </div>
+
+            <div class="cu-row-3-eq">
+              <div class="cu-field">
+                <label class="cu-label" for="rmBatchSelect">Batch no. <span class="req">*</span></label>
+                <select id="rmBatchSelect" class="cu-select searchable-dropdown" autocomplete="off">
+                  <option value="">— Select batch —</option>
+                </select>
+                {{ form.logsheet_id }}
+                {% if form.logsheet_id.errors %}<span class="field-error">{{ form.logsheet_id.errors.0 }}</span>{% endif %}
+              </div>
+              <div class="cu-field">
+                <label class="cu-label" for="rmBatchSizeL">Batch size (Lakh)</label>
+                <input type="text" id="rmBatchSizeL" class="cu-input cu-num" readonly tabindex="-1" placeholder="—" autocomplete="off">
+              </div>
+              <div class="cu-field">
+                <label class="cu-label" for="rmBatchSizeN">Batch size (Nos)</label>
+                <input type="text" id="rmBatchSizeN" class="cu-input cu-num" readonly tabindex="-1" placeholder="—" autocomplete="off">
+              </div>
+            </div>
+
+            <div class="cu-field">
+              <label class="cu-label" for="rmSpec">Specification <span class="req">*</span></label>
+              {{ form.specification }}
+              {% if form.specification.errors %}<span class="field-error">{{ form.specification.errors.0 }}</span>{% endif %}
+            </div>
+
+            <div class="cu-row-2-eq">
+              <div class="cu-field">
+                <label class="cu-label" for="rmMachine">Machine name <span class="req">*</span></label>
+                {{ form.machine }}
+                {% if form.machine.errors %}<span class="field-error">{{ form.machine.errors.0 }}</span>{% endif %}
+              </div>
+              <div class="cu-field">
+                <label class="cu-label" for="rmLots">No. of lots <span class="req">*</span></label>
+                {{ form.lot_no }}
+                {% if form.lot_no.errors %}<span class="field-error">{{ form.lot_no.errors.0 }}</span>{% endif %}
+              </div>
+            </div>
+
+            <div class="cu-row-2-eq">
+              <div class="cu-field">
+                <label class="cu-label" for="rmDispensedBy">Dispensed by <span class="req">*</span></label>
+                {{ form.dispensed_by }}
+                {% if form.dispensed_by.errors %}<span class="field-error">{{ form.dispensed_by.errors.0 }}</span>{% endif %}
+              </div>
+              <div class="cu-field">
+                <label class="cu-label" for="rmWorker">Worker name <span class="req">*</span></label>
+                {{ form.worker_name }}
+                {% if form.worker_name.errors %}<span class="field-error">{{ form.worker_name.errors.0 }}</span>{% endif %}
+              </div>
+            </div>
+
+            <div class="cu-row-2-eq">
+              <div class="cu-field">
+                <label class="cu-label" for="rmCheckedBy">Checked by</label>
+                {{ form.checked_by }}
+                {% if form.checked_by.errors %}<span class="field-error">{{ form.checked_by.errors.0 }}</span>{% endif %}
+              </div>
+              <div class="cu-field">
+                <label class="cu-label" for="rmVerifiedBy">Verified by</label>
+                {{ form.verified_by }}
+                {% if form.verified_by.errors %}<span class="field-error">{{ form.verified_by.errors.0 }}</span>{% endif %}
+              </div>
+            </div>
+
+            <div class="cu-field">
+              <label class="cu-label" for="rmRemarks">Remarks</label>
+              {{ form.remarks }}
+              {% if form.remarks.errors %}<span class="field-error">{{ form.remarks.errors.0 }}</span>{% endif %}
+            </div>
+
+          </div>
+        </div>
+
+        <div class="rm-grid-block">
+          <div class="rm-grid-title">Bill of Material as per specification</div>
+          <div class="cu-section rm-section-block rm-section-no-strip rm-grid-section">
+            <div class="cu-section-fields rm-grid-fields">
+              <div class="rm-panel-shell rm-grid-panel">
+                <div class="rm-table-wrap rm-table-wrap--grid">
+                  <table class="rm-table">
+                    <thead>
+                      <tr>
+                        <th>Select</th>
+                        <th>Production stage</th>
+                        <th>Item name</th>
+                        <th class="num">Available</th>
+                        <th>Per/Lakh qty</th>
+                        <th>Dispensing qty</th>
+                        <th>Additional qty</th>
+                        <th>Dispensing date</th>
+                        <th>Remarks</th>
+                      </tr>
+                    </thead>
+                    <tbody id="rmGridBody">
+                      <tr><td colspan="9" class="rm-muted">Select customer, product, batch, and specification…</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="rm-grid-error-wrap">
+                  <span class="field-error js-err" id="rmGridErr" role="alert"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {{ form.lines_json }}
+
+        <div class="cu-actions rm-actions">
+          <div aria-hidden="true"></div>
+          {% if edit_instance %}
+            <a href="{% url 'transactions:rm_dispensing' %}" class="btn-cancel" id="rmCancel">
+              <i class="bi bi-x"></i> Cancel
+            </a>
+            <button type="submit" class="btn-save btn-save-main" id="rmSaveBtn">
+              <i class="bi bi-check2-circle"></i> Update dispensing
+            </button>
+          {% else %}
+            <button type="submit" class="btn-save btn-save-main" id="rmSaveBtn">
+              <i class="bi bi-check2-circle"></i> Save dispensing
+            </button>
+            <a href="{% url 'transactions:rm_dispensing' %}" class="btn-cancel" id="rmClear">
+              <i class="bi bi-x"></i> Clear
+            </a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-card-header">
+      <i class="bi bi-list-ul"></i>
+      <h3>Dispensing records <span class="rm-list-count" id="rmListCount"></span></h3>
+    </div>
+    <div class="table-scroll-body">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Date</th>
+            <th>Customer</th>
+            <th>Product</th>
+            <th>Batch</th>
+            <th>Spec</th>
+            <th>Stages</th>
+            <th>Completed</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="rmListBody">
+          <tr><td colspan="9" class="empty-row">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

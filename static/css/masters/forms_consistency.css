@@ -1,0 +1,590 @@
+
+
+/* ── List card shell (display tables) ─────────────────────────── */
+.cu-page[data-page-init] .table-card {
+  flex: 0 0 auto;
+  width: 100%;
+  min-height: 0;
+  max-height: calc(100vh - var(--topbar-h) - 45px);
+  border-radius: var(--table-card-radius);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cu-page[data-page-init] .table-scroll-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Unified data table (inside .table-card only) ─────────────── */
+.cu-page[data-page-init] .table-card table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.cu-page[data-page-init] .table-card thead th {
+  padding: var(--table-header-pad-y) var(--table-header-pad-x);
+  font-size: var(--table-header-fz);
+  font-weight: var(--table-header-fw);
+  color: var(--text-mid);
+  text-transform: uppercase;
+  letter-spacing: var(--table-header-ls);
+  background: var(--table-header-bg);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  vertical-align: middle;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.cu-page[data-page-init] .table-card tbody td {
+  padding: var(--table-cell-pad-y) var(--table-cell-pad-x);
+  font-size: var(--table-cell-fz);
+  line-height: 1.35;
+  color: var(--text-dark);
+  border-bottom: 1px solid var(--table-row-line);
+  vertical-align: middle;
+}
+
+.cu-page[data-page-init] .table-card tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.cu-page[data-page-init] .table-card tbody tr:hover {
+  background: #fafcff;
+}
+
+.cu-page[data-page-init] .table-card tbody tr.row-editing {
+  background: #f0f9ff;
+  outline: 2px solid rgba(5, 90, 114, 0.35);
+  outline-offset: -2px;
+}
+
+/* Financial year admin tables — same rhythm as app data tables */
+.main-content .fy-table thead th {
+  padding: var(--table-header-pad-y) var(--table-header-pad-x);
+  font-size: var(--table-header-fz);
+  font-weight: var(--table-header-fw);
+  text-transform: uppercase;
+  letter-spacing: var(--table-header-ls);
+  color: var(--text-mid);
+  background: var(--table-header-bg);
+  vertical-align: middle;
+}
+
+.main-content .fy-table tbody td {
+  padding: var(--table-cell-pad-y) var(--table-cell-pad-x);
+  font-size: var(--table-cell-fz);
+  line-height: 1.35;
+  vertical-align: middle;
+  color: var(--text-dark);
+}
+
+.cu-page[data-page-init] .cu-heading h1 {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-dark);
+  margin: 0 0 1px;
+}
+
+.cu-page[data-page-init] .cu-heading p {
+  font-size: 12px;
+  color: var(--text-mid);
+  margin: 0;
+}
+
+.cu-page[data-page-init] .cu-card-header {
+  padding: 7px 16px;
+}
+
+.cu-page[data-page-init] .cu-card-header .icon-wrap {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.cu-page[data-page-init] .cu-card-header h2 {
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0 0 1px;
+}
+
+.cu-page[data-page-init] .cu-card-header p {
+  font-size: 12px;
+  margin: 0;
+}
+
+.cu-page[data-page-init] .cu-card-body {
+  padding: 8px 14px;
+}
+
+.cu-page[data-page-init] .cu-section-fields {
+  padding: 8px 12px;
+  gap: var(--form-field-row-gap);
+}
+
+.cu-page[data-page-init] .cu-field {
+  gap: var(--form-field-inner-gap);
+}
+
+/* Equal grid rows — any data-page-init form */
+.cu-page[data-page-init] .cu-row-2-eq {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--form-field-grid-gap);
+}
+
+.cu-page[data-page-init] .cu-row-3-eq {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--form-field-grid-gap);
+}
+
+.cu-page[data-page-init] .cu-row-4-eq {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--form-field-grid-gap);
+}
+
+@media (max-width: 1100px) {
+  .cu-page[data-page-init] .cu-row-4-eq {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .cu-page[data-page-init] .cu-row-2-eq,
+  .cu-page[data-page-init] .cu-row-4-eq {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cu-page[data-page-init] .cu-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.cu-page[data-page-init] .cu-input,
+.cu-page[data-page-init] .cu-select {
+  height: 30px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: "Plus Jakarta Sans", sans-serif;
+}
+
+/* Numeric alignment (all forms) */
+.cu-page[data-page-init] input[type="number"].cu-input,
+.cu-page[data-page-init] input.cu-input.cu-num {
+  text-align: right;
+}
+
+.cu-page[data-page-init] .cu-field:has(input[type="number"]) .cu-label,
+.cu-page[data-page-init] .cu-field:has(input.cu-num) .cu-label {
+  text-align: right;
+}
+
+.cu-page[data-page-init] .inw-cell:has(input[type="number"]) label,
+.cu-page[data-page-init] .inw-cell:has(input.cu-num) label {
+  text-align: right;
+}
+
+.cu-page[data-page-init] .cu-textarea {
+  border-radius: 6px;
+  font-size: 12px;
+  padding-left: 5px;
+  font-family: "Plus Jakarta Sans", sans-serif;
+}
+
+.cu-page[data-page-init] .field-error {
+  font-size: 10px;
+  color: var(--color-error);
+  display: block;
+}
+
+.cu-page[data-page-init] .btn-cancel,
+.cu-page[data-page-init] .btn-save {
+  height: 30px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-family: "Plus Jakarta Sans", sans-serif;
+}
+
+.cu-page[data-page-init] .table-card-header {
+  padding: 7px 16px;
+}
+
+.cu-page[data-page-init] .table-card-header h3 {
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.cu-page[data-page-init] .btn-action {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+/* Consistent selector card component for BOM, Logistics, Product Attr */
+.cu-page[data-page-init] .bom-selector,
+.cu-page[data-page-init] .attr-selector,
+.cu-page[data-page-init] .logistics-selector {
+  gap: 8px;
+}
+
+.cu-page[data-page-init] .bom-selector .bom-type-card,
+.cu-page[data-page-init] .attr-selector .attr-card,
+.cu-page[data-page-init] .logistics-selector .attr-card {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  min-height: 42px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text-mid);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s, color 0.15s;
+}
+
+.cu-page[data-page-init] .bom-selector .bom-type-card:hover,
+.cu-page[data-page-init] .attr-selector .attr-card:hover,
+.cu-page[data-page-init] .logistics-selector .attr-card:hover {
+  border-color: #9bdff0;
+  background: #f3fbfe;
+  color: #0b5872;
+}
+
+.cu-page[data-page-init] .bom-selector .bom-type-card.active,
+.cu-page[data-page-init] .attr-selector .attr-card.active,
+.cu-page[data-page-init] .logistics-selector .attr-card.active {
+  border-color: var(--accent2);
+  background: linear-gradient(135deg, rgba(0, 180, 216, 0.12), rgba(79, 70, 229, 0.08));
+  color: #0b1f3a;
+  box-shadow: 0 2px 10px rgba(0, 180, 216, 0.18);
+}
+
+.cu-page[data-page-init] .attr-selector .attr-card i,
+.cu-page[data-page-init] .logistics-selector .attr-card i,
+.cu-page[data-page-init] .bom-selector .bom-type-card i {
+  font-size: 14px;
+}
+
+.cu-page[data-page-init] .bom-selector .bom-type-card span,
+.cu-page[data-page-init] .attr-selector .attr-card span,
+.cu-page[data-page-init] .logistics-selector .attr-card span {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Validation borders — all masters pages (data-page-init)
+   - Section chrome stays neutral; red only on invalid controls.
+   - Tame native :invalid flash on email/number before JS runs.
+   - Server errors: Django .field-error without .js-err + control styling.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.cu-page[data-page-init] .cu-section {
+  border-color: var(--border);
+}
+
+.cu-page[data-page-init] .cu-section-label {
+  border-right-color: var(--border);
+}
+
+/* Native validity outline — we rely on .input-error + server error spans */
+.cu-page[data-page-init] input.cu-input:invalid:not(.input-error),
+.cu-page[data-page-init] textarea.cu-textarea:invalid:not(.input-error),
+.cu-page[data-page-init] select.cu-select:invalid:not(.input-error) {
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+.cu-page[data-page-init] input.cu-input:focus:invalid:not(.input-error),
+.cu-page[data-page-init] textarea.cu-textarea:focus:invalid:not(.input-error),
+.cu-page[data-page-init] select.cu-select:focus:invalid:not(.input-error) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.12);
+}
+
+/* Client-side / explicit error state */
+.cu-page[data-page-init] .cu-input.input-error,
+.cu-page[data-page-init] .cu-select.input-error,
+.cu-page[data-page-init] .cu-textarea.input-error {
+  border-color: #e84040 !important;
+  box-shadow: none;
+}
+
+.cu-page[data-page-init] .cu-input.input-error:focus,
+.cu-page[data-page-init] .cu-select.input-error:focus,
+.cu-page[data-page-init] .cu-textarea.input-error:focus {
+  border-color: #e84040 !important;
+  box-shadow: 0 0 0 3px rgba(232, 64, 64, 0.15);
+}
+
+/* Server-rendered field errors (span.field-error not the live JS placeholder) */
+.cu-page[data-page-init] .cu-field:has(.field-error:not(.js-err)) .cu-input,
+.cu-page[data-page-init] .cu-field:has(.field-error:not(.js-err)) .cu-select,
+.cu-page[data-page-init] .cu-field:has(.field-error:not(.js-err)) .cu-textarea {
+  border-color: #e84040;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   JS-built controls — grids (customer/BOM), line cards (inward/SO)
+   Match .cu-input / .cu-label rhythm so dynamically inserted HTML
+   follows the same chrome as server-rendered masters forms.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.cu-page[data-page-init] .grid-input,
+.cu-page[data-page-init] .grid-select {
+  width: 100%;
+  box-sizing: border-box;
+  height: 30px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  color: var(--text-dark);
+  background: var(--off-white);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.cu-page[data-page-init] .grid-select {
+  padding-right: 28px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%235A6B7C' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  appearance: none;
+  cursor: pointer;
+}
+
+.cu-page[data-page-init] .grid-input::placeholder {
+  color: var(--text-placeholder);
+}
+
+.cu-page[data-page-init] .grid-select:focus,
+.cu-page[data-page-init] .grid-input:focus {
+  border-color: var(--accent);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.12);
+}
+
+.cu-page[data-page-init] .grid-select.cell-error,
+.cu-page[data-page-init] .grid-input.cell-error {
+  border-color: var(--color-error);
+}
+
+.cu-page[data-page-init] .grid-input.batch-abbr {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  text-align: center;
+}
+
+.cu-page[data-page-init] .grid-input.lic-details:disabled {
+  opacity: 0.68;
+  cursor: not-allowed;
+  background: #f1f4f8;
+  color: var(--text-mid);
+}
+
+.cu-page[data-page-init] .grid-input.qty-input,
+.cu-page[data-page-init] .prod-grid-table input.grid-input[type="number"] {
+  text-align: right;
+}
+
+.cu-page[data-page-init] .cell-err-msg {
+  font-size: 10px;
+  color: var(--color-error);
+  display: block;
+  line-height: 1.25;
+  margin-top: 2px;
+}
+
+/* JS-built product/item grids (BOM, customer, …): table rows are not flex children
+   of .cu-section-fields — use the same row-gap token for cell padding + borders. */
+.cu-page[data-page-init] .prod-grid-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.cu-page[data-page-init] .prod-grid-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: var(--form-field-row-gap) var(--table-cell-pad-x);
+  font-size: var(--table-header-fz);
+  font-weight: var(--table-header-fw);
+  letter-spacing: var(--table-header-ls);
+  color: var(--text-mid);
+  text-transform: uppercase;
+  background: var(--table-header-bg);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.cu-page[data-page-init] .prod-grid-table tbody td {
+  padding: var(--form-field-row-gap) var(--table-cell-pad-x);
+  font-size: var(--table-cell-fz);
+  line-height: 1.35;
+  color: var(--text-dark);
+  vertical-align: middle;
+  border-bottom: 1px solid var(--table-row-line);
+}
+
+.cu-page[data-page-init] .prod-grid-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.cu-page[data-page-init] .lic-toggle {
+  width: 100%;
+  height: 30px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  background: var(--off-white);
+  color: var(--text-mid);
+  font-family: "Plus Jakarta Sans", sans-serif;
+}
+
+.cu-page[data-page-init] .lic-toggle.active-y {
+  background: #ecfdf5;
+  color: var(--color-success);
+  border-color: rgba(13, 92, 46, 0.35);
+}
+
+.cu-page[data-page-init] .lic-toggle.active-n {
+  background: var(--off-white);
+  color: var(--text-mid);
+  border-color: var(--border);
+}
+
+.cu-page[data-page-init] .prod-grid-table .btn-del-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(183, 28, 28, 0.1);
+  color: var(--color-error);
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.cu-page[data-page-init] .prod-grid-table .btn-del-row:hover {
+  background: var(--color-error);
+  color: #fff;
+}
+
+.cu-page[data-page-init].inward-page .inw-br-del .btn-del-row,
+.cu-page[data-page-init].sales-order-page .inw-br-del .btn-del-row,
+.cu-page[data-page-init].sinv-page .inw-br-del .btn-del-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(183, 28, 28, 0.1);
+  color: var(--color-error);
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.cu-page[data-page-init].inward-page .inw-br-del .btn-del-row:hover,
+.cu-page[data-page-init].sales-order-page .inw-br-del .btn-del-row:hover,
+.cu-page[data-page-init].sinv-page .inw-br-del .btn-del-row:hover {
+  background: var(--color-error);
+  color: #fff;
+}
+
+/* Inward / Sales order — JS-rendered line + batch blocks use .inw-cell / .inw-br-field */
+.cu-page[data-page-init].inward-page .inw-cell label,
+.cu-page[data-page-init].sales-order-page .inw-cell label,
+.cu-page[data-page-init].sinv-page .inw-cell label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin-bottom: var(--form-field-inner-gap);
+  letter-spacing: 0.01em;
+}
+
+.cu-page[data-page-init].inward-page .inw-cell .req,
+.cu-page[data-page-init].sales-order-page .inw-cell .req,
+.cu-page[data-page-init].sinv-page .inw-cell .req {
+  color: var(--color-error);
+}
+
+.cu-page[data-page-init].inward-page .inw-br-field label,
+.cu-page[data-page-init].sales-order-page .inw-br-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin-bottom: var(--form-field-inner-gap);
+}
+
+.cu-page[data-page-init].inward-page .inw-br-field .cu-input,
+.cu-page[data-page-init].inward-page .inw-br-field .cu-select,
+.cu-page[data-page-init].sales-order-page .inw-br-field .cu-input,
+.cu-page[data-page-init].sales-order-page .inw-br-field .cu-select {
+  font-size: 12px;
+  min-width: 0;
+  width: 100%;
+}
+
+.cu-page[data-page-init].inward-page .inw-input-disabled,
+.cu-page[data-page-init].sales-order-page .inw-input-disabled,
+.cu-page[data-page-init].sinv-page .inw-input-disabled {
+  opacity: 0.68;
+  cursor: not-allowed;
+  background: #f1f4f8 !important;
+  color: var(--text-mid);
+}
+
+/* Live JS validation placeholders (wizard / grid forms) */
+.cu-page[data-page-init] .field-error.js-err:empty {
+  display: none;
+}
+
+.cu-page[data-page-init] .field-error.js-err:not(:empty) {
+  display: block;
+  margin-top: 4px;
+}
+
+.cu-page[data-page-init] .inw-step2 > .field-error.js-err#err-lines_json:not(:empty) {
+  margin-bottom: 6px;
+}
+
+.cu-page[data-page-init] .inw-step1-actions + .field-error.js-err:not(:empty),
+.cu-page[data-page-init] .inw-step1-actions ~ .field-error.js-err#err-step1:not(:empty) {
+  margin-top: 6px;
+}

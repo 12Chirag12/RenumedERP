@@ -1,0 +1,19 @@
+<a href="{% url 'dashboard' %}" class="menu-direct" data-label="Dashboard">
+  <i class="bi bi-speedometer2"></i><span>Dashboard</span>
+</a>
+
+<div class="sidebar-divider"></div>
+
+{% for section in erp_menu.sections %}
+  {% if section.key == 'utilities' %}<div class="sidebar-divider"></div>{% endif %}
+  <div class="menu-parent" id="parent-{{ section.key }}" data-label="{{ section.label }}" onclick="toggleMenu('{{ section.key }}')">
+    <i class="bi bi-{% if section.key == 'masters' %}box-seam{% elif section.key == 'transactions' %}arrow-left-right{% elif section.key == 'inventory' %}boxes{% elif section.key == 'reports' %}bar-chart-line{% else %}gear{% endif %} m-icon"></i>
+    <span>{{ section.label }}</span>
+    <i class="bi bi-chevron-right chevron"></i>
+  </div>
+  <div class="submenu" id="submenu-{{ section.key }}">
+    {% for item in section.items %}
+    <a href="{% url item.menu_url_name %}" class="submenu-item">{{ item.label }}</a>
+    {% endfor %}
+  </div>
+{% endfor %}

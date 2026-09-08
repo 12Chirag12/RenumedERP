@@ -1,0 +1,200 @@
+/*
+  static/css/masters/operator.css
+  Operator master — form + list. Scoped under .operator-page; uses global tokens
+  from base.css (--accent, --border, --navy, forms_consistency for data-page-init).
+*/
+
+.cu-page.operator-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
+  gap: 8px;
+  min-height: 0;
+}
+
+/*
+  Global section.css uses overflow:hidden on .cu-panel / .cu-section — that clips
+  the absolutely positioned section dropdown. Allow overflow for this page only.
+*/
+.cu-page.operator-page .cu-panel,
+.cu-page.operator-page .cu-card-body,
+.cu-page.operator-page .cu-section,
+.cu-page.operator-page .cu-section-fields,
+.cu-page.operator-page .cu-row-3,
+.cu-page.operator-page #operatorForm {
+  overflow: visible;
+}
+
+/*
+  .cu-actions follows .cu-section in the DOM, so it paints on top by default.
+  When the dropdown is open, lift the whole .cu-section stacking context above actions.
+  (JS toggles .operator-form--dd-open on .cu-page.operator-page.)
+*/
+.cu-page.operator-page .cu-actions {
+  position: relative;
+  z-index: 0;
+}
+
+.cu-page.operator-page.operator-form--dd-open .cu-section {
+  position: relative;
+  z-index: 300;
+}
+
+/* Three-column row (name | designation | sections) */
+.cu-page.operator-page .cu-row-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--form-field-grid-gap);
+}
+
+@media (max-width: 960px) {
+  .cu-page.operator-page .cu-row-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cu-page.operator-page .cu-hint {
+  font-size: 11px;
+  color: var(--text-mid);
+  margin: 6px 0 0;
+  line-height: 1.35;
+}
+
+/* Section pills in grid (same language as machine master, global palette) */
+.cu-page.operator-page .section-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 20px;
+  font-size: 10.5px;
+  font-weight: 600;
+  background: rgba(0, 180, 216, 0.1);
+  color: var(--accent2);
+  white-space: nowrap;
+}
+
+.cu-page.operator-page .col-actions {
+  width: 72px;
+}
+
+/* ── Sections: one dropdown + checkbox panel ─────────────────── */
+
+.cu-page.operator-page .operator-section-dd {
+  position: relative;
+  width: 100%;
+}
+
+.cu-page.operator-page .operator-section-dd__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 30px;
+  padding: 0 10px;
+  text-align: left;
+  cursor: pointer;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 12px;
+  color: var(--text-dark);
+  background: var(--off-white);
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.cu-page.operator-page .operator-section-dd__toggle:hover {
+  border-color: var(--border-interactive);
+}
+
+.cu-page.operator-page .operator-section-dd__toggle:focus {
+  border-color: var(--accent);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.12);
+}
+
+.cu-page.operator-page .operator-section-dd__toggle[aria-expanded="true"] .operator-section-dd__chev {
+  transform: rotate(180deg);
+}
+
+.cu-page.operator-page .operator-section-dd__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cu-page.operator-page .operator-section-dd__chev {
+  flex-shrink: 0;
+  font-size: 12px;
+  opacity: 0.65;
+  color: var(--text-mid);
+  transition: transform 0.15s ease;
+}
+
+.cu-page.operator-page .operator-section-dd__panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 301;
+  background: #fff;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(11, 31, 58, 0.12);
+  max-height: min(320px, 55vh);
+  display: flex;
+  flex-direction: column;
+}
+
+.cu-page.operator-page .operator-section-dd__panel[hidden] {
+  display: none !important;
+}
+
+.cu-page.operator-page .operator-section-dd__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 0;
+}
+
+.cu-page.operator-page .operator-section-dd__group {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-mid);
+  padding: 8px 12px 4px;
+  background: var(--off-white);
+  border-bottom: 1px solid var(--table-row-line);
+}
+
+.cu-page.operator-page .operator-section-dd__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  margin: 0;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-dark);
+  transition: background 0.12s ease;
+}
+
+.cu-page.operator-page .operator-section-dd__row:hover {
+  background: #fafcff;
+}
+
+.cu-page.operator-page .operator-section-dd__row input {
+  flex-shrink: 0;
+  margin: 0;
+  accent-color: var(--accent2);
+}
+
+.cu-page.operator-page .operator-section-dd__row span {
+  flex: 1;
+  min-width: 0;
+}

@@ -1,0 +1,772 @@
+/* ── Variables (WCAG AA–oriented: text vs surfaces ≥4.5:1 where used for body copy) ── */
+    :root {
+      --navy: #0B1F3A;
+      --navy-mid: #132D52;
+      --navy-light: #1E4070;
+      /* Brand accent — sidebars, focus rings, large decorative UI on dark */
+      --accent: #00B4D8;
+      /* Teal for links, icons, and small text on light backgrounds (≥4.5:1 on white) */
+      --accent2: #005A72;
+      --white: #FFFFFF;
+      --off-white: #F4F7FB;
+      --text-dark: #0F1B2E;
+      --text-mid: #3A4F62;
+      /* Secondary / index / empty-state copy on light surfaces */
+      --text-light: #5A6B7C;
+      /* Placeholders: same token, ≥4.5:1 on #fff and off-white at 12px */
+      --text-placeholder: var(--text-light);
+      --border: #C5D4E6;
+      /* Ghost buttons & static panels: clearer edge than body text */
+      --border-interactive: #8FA6BC;
+      /* Primary filled actions — white label ≥4.5:1 across gradient */
+      --primary-action: #055A72;
+      --primary-action-hover: #044357;
+      --primary-action-active: #033945;
+      --shadow-primary: 0 3px 12px rgba(5, 72, 90, 0.35);
+      /* Navy sidebar: solid tones (avoid low-contrast translucent white) */
+      --sidebar-fg: #E2ECF5;
+      --sidebar-fg-muted: #B9CADB;
+      --sidebar-fg-soft: #9EB2C8;
+      --sidebar-bg-elevated: rgba(0, 0, 0, 0.16);
+      /* Text on dark navy / gradient banners */
+      --text-on-dark-muted: #C9DCEA;
+      /* Semantic feedback (text on tinted backgrounds, AA) */
+      --color-error: #B71C1C;
+      --color-error-border: #B71C1C;
+      --color-error-bg: #FFEBEE;
+      --color-success: #0D5C2E;
+      --color-success-border: #0D5C2E;
+      --color-success-bg: #E6F7EC;
+      --color-info: #005A72;
+      --color-info-border: #005A72;
+      --color-info-bg: #E8F3F7;
+      --color-warning: #8C4A00;
+      --color-warning-border: #A35C00;
+      --color-warning-bg: #FFF6E5;
+      --sidebar-w: 240px;
+      /* Width when expanded */
+      --topbar-h: 64px;
+      /* Height of top navbar */
+      /* Data tables (masters / transactions / admin FY — not UserList-specific) */
+      --table-header-bg: var(--off-white);
+      --table-header-fz: 10px;
+      --table-header-fw: 700;
+      --table-header-pad-y: 6px;
+      --table-header-pad-x: 12px;
+      --table-header-ls: 0.06em;
+      --table-cell-fz: 12px;
+      --table-cell-pad-y: 8px;
+      --table-cell-pad-x: 12px;
+      --table-row-line: rgba(11, 31, 58, 0.08);
+      --table-card-radius: 10px;
+      --radius: 8px;
+      /* Forms — vertical space between rows; label↔control; grid cells in .cu-row* */
+      --form-field-row-gap: 8px;
+      --form-field-inner-gap: 4px;
+      --form-field-grid-gap: 10px;
+    }
+
+    html {
+      height: 100%;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Window does not scroll — only .main-content scrolls (stays below fixed .topbar). */
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--off-white);
+      color: var(--text-dark);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ────────────────────────────────────────────────
+       TOP NAVBAR
+    ──────────────────────────────────────────────── */
+    .topbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--topbar-h);
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px 0 0;
+      z-index: 100;
+      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+    }
+
+    /* Left zone: sidebar toggle + logo */
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      height: 100%;
+    }
+
+    /* Sidebar toggle button (hamburger) */
+    .sidebar-toggle {
+      width: var(--topbar-h);
+      height: var(--topbar-h);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-mid);
+      font-size: 20px;
+      transition: background 0.2s, color 0.2s;
+      flex-shrink: 0;
+    }
+
+    .sidebar-toggle:hover {
+      background: var(--off-white);
+      color: var(--navy);
+    }
+
+    /* Logo block */
+    .topbar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      padding: 0 16px 0 8px;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: transparent;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .logo-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .brand-lockup {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 0;
+    }
+
+    .brand-name {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--navy);
+      letter-spacing: -0.3px;
+      line-height: 1.05;
+      white-space: nowrap;
+    }
+
+    .brand-slogan {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--navy-mid);
+      line-height: 1.05;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 1200px) {
+      .brand-name { font-size: 16px; }
+      .brand-slogan { font-size: 12px; }
+      .logo-icon { width: 36px; height: 36px; }
+    }
+
+    @media (max-width: 860px) {
+      .brand-slogan { display: none; }
+      .brand-name { font-size: 15px; }
+      .logo-icon { width: 34px; height: 34px; }
+    }
+
+    /* Right zone: user info + logout */
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    /* User info block */
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .user-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--navy-mid), var(--navy-light));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 14px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .user-details {
+      text-align: right;
+    }
+
+    .user-name {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text-dark);
+      line-height: 1.2;
+    }
+
+    .user-role {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent2);
+      letter-spacing: 0.2px;
+      background: rgba(5, 90, 114, 0.1);
+      padding: 1px 7px;
+      border-radius: 20px;
+      display: inline-block;
+    }
+
+    /* Divider */
+    .topbar-divider {
+      width: 1px;
+      height: 30px;
+      background: var(--border);
+    }
+
+    /* Logout button */
+    .btn-logout {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 16px;
+      background: var(--white);
+      border: 1.5px solid var(--border-interactive);
+      border-radius: var(--radius);
+      color: var(--text-dark);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+    }
+
+    .btn-logout:hover {
+      background: #FFF0F0;
+      border-color: var(--color-error);
+      color: var(--color-error);
+    }
+
+
+    /* ────────────────────────────────────────────────
+       SIDEBAR
+    ──────────────────────────────────────────────── */
+    .sidebar {
+      position: fixed;
+      top: var(--topbar-h);
+      left: 0;
+      width: var(--sidebar-w);
+      height: calc(100vh - var(--topbar-h));
+      background: var(--navy);
+      overflow-y: auto;
+      overflow-x: hidden;
+      transition: width 0.25s ease;
+      z-index: 90;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar.collapsed {
+      width: 60px;
+    }
+
+    .sidebar::-webkit-scrollbar, .submenu::-webkit-scrollbar {
+      width: 0px;
+    }
+    .sidebar:hover::-webkit-scrollbar,
+    .submenu:hover::-webkit-scrollbar {
+      width: 4px;
+    }
+
+
+    .sidebar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb,
+    .submenu::-webkit-scrollbar-thumb {
+      background: transparent;
+      transition: background 0.2s;
+    }
+
+    .sidebar:hover::-webkit-scrollbar-thumb,
+    .submenu:hover::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* ── Direct link (Dashboard, Settings) ── */
+    .menu-direct {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 18px;
+      color: var(--sidebar-fg-muted);
+      text-decoration: none;
+      font-size: 13.5px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      transition: background 0.2s, color 0.2s;
+      position: relative;
+    }
+
+    .menu-direct i {
+      font-size: 17px;
+      flex-shrink: 0;
+      width: 22px;
+      text-align: center;
+    }
+
+    .menu-direct:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--sidebar-fg);
+    }
+
+    .menu-direct.active {
+      background: rgba(0, 180, 216, 0.15);
+      color: var(--accent);
+      border-left: 3px solid var(--accent);
+    }
+
+    .menu-direct.active i {
+      color: var(--accent);
+    }
+
+    .sidebar.collapsed .menu-direct span {
+      display: none;
+    }
+
+    .sidebar.collapsed .menu-direct:hover::after {
+      content: attr(data-label);
+      position: absolute;
+      left: 65px;
+      background: var(--navy-mid);
+      color: white;
+      font-size: 12px;
+      padding: 5px 10px;
+      border-radius: 6px;
+      white-space: nowrap;
+      z-index: 200;
+      pointer-events: none;
+    }
+
+    /* ── Accordion parent item ── */
+    .menu-parent {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 18px;
+      color: var(--sidebar-fg-muted);
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+      overflow: hidden;
+      transition: background 0.2s, color 0.2s;
+      position: relative;
+    }
+
+    .menu-parent .m-icon {
+      font-size: 17px;
+      flex-shrink: 0;
+      width: 22px;
+      text-align: center;
+    }
+
+    .menu-parent .chevron {
+      margin-left: auto;
+      font-size: 11px;
+      transition: transform 0.25s;
+      flex-shrink: 0;
+    }
+
+    .menu-parent:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--sidebar-fg);
+    }
+
+    .menu-parent.open {
+      color: var(--sidebar-fg);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .menu-parent.open .chevron {
+      transform: rotate(90deg);
+    }
+
+    .sidebar.collapsed .menu-parent span,
+    .sidebar.collapsed .menu-parent .chevron {
+      display: none;
+    }
+
+    .sidebar.collapsed .menu-parent:hover::after {
+      content: attr(data-label);
+      position: absolute;
+      left: 65px;
+      background: var(--navy-mid);
+      color: white;
+      font-size: 12px;
+      padding: 5px 10px;
+      border-radius: 6px;
+      white-space: nowrap;
+      z-index: 200;
+      pointer-events: none;
+    }
+
+    /* ── Submenu container ── */
+    .submenu {
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.3s ease;
+      background: var(--sidebar-bg-elevated);
+    }
+
+    .submenu.open {
+      max-height: 360px;
+      overflow-y: auto;
+    }
+
+    .sidebar.collapsed .submenu {
+      display: none;
+    }
+
+    /* ── Submenu links ── */
+    .submenu-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 18px 9px 48px;
+      color: var(--sidebar-fg-soft);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 400;
+      transition: background 0.2s, color 0.2s;
+      position: relative;
+    }
+
+    .submenu-item::before {
+      content: '';
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--sidebar-fg-soft);
+      flex-shrink: 0;
+    }
+
+    .submenu-item:hover {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--sidebar-fg);
+    }
+
+    .submenu-item.active {
+      color: var(--accent);
+      background: rgba(0, 180, 216, 0.08);
+    }
+
+    .submenu-item.active::before {
+      background: var(--accent);
+    }
+
+    /* ── Sidebar divider ── */
+    .sidebar-divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.07);
+      margin: 6px 0;
+    }
+
+    /* Spacer & footer */
+    .sidebar-spacer {
+      flex: 1;
+    }
+
+    .sidebar-footer {
+      padding: 14px 18px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 11px;
+      color: var(--sidebar-fg-soft);
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .sidebar.collapsed .sidebar-footer {
+      display: none;
+    }
+
+
+    /* ────────────────────────────────────────────────
+       MAIN CONTENT AREA
+    ──────────────────────────────────────────────── */
+    .main-content {
+      margin-top: var(--topbar-h);
+      margin-left: var(--sidebar-w);
+      padding: 20px 20px;
+      height: calc(100vh - var(--topbar-h));
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      transition: margin-left 0.25s ease;
+    }
+
+    .main-content.collapsed {
+      margin-left: 60px;
+    }
+
+  
+    .messages-container {
+      position: fixed;
+      top: calc(var(--topbar-h) + 14px);
+      right: 20px;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;   /* container itself is click-through */
+      max-width: 360px;
+      width: max-content;
+    }
+
+    .alert {
+      pointer-events: all;    /* individual toasts are clickable */
+      padding: 11px 40px 11px 14px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      position: relative;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      animation: toastIn 0.22s ease;
+    }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(24px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .alert-dismiss {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      color: inherit;
+      opacity: 0.72;
+      padding: 2px 5px;
+      border-radius: 4px;
+      transition: opacity 0.15s, background 0.15s;
+    }
+
+    .alert-dismiss:hover {
+      opacity: 1;
+      background: rgba(0, 0, 0, 0.08);
+    }
+
+    .alert-dismiss:focus-visible {
+      opacity: 1;
+      outline: 2px solid currentColor;
+      outline-offset: 2px;
+    }
+
+    .alert-error {
+      background: var(--color-error-bg);
+      color: var(--color-error);
+      border-left: 3px solid var(--color-error-border);
+    }
+
+    .alert-success {
+      background: var(--color-success-bg);
+      color: var(--color-success);
+      border-left: 3px solid var(--color-success-border);
+    }
+
+    .alert-info {
+      background: var(--color-info-bg);
+      color: var(--color-info);
+      border-left: 3px solid var(--color-info-border);
+    }
+
+    .alert-warning {
+      background: var(--color-warning-bg);
+      color: var(--color-warning);
+      border-left: 3px solid var(--color-warning-border);
+    }
+    /* ════════════════════════════════════════════════
+       REUSABLE MASTER TABLE — ACTION BUTTONS
+       Used by Section, Machines, Products, etc.
+    ════════════════════════════════════════════════ */
+
+    .col-actions {
+      width: 90px;
+      white-space: nowrap;
+    }
+
+    /* Base style shared by edit + delete buttons */
+    .btn-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+      border: 1.5px solid var(--border-interactive);
+      background: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      text-decoration: none;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      color: var(--text-mid);
+    }
+
+    .btn-edit:hover {
+      background: #eff6ff;
+      border-color: var(--accent);
+      color: var(--accent2);
+    }
+
+    .btn-delete:hover {
+      background: #fff0f0;
+      border-color: var(--color-error);
+      color: var(--color-error);
+    }
+
+    /* Row currently being edited (specificity on .table-card rows in forms_consistency) */
+    .row-editing {
+      background: #f0f9ff;
+      outline: 2px solid rgba(5, 90, 114, 0.35);
+      outline-offset: -2px;
+    }
+
+    /* ════════════════════════════════════════════════
+       REUSABLE DELETE CONFIRMATION MODAL
+       Triggered by openDeleteModal() in base.js
+    ════════════════════════════════════════════════ */
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      z-index: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-box {
+      background: #fff;
+      border-radius: 12px;
+      padding: 28px 32px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+      text-align: center;
+      animation: modalIn 0.2s ease;
+    }
+
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    .modal-icon {
+      font-size: 36px;
+      color: var(--color-error);
+      margin-bottom: 12px;
+    }
+
+    .modal-title {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--text-dark);
+      margin-bottom: 8px;
+    }
+
+    .modal-msg {
+      font-size: 13px;
+      color: var(--text-mid);
+      margin-bottom: 22px;
+      line-height: 1.55;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .modal-actions .btn-cancel {
+      flex: 1;
+    }
+
+    /* Red destructive action button — used in delete modal */
+    .btn-danger {
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      height: 38px;
+      border: none;
+      border-radius: 8px;
+      background: var(--color-error);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-danger:hover {
+      background: #8A1515;
+    }
+
+/* ── HTMX loading spinner (used in AJAX table reload) ── */
+.spin-icon {
+  display: inline-block;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}

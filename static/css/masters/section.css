@@ -1,0 +1,354 @@
+/*
+  static/css/masters/section.css
+  Styles for Section Master page.
+  Reuses the .cu-* design system from create_user.css.
+  Only page-specific overrides and additions are here.
+*/
+
+/* ── Page wrapper ───────────────────────────────────────────── */
+
+/* .cu-page[data-page-init="section"] has specificity (0,2,0) — beats
+   create_user.css's unscoped .cu-page (0,1,0) even though that file
+   loads later, so height/gap are safe from bleed. */
+.cu-page[data-page-init="section"] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  gap: 18px;
+}
+
+/* ── Page heading ────────────────────────────────────────────── */
+.cu-heading {
+  width: 100%;
+}
+
+.cu-heading h1 {
+  font-size: 21px;
+  font-weight: 800;
+  color: var(--text-dark);
+  margin: 0 0 3px;
+}
+
+.cu-heading p {
+  font-size: 13px;
+  color: var(--text-mid);
+  margin: 0;
+}
+
+/* ── Main panel ─────────────────────────────────────────────── */
+.cu-panel {
+  width: 100%;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.09);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Dark card header ───────────────────────────────────────── */
+.cu-card-header {
+  background: var(--navy);
+  padding: 14px 22px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.cu-card-header .icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.cu-card-header h2 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 2px;
+}
+
+.cu-card-header p {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.65);
+  margin: 0;
+}
+
+/* ── Card body ──────────────────────────────────────────────── */
+.cu-card-body {
+  padding: 16px 22px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── Error banner (non-field errors) ────────────────────────── */
+.cu-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff0f0;
+  border: 1px solid #f5c0c0;
+  border-radius: 6px;
+  padding: 9px 14px;
+  font-size: 12.5px;
+  color: #c0392b;
+  margin-bottom: 14px;
+}
+
+.cu-error-banner i {
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+/* ── Section row ────────────────────────────────────────────── */
+.cu-section {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.cu-section-fields {
+  flex: 1;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--form-field-row-gap);
+}
+
+/* ── 2-column row ───────────────────────────────────────────── */
+.cu-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--form-field-grid-gap);
+}
+
+/* ── Field ───────────────────────────────────────────────────── */
+.cu-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--form-field-inner-gap);
+}
+
+.cu-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-dark);
+  letter-spacing: 0.01em;
+}
+
+.cu-label .req {
+  color: #e84040;
+  margin-left: 2px;
+}
+
+/* ── Input ───────────────────────────────────────────────────── */
+.cu-input {
+  height: 36px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  padding: 0 10px;
+  font-size: 13px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color: var(--text-dark);
+  background: var(--off-white);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cu-input::placeholder {
+  color: var(--text-light);
+}
+
+.cu-input:focus {
+  border-color: var(--accent);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.12);
+}
+
+/* ── Select wrapper + styled select ────────────────────────── */
+.cu-select-wrap {
+  position: relative;
+}
+
+.cu-select {
+  height: 36px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  padding: 0 32px 0 10px;
+  font-size: 13px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color: var(--text-dark);
+  background: var(--off-white);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  appearance: none;
+  outline: none;
+  cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.cu-select:focus {
+  border-color: var(--accent);
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.12);
+}
+
+/* Field errors: forms_consistency.css */
+
+/* ── Action bar ──────────────────────────────────────────────── */
+.cu-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.btn-cancel {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 18px;
+  height: 38px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text-mid);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.btn-cancel:hover {
+  background: var(--off-white);
+  border-color: var(--border-interactive);
+}
+
+.btn-save {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 38px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--primary-action), var(--primary-action-hover));
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 700;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+  letter-spacing: 0.01em;
+}
+
+.btn-save:hover {
+  background: linear-gradient(135deg, var(--primary-action-hover), var(--primary-action-active));
+  box-shadow: var(--shadow-primary);
+}
+
+/* ── Sections list table ─────────────────────────────────────── */
+.table-card {
+  width: 100%;
+  background: white;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-card-header {
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-shrink: 0;      /* header never scrolls away */
+}
+
+.table-card-header i {
+  color: var(--accent2);
+  font-size: 17px;
+}
+
+.table-card-header h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead th {
+  padding: 11px 18px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-mid);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  background: var(--off-white);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+tbody td {
+  padding: 11px 18px;
+  font-size: 13px;
+  color: var(--text-dark);
+  border-bottom: 1px solid var(--off-white);
+  vertical-align: middle;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.col-idx {
+  width: 48px;
+  color: var(--text-light);
+  font-size: 12px;
+}
+
+.dept-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: rgba(11, 31, 58, 0.07);
+  color: var(--navy);
+  white-space: nowrap;
+}
+
+.empty-row {
+  text-align: center;
+  color: var(--text-light);
+  padding: 36px !important;
+  font-size: 13.5px;
+}

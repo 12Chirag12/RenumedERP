@@ -1,0 +1,229 @@
+{% extends base_template %}
+{% load static %}
+{% block title %}BOM Master — PharmaERP{% endblock %}
+
+{% block content %}
+<div class="cu-page bom-page" data-page-init="bom">
+  <div class="cu-heading">
+    <h1>BOM Master</h1>
+    <p>Manage BOM RM and BOM PM specifications.</p>
+  </div>
+
+  <div class="bom-selector">
+    <a href="{% url 'bom' %}?type=rm"
+       hx-get="{% url 'bom' %}?type=rm"
+       hx-target="#mainContent"
+       hx-swap="innerHTML"
+       hx-push-url="true"
+       class="bom-type-card {% if bom_type == 'rm' %}active{% endif %}">
+      <i class="bi bi-capsule"></i>
+      <span>BOM RM</span>
+    </a>
+    <a href="{% url 'bom' %}?type=pm"
+       hx-get="{% url 'bom' %}?type=pm"
+       hx-target="#mainContent"
+       hx-swap="innerHTML"
+       hx-push-url="true"
+       class="bom-type-card {% if bom_type == 'pm' %}active{% endif %}">
+      <i class="bi bi-box-seam"></i>
+      <span>BOM PM</span>
+    </a>
+  </div>
+
+  <div class="cu-panel">
+    <div class="cu-card-header">
+      <div class="icon-wrap"><i class="bi bi-diagram-3"></i></div>
+      <div>
+        <h2 id="bomHeaderTitle">{% if bom_type == 'rm' %}BOM RM{% else %}BOM PM{% endif %}</h2>
+        <p>Save from header step; item grid is auxiliary.</p>
+      </div>
+      <div class="step-indicator">
+        <span class="step-dot active" id="dot1"></span>
+        <span class="step-line"></span>
+        <span class="step-dot" id="dot2"></span>
+      </div>
+    </div>
+
+    <div class="cu-card-body">
+      {% include "includes/form_errors_alert.html" with form=form %}
+
+      <form method="POST" id="bomForm" action="{% url 'bom' %}{% if edit_instance %}?type={{ bom_type }}&edit_pk={{ edit_instance.pk }}{% else %}?type={{ bom_type }}{% endif %}" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="bom_type" id="bomTypeHidden" value="{{ bom_type }}">
+        <input type="hidden" name="items_json" id="bomItemsJsonHidden" value="{{ existing_items_json|escape }}">
+        {% if edit_instance %}<input type="hidden" name="edit_pk" value="{{ edit_instance.pk }}">{% endif %}
+
+        <span class="field-error js-err" id="err-items_json">{% if item_errors %}{{ item_errors.0 }}{% endif %}</span>
+
+        <div id="step1" class="cust-step">
+          <div class="cu-section">
+            <div class="cu-section-fields">
+              <div class="cu-row-2-eq">
+                <div class="cu-field">
+                  <label class="cu-label">Customer <span class="req">*</span></label>
+                  {{ form.customer }}
+                  {% if form.customer.errors %}<span class="field-error">{{ form.customer.errors.0 }}</span>{% endif %}
+                  <span class="field-error js-err" id="err-customer"></span>
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">Product <span class="req">*</span></label>
+                  {{ form.product }}
+                  {% if form.product.errors %}<span class="field-error">{{ form.product.errors.0 }}</span>{% endif %}
+                  <span class="field-error js-err" id="err-product"></span>
+                </div>
+              </div>
+                <div class="cu-field">
+                <label class="cu-label">Specification Name (auto)</label>
+                <input type="text" class="cu-input" id="specNamePreview" readonly>
+              </div>
+
+              <div id="rmFields" {% if bom_type != 'rm' %}style="display:none;"{% endif %}>
+                <div class="cu-row-2">
+                  <div class="cu-field"><label class="cu-label">Machine <span class="req">*</label>{{ form.machine }}{% if form.machine.errors %}<span class="field-error">{{ form.machine.errors.0 }}</span>{% endif %}</div>
+                  <div class="cu-field"><label class="cu-label">No of Lots <span class="req">*</span></label>{{ form.no_of_lots }}{% if form.no_of_lots.errors %}<span class="field-error">{{ form.no_of_lots.errors.0 }}</span>{% endif %}</div>
+                </div>
+                <div class="cu-row-3">
+                  <div class="cu-field"><label class="cu-label">Shape</label>{{ form.shape }}{% if form.shape.errors %}<span class="field-error">{{ form.shape.errors.0 }}</span>{% endif %}</div>
+                  <div class="cu-field"><label class="cu-label">Color</label>{{ form.color }}{% if form.color.errors %}<span class="field-error">{{ form.color.errors.0 }}</span>{% endif %}</div>
+                  <div class="cu-field"><label class="cu-label">Coating</label>{{ form.coating }}{% if form.coating.errors %}<span class="field-error">{{ form.coating.errors.0 }}</span>{% endif %}</div>
+                </div>
+                <div class="cu-row-4-eq">
+                  <div class="cu-field"><label class="cu-label">Capsule</label>{{ form.capsule }}{% if form.capsule.errors %}<span class="field-error">{{ form.capsule.errors.0 }}</span>{% endif %}</div>
+                  <div class="cu-field"><label class="cu-label">Average Weight (mg) <span class="req">*</span></label>{{ form.avg_wt }}{% if form.avg_wt.errors %}<span class="field-error">{{ form.avg_wt.errors.0 }}</span>{% endif %}</div>
+                  {% if bom_type == 'rm' %}
+                  <div class="cu-field bom-right">
+                    <label class="cu-label">Batch size (lakh) <span class="req">*</span></label>
+                    {{ form.batch_size }}
+                    {% if form.batch_size.errors %}<span class="field-error">{{ form.batch_size.errors.0 }}</span>{% endif %}
+                    <span class="field-error js-err" id="err-batch_size"></span>
+                  </div>
+                  <div class="cu-field bom-right">
+                    <label class="cu-label">Batch nos. <span class="req">*</span></label>
+                    {{ form.batch_nos }}
+                    {% if form.batch_nos.errors %}<span class="field-error">{{ form.batch_nos.errors.0 }}</span>{% endif %}
+                    <span class="field-error js-err" id="err-batch_nos"></span>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div id="pmFields" {% if bom_type != 'pm' %}style="display:none;"{% endif %}>
+                <div class="cu-row-3-eq">
+                  <div class="cu-field"><label class="cu-label">Packing Style <span class="req">*</span></label>{{ form.pkg_style }}{% if form.pkg_style.errors %}<span class="field-error">{{ form.pkg_style.errors.0 }}</span>{% endif %}<span class="field-error js-err" id="err-pkg_style"></span></div>
+                  {% if bom_type == 'pm' %}
+                  <div class="cu-field bom-right">
+                    <label class="cu-label">Batch size (lakh) <span class="req">*</span></label>
+                    {{ form.batch_size }}
+                    {% if form.batch_size.errors %}<span class="field-error">{{ form.batch_size.errors.0 }}</span>{% endif %}
+                    <span class="field-error js-err" id="err-batch_size"></span>
+                  </div>
+                  <div class="cu-field bom-right">
+                    <label class="cu-label">Batch nos. <span class="req">*</span></label>
+                    {{ form.batch_nos }}
+                    {% if form.batch_nos.errors %}<span class="field-error">{{ form.batch_nos.errors.0 }}</span>{% endif %}
+                    <span class="field-error js-err" id="err-batch_nos"></span>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="cu-actions">
+            <button type="button" class="btn-save btn-item-details" onclick="goToBomItems()"><i class="bi bi-grid-3x3-gap"></i> Add Items</button>
+            <button type="submit" class="btn-save btn-save-main" id="btnSaveBom"><i class="bi bi-check2-circle"></i>{% if edit_instance %}Update BOM{% else %}Save BOM{% endif %}</button>
+            {% if edit_instance %}
+              <a href="{% url 'bom' %}?type={{ bom_type }}" class="btn-cancel"><i class="bi bi-x"></i> Cancel</a>
+            {% else %}
+              <button type="button" class="btn-cancel" onclick="resetBomForm()"><i class="bi bi-x"></i> Clear</button>
+            {% endif %}
+          </div>
+        </div>
+
+        <div id="step2" class="cust-step" style="display:none;">
+          <div class="prod-grid-wrap">
+            <div class="prod-grid-toolbar">
+              <span class="prod-grid-label"><i class="bi bi-list-ul"></i> Item Details</span>
+              <button type="button" class="btn-add-row" onclick="addBomItemRow()"><i class="bi bi-plus-lg"></i> Add Row</button>
+            </div>
+            <div class="prod-grid-scroll">
+              <table class="prod-grid-table">
+                <thead><tr>
+                  <th>Stage</th>
+                  <th>Item</th>
+                  <th class="qty-col">QTY</th>
+                  <th>UOM</th>
+                  <th></th>
+                </tr></thead>
+                <tbody id="bomGridBody"></tbody>
+              </table>
+              <p class="prod-grid-empty" id="bomGridEmpty"><i class="bi bi-info-circle"></i>No item rows yet.</p>
+            </div>
+          </div>
+          <div class="cu-actions">
+            <button type="button" class="btn-cancel" onclick="goBackToBomHeader()"><i class="bi bi-arrow-left"></i> Back to Header</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-card-header"><i class="bi bi-list-ul"></i><h3>BOM Records ({{ records|length }})</h3></div>
+    <div class="table-scroll-body">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Specification</th>
+            <th>Customer</th>
+            <th>Product</th>
+            {% if bom_type == 'pm' %}<th>Type Field</th>{% endif %}
+            <th>No. of Items</th>
+            <th>Lock</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in records %}
+          <tr {% if edit_instance and edit_instance.pk == r.spec_id %}class="row-editing"{% endif %}>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ r.spec_name }}</td>
+            <td>{{ r.customer__cust_name }}</td>
+            <td>{{ r.product__prod_name }}</td>
+            {% if bom_type == 'pm' %}<td>{{ r.pkg_style__pkg_style_name }}</td>{% endif %}
+            <td>{{ r.num_items }}</td>
+            <td>{% if r.is_locked %}<span class="lock-badge">Locked</span>{% else %}<span class="lock-badge unlocked">Open{% endif %}</span></td>
+            <td class="col-actions">
+              <a href="?type={{ bom_type }}&edit_pk={{ r.spec_id }}" class="btn-action btn-edit"><i class="bi bi-pencil"></i></a>
+              <button type="button" class="btn-action btn-delete" data-delete-url="{% url 'bom_delete' bom_type r.spec_id %}" data-delete-name="{{ r.spec_name|escapejs }}" onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="{% if bom_type == 'pm' %}8{% else %}7{% endif %}" class="empty-row">No BOM records found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script id="bomPageData" type="application/json">
+{
+  "bomType": "{{ bom_type }}",
+  "customers": {{ customers_json|safe }},
+  "products": {{ products_json|safe }},
+  "stages": {{ stages_json|safe }},
+  "items": {{ items_json|safe }},
+  "shapes": {{ shapes_json|safe }},
+  "colors": {{ colors_json|safe }},
+  "coatings": {{ coatings_json|safe }},
+  "capsules": {{ capsules_json|safe }},
+  "pkgStyles": {{ pkg_styles_json|safe }},
+  "machines": {{ machines_json|safe }},
+  "existingItems": {{ existing_items_json|safe }},
+  "isLocked": {% if edit_instance and edit_instance.is_locked %}true{% else %}false{% endif %},
+  "startStep": {{ start_step }}
+}
+</script>
+{% endblock %}

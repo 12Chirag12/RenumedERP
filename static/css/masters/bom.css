@@ -1,0 +1,289 @@
+.bom-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 8px;
+}
+.bom-page .cu-panel,
+.bom-page .table-card {
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.bom-page .cu-card-header {
+  background: var(--navy);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+}
+.bom-page .icon-wrap {
+  background: rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bom-page .cu-section {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 6px;
+}
+.bom-page .cu-section-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--form-field-row-gap);
+  padding: 10px 12px;
+}
+
+/* RM/PM conditional blocks stack multiple .cu-row* — gap like .cu-section-fields */
+.bom-page #rmFields,
+.bom-page #pmFields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--form-field-row-gap);
+  min-width: 0;
+}
+
+/* Step panels: space between section grid and action bar */
+.bom-page .cust-step {
+  gap: var(--form-field-row-gap);
+}
+.bom-page .cu-row-2-eq {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--form-field-grid-gap);
+}
+.bom-page .cu-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--form-field-grid-gap);
+}
+.bom-page .cu-label .req {
+  color: #e84040;
+}
+.bom-page .cu-input,
+.bom-page .cu-select {
+  border: 1.5px solid var(--border);
+  padding: 0 8px;
+  background: var(--off-white);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* BOM: batch size / batch nos should be right-aligned. */
+.bom-page #bomBatchSizeInput,
+.bom-page #bomBatchNosInput {
+  text-align: right;
+}
+
+.bom-page .cu-field.bom-right .cu-label {
+  text-align: right;
+}
+.bom-page .cu-select[disabled],
+.bom-page .cu-input[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.bom-page .cu-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.bom-page .btn-cancel,
+.bom-page .btn-save {
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.bom-page .btn-cancel {
+  border: 1.5px solid var(--border);
+  background: #fff;
+  color: var(--text-mid);
+}
+.bom-page .btn-save {
+  border: none;
+  background: linear-gradient(135deg, var(--primary-action), var(--primary-action-hover));
+  color: #fff;
+  flex: 1;
+  justify-content: center;
+}
+.bom-page .btn-item-details {
+  flex: 0 0 auto;
+  background: #e8f8fc;
+  color: #0b5872;
+  border: 1px solid #9bdff0;
+}
+.bom-page .btn-save-main {
+  flex: 0 0 auto;
+  min-width: 150px;
+  font-weight: 700;
+  box-shadow: 0 2px 10px rgba(0, 180, 216, 0.25);
+}
+.bom-page #step1 .cu-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 3fr) minmax(0, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+.bom-page #step1 .cu-actions .btn-cancel,
+.bom-page #step1 .cu-actions .btn-save-main,
+.bom-page #step1 .cu-actions .btn-item-details {
+  width: 100%;
+  justify-content: center;
+  min-width: 0;
+}
+.bom-page #step1 .cu-actions .btn-save-main {
+  min-width: 0;
+}
+.bom-page .btn-save[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+/* .field-error text + .input-error borders: forms_consistency.css */
+.bom-page .js-err:empty {
+  display: none;
+}
+.bom-page .bom-selector {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+}
+.bom-page .bom-selector .bom-type-card {
+  flex: 1 1 0;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  font-weight: 700;
+}
+.bom-page .cu-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff0f0;
+  border: 1px solid #f5c0c0;
+  border-radius: 6px;
+  padding: 5px 10px;
+  color: #c0392b;
+  margin-bottom: 6px;
+}
+.bom-page .prod-grid-wrap {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.bom-page .prod-grid-toolbar {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 10px;
+  background: var(--off-white);
+  border-bottom: 1px solid var(--border);
+}
+.bom-page .prod-grid-scroll {
+  max-height: 180px;
+  overflow: auto;
+}
+.bom-page .prod-grid-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+/* thead/tbody cell padding + row borders: forms_consistency.css (.cu-page[data-page-init] .prod-grid-table …) */
+
+/* Specification name (auto): always emphasized */
+.bom-page #specNamePreview {
+  font-weight: 700;
+  border-color: rgba(0, 180, 216, 0.85);
+  box-shadow: 0 0 0 2px rgba(0, 180, 216, 0.14);
+  background: #f3fbfe;
+}
+
+/* Qty column alignment */
+.bom-page .prod-grid-table th.qty-col,
+.bom-page .prod-grid-table td.qty-col {
+  text-align: right;
+}
+.bom-page .qty-input {
+  text-align: right;
+}
+.bom-page .prod-grid-empty {
+  padding: 18px;
+  text-align: center;
+  color: var(--text-light);
+  margin: 0;
+}
+.bom-page .btn-add-row,
+.bom-page .btn-del-row {
+  height: 24px;
+  border-radius: 5px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.bom-page .btn-add-row {
+  border: 1.5px solid var(--accent2);
+  color: var(--accent2);
+  background: rgba(0, 180, 216, 0.06);
+  padding: 0 10px;
+}
+.bom-page .btn-del-row {
+  width: 24px;
+  border: none;
+  background: rgba(232, 64, 64, 0.1);
+  color: #e84040;
+}
+.bom-page .table-card {
+  display: flex;
+  flex-direction: column;
+}
+.bom-page .table-card-header {
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bom-page table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.bom-page th {
+  background: var(--off-white);
+  text-transform: uppercase;
+}
+.bom-page td {
+  border-bottom: 1px solid var(--off-white);
+}
+.bom-page .btn-action {
+  border: none;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  text-decoration: none;
+}
+.bom-page .btn-edit {
+  background: rgba(0, 180, 216, 0.1);
+  color: var(--accent2);
+}
+.bom-page .btn-delete {
+  background: rgba(232, 64, 64, 0.1);
+  color: #e84040;
+  margin-left: 3px;
+}
+.bom-page .lock-badge {
+  display: inline-block;
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+.bom-page .lock-badge.unlocked {
+  background: #dcfce7;
+  color: #166534;
+}

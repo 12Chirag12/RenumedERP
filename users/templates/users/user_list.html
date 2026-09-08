@@ -1,0 +1,115 @@
+{% extends base_template %}
+<!--
+  user_list.html
+  Admin-only page listing all system users with department & role info.
+  Allows admin to reset passwords.
+-->
+
+{% block title %}User Management — PharmaERP{% endblock %}
+
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/users/user_list.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="user-list-page">
+<div class="page-header">
+  <div>
+    <h1>User Management</h1>
+    <p>Manage system user accounts. Only Administrators can access this page.</p>
+  </div>
+  <a href="{% url 'create_user' %}" class="btn-primary">
+    <i class="bi bi-person-plus"></i> Add New User
+  </a>
+</div>
+
+<div class="table-card">
+  <div class="table-card-header">
+    <i class="bi bi-people"></i>
+    <h3>All Users ({{ users.count }})</h3>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Full Name</th>
+        <th>Username</th>
+        <th>Department</th>
+        <th>Sub-Department</th>
+        <th>Role / Position</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for profile in users %}
+      <tr>
+        <td class="col-idx">{{ forloop.counter }}</td>
+        <td><strong>{{ profile.full_name }}</strong></td>
+        <td class="col-username">{{ profile.user.username }}</td>
+
+        <!-- Department -->
+        <td>
+          {% if profile.department %}
+          <span class="dept-badge">{{ profile.department }}</span>
+          {% else %}
+          <span class="empty-val">—</span>
+          {% endif %}
+        </td>
+
+        <!-- Sub-Department -->
+        <td>
+          {% if profile.sub_department %}
+          <span class="subdept-text">{{ profile.sub_department }}</span>
+          {% else %}
+          <span class="empty-val">—</span>
+          {% endif %}
+        </td>
+
+        <!-- Role -->
+        <td>
+          {% if profile.role %}
+          <span class="role-badge">{{ profile.role }}</span>
+          {% else %}
+          <span class="empty-val">—</span>
+          {% endif %}
+        </td>
+
+        <!-- Password status -->
+        <td>
+          {% if profile.must_change_password %}
+          <span class="status-badge status-temp">
+            <i class="bi bi-clock"></i> Temp Password
+          </span>
+          {% else %}
+          <span class="status-badge status-active">
+            <i class="bi bi-check-circle"></i> Active
+          </span>
+          {% endif %}
+        </td>
+
+        <!-- Actions -->
+        <td>
+          {% if profile.user != request.user %}
+          <a href="{% url 'change_user_password' profile.user.id %}" class="btn-reset">
+            <i class="bi bi-key"></i> Change Password
+          </a>
+          {% else %}
+          <span class="self-label">— (You)</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" class="empty-row">
+          No users found. Click <strong>Add New User</strong> to create one.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div><!-- /table-card -->
+</div><!-- /user-list-page -->
+{% endblock %}

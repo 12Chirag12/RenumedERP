@@ -1,0 +1,655 @@
+/* Master Reports — scoped under .mr-page */
+
+.mr-page {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.mr-page .mr-heading h1 {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0 0 2px;
+  color: var(--text-dark);
+}
+.mr-page .mr-heading p {
+  font-size: 12px;
+  color: var(--text-mid);
+  margin: 0;
+}
+
+.mr-toolbar {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.mr-toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.mr-meta-row {
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+  padding-top: 6px;
+}
+.mr-meta {
+  font-size: 11px;
+  color: var(--text-mid);
+}
+
+.mr-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.mr-select {
+  min-width: 220px;
+  max-width: 100%;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #fff;
+}
+
+.mr-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #fff;
+  color: var(--text-dark);
+  cursor: pointer;
+}
+/* Do not style .mr-btn-primary here — it must stay navy on hover (see .mr-btn-primary:hover). */
+.mr-btn:hover:not(.mr-btn-primary) {
+  background: #f8fafc;
+}
+.mr-btn-primary {
+  background: var(--navy, #1e3a5f);
+  color: #fff;
+  border-color: transparent;
+}
+.mr-btn-primary:hover {
+  background: var(--navy, #1e3a5f);
+  filter: brightness(1.08);
+}
+
+/* Full-width stack: filters on top, preview below */
+.mr-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.mr-stack > .mr-filters {
+  flex-shrink: 0;
+}
+
+.mr-filters,
+.mr-preview {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 0;
+}
+
+/* Global .cu-panel uses overflow:hidden — allow inner preview to scroll horizontally */
+.mr-preview.cu-panel {
+  overflow: hidden;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.mr-filters-header {
+  background: var(--navy, #1e3a5f);
+  color: #fff;
+  padding: 10px 14px;
+}
+.mr-filters-header h2 {
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.mr-filters-header p {
+  margin: 0;
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.7);
+}
+.mr-filters-body {
+  padding: 10px 14px 12px;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+/* One row: [ Type | Customer | Group ] (3/4) + [ Columns ] (1/4) — scroll if needed */
+.mr-filters-host {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+}
+
+#mrFiltersDynamic {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  flex: 3 1 0;
+  min-width: 0;
+  gap: 6px;
+  align-items: stretch;
+  box-sizing: border-box;
+}
+
+#mrFiltersDynamic .mr-filter-block {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: none;
+  margin-bottom: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 8px;
+  background: #fafafa;
+  box-sizing: border-box;
+}
+
+.mr-filters-host > .mr-columns-block {
+  flex: 1 1 0;
+  min-width: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 8px;
+  background: #fafafa;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.mr-filters-host > .mr-columns-block .mr-check-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+#mrFiltersDynamic .mr-filter-block .mr-select,
+.mr-filters-host > .mr-columns-block .mr-select {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+#mrFiltersDynamic .mr-filter-title {
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#mrFiltersDynamic .mr-radio-row,
+.mr-filters-host > .mr-columns-block .mr-radio-row {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+#mrFiltersDynamic .mr-list-label,
+.mr-filters-host > .mr-columns-block .mr-list-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mr-filters-host > .mr-columns-block .mr-subhead {
+  margin-top: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mr-columns-block {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.mr-subhead {
+  font-size: 12px;
+  font-weight: 700;
+  margin: 0 0 8px;
+  color: var(--text-dark);
+}
+
+.mr-filter-block {
+  margin-bottom: 14px;
+}
+
+.mr-filter-title {
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--text-dark);
+}
+.mr-radio-row {
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+/* Stacked radio options (e.g. BOM View / BOM type) */
+.mr-radio-row.mr-radio-col {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  white-space: normal;
+}
+
+#mrFiltersDynamic .mr-radio-row.mr-radio-col {
+  flex-wrap: nowrap;
+  white-space: normal;
+}
+.mr-list-label {
+  font-size: 10.5px;
+  color: var(--text-mid);
+  margin-bottom: 4px;
+}
+
+/* Inner option lists stay vertical (checkboxes / values) */
+.mr-check-scroll {
+  display: block;
+  max-height: 180px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: #fff;
+}
+.mr-check-scroll label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  padding: 3px 0;
+  cursor: pointer;
+}
+
+.mr-preview-header {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+.mr-preview-header h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.mr-print-header {
+  display: none;
+  text-align: center;
+  padding: 12px 14px 0;
+}
+.mr-print-company {
+  font-weight: 800;
+  font-size: 14px;
+}
+.mr-print-title {
+  font-weight: 700;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.mr-preview-wrap {
+  /* Extra BR padding so table outer borders are not clipped by overflow:auto */
+  padding: 10px 16px 16px;
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  max-height: calc(100vh - 380px);
+  width: 100%;
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  z-index: 0;
+}
+
+/*
+ * Preview tables: size to content so many columns stay readable; the wrap
+ * scrolls horizontally. Avoid table-layout:fixed + width:100% with a single
+ * <col span="N"> — that forces equal narrow columns and jumbled headers.
+ */
+.mr-table {
+  width: max-content;
+  min-width: 100%;
+  max-width: none;
+  border-collapse: collapse;
+  font-size: 11px;
+  table-layout: auto;
+  /* Explicit outer frame (cell borders can look incomplete at the edge when clipped) */
+  border: 1px solid #111;
+  box-sizing: border-box;
+}
+
+.mr-table:has(col.mr-col-sr) col.mr-col-sr {
+  width: auto;
+  min-width: 3rem;
+}
+.mr-table:has(col.mr-col-sr) col.mr-col-val,
+.mr-table:has(col.mr-col-sr) col.mr-col-rest {
+  width: auto;
+}
+.mr-table:has(col.mr-col-sr) thead tr:last-child th:first-child,
+.mr-table:has(col.mr-col-sr) tbody td:first-child {
+  min-width: 3rem;
+  max-width: none;
+  width: auto;
+  text-align: center;
+  white-space: nowrap;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.mr-table th,
+.mr-table td {
+  border: 1px solid #111;
+  padding: 5px 8px;
+  vertical-align: top;
+}
+.mr-table thead th {
+  white-space: nowrap;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+.mr-table tbody td {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.mr-table th {
+  font-weight: 700;
+  background: #f1f5f9;
+}
+.mr-table tr:nth-child(even) td {
+  background: #fafafa;
+}
+
+.mr-group-header {
+  font-weight: 700;
+  background: #e2e8f0 !important;
+}
+
+/* Product attributes: grid of cards — min(260px,100%) avoids track overflow / overlap */
+.mr-multi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+  align-items: start;
+}
+
+.mr-mini-table-wrap {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 8px;
+  padding: 10px 12px 12px;
+  background: #fff;
+  /* Isolate stacking; clip horizontal bleed inside narrow grid cells */
+  isolation: isolate;
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+/* Stacked tables (e.g. grouped capsule sizes): block wrapper beats odd table-in-flex bugs */
+.mr-grouped-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Same total width as a single full-width table so inner columns line up across groups */
+.mr-grouped-stack .mr-table-slot .mr-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.mr-table-slot {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 0 2px 2px 0;
+  box-sizing: border-box;
+}
+
+.mr-mini-table-wrap h4 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mr-mini-table-wrap .mr-table {
+  width: 100%;
+  font-size: 11px;
+}
+
+.mr-mini-table-wrap .mr-multi-grid {
+  display: block;
+}
+
+.mr-error {
+  margin: 10px 14px 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 12px;
+}
+.mr-loading {
+  padding: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-mid);
+}
+
+.mr-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 8px 14px 12px;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+  font-size: 12px;
+}
+
+.prod-name-cell .p1 {
+  font-weight: 600;
+}
+.prod-name-cell .p2 {
+  font-size: 10.5px;
+  color: var(--text-mid);
+}
+
+@media print {
+  @page {
+    size: landscape;
+    margin: 10mm;
+  }
+
+  .sidebar,
+  .topbar,
+  .mr-toolbar,
+  .mr-heading,
+  .mr-filters,
+  .mr-preview-header,
+  .mr-pagination,
+  .mr-error,
+  .mr-loading,
+  #page-loader {
+    display: none !important;
+  }
+
+  .mr-filters.cu-panel,
+  .mr-preview.cu-panel {
+    overflow: visible !important;
+  }
+
+  html,
+  body {
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Uniform 11pt for all printable report output (tables, headers, nested cells). */
+  .mr-preview.cu-panel,
+  .mr-preview.cu-panel * {
+    font-size: 11pt !important;
+  }
+
+  .main-content {
+    margin: 0 !important;
+    margin-left: 0 !important;
+    padding: 8px !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+    overflow: visible !important;
+  }
+
+  .mr-page {
+    width: 100% !important;
+    max-width: none !important;
+    overflow: visible !important;
+  }
+
+  .mr-stack {
+    display: block !important;
+  }
+
+  .mr-preview {
+    box-shadow: none !important;
+    border: none !important;
+    overflow: visible !important;
+  }
+
+  .mr-print-header {
+    display: block !important;
+  }
+
+  .mr-preview-wrap {
+    max-height: none !important;
+    overflow: visible !important;
+    width: 100% !important;
+    padding: 2px !important;
+  }
+
+  .mr-table {
+    width: 100% !important;
+    max-width: none !important;
+    table-layout: auto !important;
+    page-break-inside: auto;
+    border: 1px solid #000 !important;
+    box-sizing: border-box !important;
+  }
+
+  .mr-table:has(col.mr-col-sr) {
+    table-layout: auto !important;
+  }
+  .mr-table:has(col.mr-col-sr) col.mr-col-sr {
+    width: auto !important;
+    min-width: 3rem !important;
+  }
+  .mr-table:has(col.mr-col-sr) col.mr-col-val,
+  .mr-table:has(col.mr-col-sr) col.mr-col-rest {
+    width: auto !important;
+  }
+  .mr-table:has(col.mr-col-sr) thead tr:last-child th:first-child,
+  .mr-table:has(col.mr-col-sr) tbody td:first-child {
+    width: auto !important;
+    max-width: none !important;
+    min-width: 3rem !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+  }
+
+  .mr-table thead th {
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+  }
+  .mr-table tbody td {
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .mr-table:has(col.mr-col-sr) thead tr:last-child th:first-child,
+  .mr-table:has(col.mr-col-sr) tbody td:first-child {
+    white-space: nowrap !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+  }
+
+  .mr-multi-grid {
+    display: block !important;
+  }
+
+  /*
+   * Product attribute master (.mr-multi-grid): first attribute stays on the
+   * same page as the print header; each following attribute starts a new page.
+   */
+  .mr-multi-grid > .mr-mini-table-wrap {
+    page-break-inside: auto;
+    break-inside: auto;
+    margin-bottom: 0;
+    border: 1px solid #000 !important;
+  }
+
+  .mr-multi-grid > .mr-mini-table-wrap:not(:first-child) {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  .mr-mini-table-wrap h4 {
+    page-break-after: avoid;
+    break-after: avoid-page;
+  }
+
+  .mr-mini-table-wrap .mr-table {
+    page-break-inside: auto;
+  }
+}

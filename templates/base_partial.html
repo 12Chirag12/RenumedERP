@@ -1,0 +1,36 @@
+{% load static %}
+<!-- {#
+  base_partial.html
+  Returned on every HTMX request (HX-Request: true header).
+  HTMX swaps this into #mainContent — topbar and sidebar stay untouched.
+#} -->
+
+{% block extra_css %}{% endblock %}
+
+{% if messages %}
+<div class="messages-container">
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }}">
+    <i class="bi bi-{% if message.tags == 'error' %}exclamation-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+    {{ message }}
+    <button class="alert-dismiss" onclick="this.parentElement.remove()" title="Dismiss">&times;</button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% block content %}{% endblock %}
+
+{% block extra_js %}{% endblock %}
+
+<script>
+  (function () {
+    if (typeof initPageContent === 'function') initPageContent();
+    var el = document.querySelector('#mainContent [data-page-init]')
+      || document.querySelector('[data-page-init]');
+    if (el) {
+      var fn = window['initPage_' + el.dataset.pageInit];
+      if (typeof fn === 'function') fn();
+    }
+  })();
+</script>

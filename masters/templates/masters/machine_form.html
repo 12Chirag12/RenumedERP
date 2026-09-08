@@ -1,0 +1,245 @@
+{% extends base_template %}
+<!--
+  masters/machine_form.html
+  Machine Master — create / edit machines.
+  Edit/Delete use the global modal system from base.html + base.js.
+  Compact layout: no page scroll, table body scrolls internally.
+-->
+{% load static %}
+{% block title %}Machine Master — PharmaERP{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/masters/machine.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="cu-page machine-page" data-page-init="machine">
+
+  <!-- ── Page heading ───────────────────────────────────────── -->
+  <div class="cu-heading">
+    <h1>Machine Master</h1>
+    <p>Add and manage machines linked to sections and departments.</p>
+  </div>
+
+  <!-- ── FORM PANEL ─────────────────────────────────────────── -->
+  <div class="cu-panel">
+
+    <div class="cu-card-header">
+      <div class="icon-wrap">
+        <i class="bi bi-{% if edit_instance %}pencil-fill{% else %}gear-wide-connected{% endif %}"></i>
+      </div>
+      <div>
+        <h2>{% if edit_instance %}Edit Machine{% else %}New Machine Details{% endif %}</h2>
+        <p>{% if edit_instance %}Update machine information{% else %}Select a section and fill in machine details{% endif %}</p>
+      </div>
+    </div>
+
+    <div class="cu-card-body">
+
+      {% include "includes/form_errors_alert.html" with form=form %}
+
+      <form method="POST"
+        action="{% url 'machine' %}"
+        id="machineForm">
+        {% csrf_token %}
+
+        {% if edit_instance %}
+          <input type="hidden" name="edit_pk" value="{{ edit_instance.pk }}">
+        {% endif %}
+
+        <div class="cu-section">
+          <div class="cu-section-fields">
+
+            <!-- Row 1: Section | Department (auto) | Machine Name -->
+            <div class="cu-row-3">
+
+              <div class="cu-field">
+                <label class="cu-label">Section <span class="req">*</span></label>
+                {{ form.section }}
+                {% if form.section.errors %}
+                  <span class="field-error">{{ form.section.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+              <div class="cu-field">
+                <label class="cu-label">Department</label>
+                <input type="text" id="deptDisplay" class="cu-input" disabled
+                  placeholder="Auto-filled from section"
+                  value="{{ edit_instance.section.department.dept_name|default:'' }}" />
+              </div>
+
+              <div class="cu-field">
+                <label class="cu-label">Machine Name <span class="req">*</span></label>
+                <input type="text" name="machine_name" id="machineNameInput" class="cu-input"
+                  placeholder="Enter machine name"
+                  value="{{ form.machine_name.value|default:'' }}"
+                  autocomplete="off" />
+                {% if form.machine_name.errors %}
+                  <span class="field-error">{{ form.machine_name.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+            </div>
+
+            <!-- Row 2: Make | Capacity | Model No. -->
+            <div class="cu-row-3">
+
+              <div class="cu-field">
+                <label class="cu-label">Maker</label>
+                <input type="text" name="make" id="makeInput" class="cu-input"
+                  placeholder="Manufacturer / maker"
+                  value="{{ form.make.value|default:'' }}"
+                  autocomplete="off" />
+                {% if form.make.errors %}
+                  <span class="field-error">{{ form.make.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+              <div class="cu-field">
+                <label class="cu-label">Capacity</label>
+                <input type="text" name="capacity" id="capacityInput" class="cu-input"
+                  placeholder="e.g. 500 kg/hr"
+                  value="{{ form.capacity.value|default:'' }}"
+                  autocomplete="off" />
+                {% if form.capacity.errors %}
+                  <span class="field-error">{{ form.capacity.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+              <div class="cu-field">
+                <label class="cu-label">Model No.</label>
+                <input type="text" name="model_no" id="modelNoInput" class="cu-input"
+                  placeholder="Model number"
+                  value="{{ form.model_no.value|default:'' }}"
+                  autocomplete="off" />
+                {% if form.model_no.errors %}
+                  <span class="field-error">{{ form.model_no.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+            </div>
+
+            <!-- Row 3: Machine No. (wide) | Installation Date -->
+            <div class="cu-row-2-1">
+
+              <div class="cu-field">
+                <label class="cu-label">Machine No.</label>
+                <input type="text" name="machine_no" id="machineNoInput" class="cu-input"
+                  placeholder="Asset tag / machine number"
+                  value="{{ form.machine_no.value|default:'' }}"
+                  autocomplete="off" />
+                {% if form.machine_no.errors %}
+                  <span class="field-error">{{ form.machine_no.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+              <div class="cu-field">
+                <label class="cu-label">Installation Date</label>
+                <input type="date" name="installed_date" id="installedDateInput" class="cu-input"
+                  value="{{ form.installed_date.value|default:'' }}" />
+                {% if form.installed_date.errors %}
+                  <span class="field-error">{{ form.installed_date.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+            </div>
+
+            <!-- Row 4: Remarks (full width) -->
+            <div class="cu-field">
+              <label class="cu-label">Remarks</label>
+              <textarea name="remarks" id="remarksInput" class="cu-textarea"
+                placeholder="Optional remarks…">{{ form.remarks.value|default:'' }}</textarea>
+              {% if form.remarks.errors %}
+                <span class="field-error">{{ form.remarks.errors.0 }}</span>
+              {% endif %}
+            </div>
+
+          </div>
+        </div><!-- /.cu-section -->
+
+        <!-- Action Buttons -->
+        <div class="cu-actions">
+          {% if edit_instance %}
+            <a href="{% url 'machine' %}" class="btn-cancel">
+              <i class="bi bi-x"></i> Cancel
+            </a>
+            <button type="submit" class="btn-save">
+              <i class="bi bi-check2-circle"></i> Update Machine
+            </button>
+          {% else %}
+            <button type="submit" class="btn-save">
+              <i class="bi bi-check2-circle"></i> Save Machine
+            </button>
+            <button type="button" class="btn-cancel" onclick="resetForm()">
+              <i class="bi bi-x"></i> Clear
+            </button>
+          {% endif %}
+        </div>
+
+      </form>
+    </div><!-- /.cu-card-body -->
+  </div><!-- /.cu-panel -->
+
+  <!-- ── MACHINES LIST TABLE ─────────────────────────────────── -->
+  <div class="table-card">
+    <div class="table-card-header">
+      <i class="bi bi-list-ul"></i>
+      <h3>All Machines ({{ machines.count }})</h3>
+    </div>
+
+    <div class="table-scroll-body">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Machine Name</th>
+            <th>Section</th>
+            <th>Department</th>
+            <th>Make</th>
+            <th>Model No.</th>
+            <th>Machine No.</th>
+            <th>Capacity</th>
+            <th>Installed Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for machine in machines %}
+          <tr {% if edit_instance.pk == machine.pk %}class="row-editing"{% endif %}>
+            <td class="col-idx">{{ forloop.counter }}</td>
+            <td><strong>{{ machine.machine_name }}</strong></td>
+            <td><span class="section-badge">{{ machine.section.section_name }}</span></td>
+            <td><span class="dept-badge">{{ machine.section.department.dept_name }}</span></td>
+            <td>{{ machine.make|default:"—" }}</td>
+            <td>{{ machine.model_no|default:"—" }}</td>
+            <td>{{ machine.machine_no|default:"—" }}</td>
+            <td>{{ machine.capacity|default:"—" }}</td>
+            <td>{% if machine.installed_date %}{{ machine.installed_date|date:"d M Y" }}{% else %}—{% endif %}</td>
+            <td class="col-actions">
+              <a href="{% url 'machine' %}?edit_pk={{ machine.pk }}"
+                 class="btn-action btn-edit" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <button type="button"
+                class="btn-action btn-delete" title="Delete"
+                data-delete-url="{% url 'machine_delete' machine.pk %}"
+                data-delete-name="{{ machine.machine_name|escapejs }}"
+                onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)">
+                <i class="bi bi-trash"></i>
+              </button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="10" class="empty-row">
+              No machines found. Use the form above to add one.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div><!-- /.table-card -->
+
+</div><!-- /.cu-page -->
+{% endblock %}

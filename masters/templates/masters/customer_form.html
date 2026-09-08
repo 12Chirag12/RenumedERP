@@ -1,0 +1,293 @@
+{% extends base_template %}
+{% load static %}
+{% block title %}Customer Master — PharmaERP{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/masters/customer.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="cu-page customer-page" data-page-init="customer">
+
+  <!-- ── Page heading ───────────────────────────────────────── -->
+  <div class="cu-heading">
+    <h1>Customer Master</h1>
+    <p>Save from customer details; add products on the next step (same pattern as BOM).</p>
+  </div>
+
+  <!-- ── FORM PANEL (single panel, two steps inside) ────────── -->
+  <div class="cu-panel">
+
+    <!-- Dynamic header — swapped by JS -->
+    <div class="cu-card-header">
+      <div class="icon-wrap">
+        <i class="bi" id="headerIcon"></i>
+      </div>
+      <div>
+        <h2 id="headerTitle"></h2>
+        <p id="headerSub"></p>
+      </div>
+      <!-- Step indicator -->
+      <div class="step-indicator">
+        <span class="step-dot" id="dot1"></span>
+        <span class="step-line"></span>
+        <span class="step-dot" id="dot2"></span>
+      </div>
+    </div>
+
+    <div class="cu-card-body">
+
+      {% include "includes/form_errors_alert.html" with form=form %}
+
+      {# Single form wraps BOTH steps — state persists across navigation #}
+      <form method="POST"
+            action="{% url 'customer' %}{% if edit_instance %}?edit_pk={{ edit_instance.pk }}{% endif %}"
+            id="customerForm"
+            novalidate>
+        {% csrf_token %}
+       
+        {% if edit_instance %}
+        <input type="hidden" name="edit_pk" value="{{ edit_instance.pk }}">
+        {% endif %}
+       
+        <input type="hidden" name="products_json" id="productsJsonHidden"
+               value="{{ existing_prods_json|escape }}">
+
+        <!-- ══ STEP 1: Customer Details ═══════════════════════ -->
+        <div id="step1" class="cust-step">
+          <div class="cu-section">
+            <div class="cu-section-fields">
+
+              <!-- Row 1: Customer Name | Short Name -->
+              <div class="cu-row-2-eq">
+                <div class="cu-field">
+                  <label class="cu-label" for="custNameInput">Customer Name <span class="req">*</span></label>
+                  <input type="text" name="cust_name" id="custNameInput" class="cu-input"
+                    placeholder="Enter customer name"
+                    value="{{ form.cust_name.value|default:'' }}" autocomplete="organization" />
+                  {% if form.cust_name.errors %}<span class="field-error">{{ form.cust_name.errors.0 }}</span>{% endif %}
+                  <span class="field-error js-err" id="err-cust_name"></span>
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label" for="shortNameInput">Short Name <span class="req">*</span></label>
+                  <input type="text" name="short_name" id="shortNameInput" class="cu-input"
+                    placeholder="Max 10 chars, no spaces"
+                    value="{{ form.short_name.value|default:'' }}" autocomplete="organization-title" maxlength="10" />
+                  {% if form.short_name.errors %}<span class="field-error">{{ form.short_name.errors.0 }}</span>{% endif %}
+                  <span class="field-error js-err" id="err-short_name"></span>
+                </div>
+              </div>
+
+              <!-- Row 2: Address (full width) -->
+              <div class="cu-field">
+                <label class="cu-label" for="addressInput">Address <span class="req">*</span></label>
+                <textarea name="address" id="addressInput" class="cu-textarea"
+                  placeholder="Enter full address…">{{ form.address.value|default:'' }}</textarea>
+                {% if form.address.errors %}<span class="field-error">{{ form.address.errors.0 }}</span>{% endif %}
+                <span class="field-error js-err" id="err-address"></span>
+              </div>
+
+              <!-- Row 3: State | Pin Code | Landline -->
+              <div class="cu-row-3">
+                <div class="cu-field">
+                  <label class="cu-label">State <span class="req">*</span></label>
+                  {{ form.state }}
+                  {% if form.state.errors %}<span class="field-error">{{ form.state.errors.0 }}</span>{% endif %}
+                  <span class="field-error js-err" id="err-state"></span>
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label" for="pinCodeInput">Pin Code <span class="req">*</span></label>
+                  <input type="text" name="pin_code" id="pinCodeInput" class="cu-input"
+                    placeholder="6-digit pin" maxlength="6"
+                    value="{{ form.pin_code.value|default:'' }}" autocomplete="postal-code" />
+                  <span class="field-error js-err" id="err-pin_code"></span>
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label" for="landlineInput">Land Line No.</label>
+                  <input type="text" name="landline_no" id="landlineInput" class="cu-input"
+                    placeholder="10-digit number" maxlength="10"
+                    value="{{ form.landline_no.value|default:'' }}" autocomplete="tel" />
+                  <span class="field-error js-err" id="err-landline_no"></span>
+                </div>
+              </div>
+
+              <!-- Row 4: Mobile | Email | PAN -->
+              <div class="cu-row-3">
+                <div class="cu-field">
+                  <label class="cu-label" for="mobileInput">Mobile No.</label>
+                  <input type="text" name="mobile_no" id="mobileInput" class="cu-input"
+                    placeholder="10-digit mobile" maxlength="10"
+                    value="{{ form.mobile_no.value|default:'' }}" autocomplete="tel-national" />
+                  <span class="field-error js-err" id="err-mobile_no"></span>
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label" for="emailInput">Email ID</label>
+                  <input type="email" name="email" id="emailInput" class="cu-input"
+                    placeholder="email@example.com"
+                    value="{{ form.email.value|default:'' }}" autocomplete="email" />
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label" for="panInput">PAN No.</label>
+                  <input type="text" name="pan_no" id="panInput" class="cu-input"
+                    placeholder="ABCDE1234F" maxlength="10"
+                    value="{{ form.pan_no.value|default:'' }}" autocomplete="off" />
+                  <span class="field-error js-err" id="err-pan_no"></span>
+                </div>
+              </div>
+
+              <!-- Row 5: GST No. | Udyam Certificate -->
+              <div class="cu-row-2-eq">
+                <div class="cu-field">
+                  <label class="cu-label" for="gstInput">GST No.</label>
+                  <input type="text" name="gst_no" id="gstInput" class="cu-input"
+                    placeholder="22AAAAA0000A1Z5"
+                    value="{{ form.gst_no.value|default:'' }}" autocomplete="off" />
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label" for="udyamInput">Udyam Certificate</label>
+                  <input type="text" name="udyam_cert" id="udyamInput" class="cu-input"
+                    placeholder="UDYAM-XX-00-0000000"
+                    value="{{ form.udyam_cert.value|default:'' }}" autocomplete="off" />
+                </div>
+              </div>
+
+            </div>
+          </div><!-- /.cu-section -->
+
+          <!-- Step 1 actions (save here; product grid is auxiliary — same as BOM) -->
+          <div class="cu-actions">
+            <button type="button" class="btn-save btn-item-details" onclick="goToProducts()">
+              <i class="bi bi-grid-3x3-gap"></i> Add Products
+            </button>
+            <button type="submit" class="btn-save btn-save-main" id="btnSaveCustomer"
+              {% if existing_prods_json|default:'[]' == '[]' %}disabled aria-disabled="true"{% endif %}>
+              <i class="bi bi-check2-circle"></i>
+              {% if edit_instance %}Update Customer{% else %}Save Customer{% endif %}
+            </button>
+            {% if edit_instance %}
+              <a href="{% url 'customer' %}" class="btn-cancel"><i class="bi bi-x"></i> Cancel</a>
+            {% else %}
+              <button type="button" class="btn-cancel" onclick="resetForm()"><i class="bi bi-x"></i> Clear</button>
+            {% endif %}
+          </div>
+          <span class="field-error js-err" id="err-products_json"></span>
+        </div><!-- /#step1 -->
+
+        <!-- ══ STEP 2: Product Details ════════════════════════ -->
+        <div id="step2" class="cust-step" style="display:none;">
+
+          {# ── FIX 2: Server-side product-grid errors (were invisible) ── #}
+          {% if product_errors %}
+          <div class="cu-error-banner" style="margin-bottom:6px;">
+            <i class="bi bi-exclamation-circle-fill"></i>
+            {% for e in product_errors %}<span>{{ e }}</span>{% endfor %}
+          </div>
+          {% endif %}
+
+          <div id="prodGridError" class="cu-error-banner" style="display:none; margin-bottom:6px;">
+            <i class="bi bi-exclamation-circle-fill"></i>
+            <span id="prodGridErrorMsg"></span>
+          </div>
+
+          <div class="prod-grid-wrap">
+            <div class="prod-grid-toolbar">
+              <span class="prod-grid-label"><i class="bi bi-box-seam"></i> Product List</span>
+              <button type="button" class="btn-add-row" onclick="addProductRow()">
+                <i class="bi bi-plus-lg"></i> Add Row
+              </button>
+            </div>
+            <div class="prod-grid-scroll">
+              <table class="prod-grid-table" id="prodGridTable">
+                <thead>
+                  <tr>
+                    <th class="col-prod">Product <span class="req">*</span></th>
+                    <th class="col-lic">Adv-Lic</th>
+                    <th class="col-licdet">License Details</th>
+                    <th class="col-batch">Batch Abbr. <span class="req">*</span></th>
+                    <th class="col-del"></th>
+                  </tr>
+                </thead>
+                <tbody id="prodGridBody"></tbody>
+              </table>
+              <p class="prod-grid-empty" id="prodGridEmpty">
+                <i class="bi bi-info-circle"></i>&nbsp;No products yet — click <strong>Add Row</strong>.
+              </p>
+            </div>
+          </div>
+
+          <!-- Step 2: grid only — back to header to save -->
+          <div class="cu-actions" style="margin-top:6px;">
+            <button type="button" class="btn-cancel" onclick="goBack()">
+              <i class="bi bi-arrow-left"></i> Back to Customer Details
+            </button>
+          </div>
+
+        </div><!-- /#step2 -->
+
+      </form>
+    </div><!-- /.cu-card-body -->
+  </div><!-- /.cu-panel -->
+
+  <!-- ── CUSTOMERS DISPLAY TABLE ────────────────────────────── -->
+  <div class="table-card">
+    <div class="table-card-header">
+      <i class="bi bi-list-ul"></i>
+      <h3>All Customers ({{ customers.count }})</h3>
+    </div>
+    <div class="table-scroll-body">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Customer Name</th>
+            <th>Short Name</th>
+            <th>State</th>
+            <th>Mobile</th>
+            <th>Email</th>
+            <th>GST No.</th>
+            <th>Products</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cust in customers %}
+          <tr {% if edit_instance.pk == cust.pk %}class="row-editing"{% endif %}>
+            <td class="col-idx">{{ forloop.counter }}</td>
+            <td><strong>{{ cust.cust_name }}</strong></td>
+            <td><span class="short-badge">{{ cust.short_name }}</span></td>
+            <td>{{ cust.state.state_name }}</td>
+            <td>{{ cust.mobile_no|default:"—" }}</td>
+            <td>{{ cust.email|default:"—" }}</td>
+            <td>{{ cust.gst_no|default:"—" }}</td>
+            <td><span class="prod-count-badge">{{ cust.cust_products.count }}</span></td>
+            <td class="col-actions">
+              <a href="?edit_pk={{ cust.pk }}" class="btn-action btn-edit" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <button type="button" class="btn-action btn-delete" title="Delete"
+                data-delete-url="{% url 'customer_delete' cust.pk %}"
+                data-delete-name="{{ cust.cust_name|escapejs }}"
+                onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)">
+                <i class="bi bi-trash"></i>
+              </button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="9" class="empty-row">No customers found. Use the form above to add one.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /.cu-page -->
+
+<script id="custPageData" type="application/json">
+{
+  "allProducts":   {{ products_json|safe }},
+  "existingProds": {{ existing_prods_json|safe }},
+  "isEdit":        {% if edit_instance %}true{% else %}false{% endif %},
+  "startStep":     {{ start_step }}
+}
+</script>
+{% endblock %}

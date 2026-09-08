@@ -1,0 +1,76 @@
+{% extends base_template %}
+{% block title %}Transaction Reports — PharmaERP{% endblock %}
+
+{% block content %}
+<div class="tr-page" id="transactionReportsRoot" data-page-init="transaction_reports"
+     data-api-options="{{ api_options_url|escape }}"
+     data-api-data="{{ api_data_url|escape }}"
+     data-api-excel="{{ api_excel_url|escape }}"
+     data-company-header="{{ company_header|escape }}">
+
+  <div class="tr-heading cu-heading">
+    <h1>Transaction Reports</h1>
+    <p>Select a transaction report, apply filters, preview data, then export or print.</p>
+  </div>
+
+  <div class="tr-toolbar cu-panel">
+    <div class="tr-toolbar-row">
+      <label class="tr-label" for="trReportSelect">Report</label>
+      <select id="trReportSelect" class="tr-select">
+        {% for r in reports_catalogue %}
+        <option value="{{ r.slug }}" data-config-url="{{ r.config_url|escape }}">{{ r.label }}</option>
+        {% endfor %}
+      </select>
+      <button type="button" class="tr-btn tr-btn-primary" id="trBtnPreview">
+        <i class="bi bi-table"></i> Preview
+      </button>
+      <button type="button" class="tr-btn" id="trBtnExcel" title="Export current preview settings to Excel">
+        <i class="bi bi-file-earmark-spreadsheet"></i> Excel
+      </button>
+      <button type="button" class="tr-btn" id="trBtnPrint">
+        <i class="bi bi-printer"></i> Print
+      </button>
+    </div>
+    <div class="tr-toolbar-row tr-meta-row" id="trMetaBar" hidden>
+      <span class="tr-meta" id="trMetaText"></span>
+    </div>
+  </div>
+
+  <div class="tr-stack">
+    <section class="tr-filters cu-panel" id="trFilterPanel">
+      <div class="tr-filters-header">
+        <h2>Filters &amp; layout</h2>
+        <p id="trReportDescription">—</p>
+      </div>
+      <div class="tr-filters-body">
+        <div id="trFiltersHost" class="tr-filters-host">
+          <div id="trFiltersDynamic"></div>
+          <div class="tr-columns-block" id="trColumnsBlock" hidden>
+            <h3 class="tr-subhead">Columns</h3>
+            <div class="tr-radio-row">
+              <label><input type="radio" name="tr_col_mode" value="all" checked> All</label>
+              <label><input type="radio" name="tr_col_mode" value="select"> Select</label>
+            </div>
+            <div class="tr-check-scroll" id="trColumnsHost"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tr-preview cu-panel">
+      <div class="tr-preview-header">
+        <h2>Preview</h2>
+      </div>
+      <div class="tr-print-header" id="trPrintHeader">
+        <div class="tr-print-company">{{ company_header }}</div>
+        <div class="tr-print-title" id="trPrintTitle"></div>
+        <div class="tr-print-subtitle" id="trPrintSubtitle" hidden></div>
+      </div>
+      <div id="trError" class="tr-error" hidden></div>
+      <div id="trLoading" class="tr-loading" hidden>Loading…</div>
+      <div class="tr-preview-wrap" id="trPreviewWrap"></div>
+      <div class="tr-pagination" id="trPagination" hidden></div>
+    </section>
+  </div>
+</div>
+{% endblock %}

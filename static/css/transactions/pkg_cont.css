@@ -1,0 +1,200 @@
+/* Daily packing (contractors) — layout aligned with DPR (page heading, form, data block). */
+
+.pkg-cont-page {
+  --pkg-cont-table-chrome-r: 10px;
+  --pkg-cont-control-line-h: 40px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  box-sizing: border-box;
+  gap: 14px;
+  padding-bottom: 24px;
+  min-height: 0;
+}
+
+.pkg-cont-page .pkg-cont-page-heading {
+  width: 100%;
+  flex-shrink: 0;
+  text-align: left;
+  align-self: flex-start;
+}
+
+.pkg-cont-page .pkg-cont-page-heading h1 {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.02em;
+  margin: 0 0 4px;
+}
+
+.pkg-cont-page .pkg-cont-page-heading p {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-mid);
+  margin: 0;
+  max-width: 52rem;
+}
+
+.pkg-cont-section-block.pkg-cont-section-no-strip {
+  border-radius: var(--pkg-cont-table-chrome-r);
+}
+
+.pkg-cont-section-block {
+  margin-bottom: 0;
+}
+
+/* Row 1: date | contractor | no. of girls */
+.pkg-cont-page .pkg-cont-row-first {
+  display: grid;
+  grid-template-columns:
+    minmax(6.25rem, 8rem)
+    minmax(12rem, 2fr)
+    minmax(5.5rem, 7.25rem);
+  gap: 10px;
+  align-items: start;
+}
+
+/* Row 2: customer | product | batch | packing style */
+.pkg-cont-page .pkg-cont-row-second {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 1fr)
+    minmax(10rem, 1.35fr)
+    minmax(8rem, 1fr);
+  gap: 10px;
+  align-items: start;
+  margin-top: 10px;
+}
+
+.pkg-cont-page .pkg-cont-field--compact .cu-input,
+.pkg-cont-page .pkg-cont-field--compact .cu-select {
+  width: 100%;
+  max-width: 100%;
+}
+
+.pkg-cont-page .pkg-cont-field--contractor .cu-select,
+.pkg-cont-page .pkg-cont-field--contractor .select2-container {
+  width: 100% !important;
+  max-width: 100%;
+}
+
+.pkg-cont-page .pkg-cont-row-second .cu-select,
+.pkg-cont-page .pkg-cont-row-second .select2-container {
+  width: 100% !important;
+  max-width: 100%;
+}
+
+.pkg-cont-page .pkg-cont-field--batch .cu-select,
+.pkg-cont-page .pkg-cont-field--batch .select2-container {
+  width: 100% !important;
+  max-width: 100%;
+}
+
+/* Remarks: 1.5× single-line control height (same basis as DPR remarks) */
+.pkg-cont-page .pkg-cont-field--remarks-full {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.pkg-cont-page .pkg-cont-field--remarks-full textarea.cu-textarea,
+.pkg-cont-page .pkg-cont-field--remarks-full textarea.cu-input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: calc(var(--pkg-cont-control-line-h) * 1.5);
+  max-height: calc(var(--pkg-cont-control-line-h) * 1.5);
+  height: calc(var(--pkg-cont-control-line-h) * 1.5);
+  line-height: 1.35;
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
+  resize: none;
+  overflow-y: auto;
+}
+
+.pkg-cont-page .cu-actions.pkg-cont-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 14px;
+  margin-top: 4px;
+}
+
+/* Toolbar + grid below main form (same rhythm as DPR dpr-data-block) */
+.pkg-cont-data-block {
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-subtle, #d8e8ef);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.pkg-cont-toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  gap: 0;
+}
+
+.pkg-cont-toolbar-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+}
+
+.pkg-cont-toolbar-label {
+  flex: 1 0 100%;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-mid);
+  margin: 0 0 2px;
+  width: 100%;
+  text-align: left;
+}
+
+.pkg-cont-toolbar-field {
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+.pkg-cont-toolbar-field .cu-input {
+  width: 8.25rem;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.pkg-cont-toolbar-btn {
+  margin-bottom: 1px;
+  white-space: nowrap;
+  align-self: flex-end;
+}
+
+.pkg-cont-toolbar-err {
+  min-height: 1.25rem;
+}
+
+.pkg-cont-grid-table-card {
+  margin-top: 4px;
+}
+
+@media (max-width: 1200px) {
+  .pkg-cont-page .pkg-cont-row-second {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .pkg-cont-page .pkg-cont-row-first {
+    grid-template-columns: 1fr;
+  }
+
+  .pkg-cont-page .pkg-cont-row-second {
+    grid-template-columns: 1fr;
+  }
+}

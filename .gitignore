@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Environment variables (keep `.env.example` committed — it has no secrets)
+.env
+.env.local
+.env.*.local
+
+# Django
+db.sqlite3
+*.log
+staticfiles/
+
+# IDEs / editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python packaging
+build/
+dist/
+*.egg-info/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Tool caches (optional linters/type-checkers)
+.mypy_cache/
+.ruff_cache/
+
+media/
+
+# Temporary files
+*.tmp
+*.temp
