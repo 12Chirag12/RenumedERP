@@ -4,11 +4,6 @@
 {% block content %}
 <div class="cu-page pkg-cont-page" data-page-init="pkg_cont">
 
-  <header class="pkg-cont-page-heading">
-    <h1>Daily packing (contractors)</h1>
-    <p>Record contractor packing against an existing log sheet batch. Product and batch come from the log sheet; packing style must match the product type.</p>
-  </header>
-
   {{ pkg_cont_ajax_urls|json_script:"pcAjaxUrls" }}
   {{ grid_defaults|json_script:"pcGridDefaults" }}
 

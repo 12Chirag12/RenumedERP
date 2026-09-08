@@ -14,29 +14,6 @@
   min-height: 0;
 }
 
-.pkg-cont-page .pkg-cont-page-heading {
-  width: 100%;
-  flex-shrink: 0;
-  text-align: left;
-  align-self: flex-start;
-}
-
-.pkg-cont-page .pkg-cont-page-heading h1 {
-  font-size: 19px;
-  font-weight: 800;
-  color: var(--navy);
-  letter-spacing: -0.02em;
-  margin: 0 0 4px;
-}
-
-.pkg-cont-page .pkg-cont-page-heading p {
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: var(--text-mid);
-  margin: 0;
-  max-width: 52rem;
-}
-
 .pkg-cont-section-block.pkg-cont-section-no-strip {
   border-radius: var(--pkg-cont-table-chrome-r);
 }

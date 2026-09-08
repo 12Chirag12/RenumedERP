@@ -4,11 +4,6 @@
 {% block content %}
 <div class="cu-page dpr-page" data-page-init="dpr">
 
-  <header class="dpr-page-heading">
-    <h1>Daily production report (DPR)</h1>
-    <p>Record production by section, machine, and shift. Choose a customer and product from sales orders, then a batch that already has a log sheet.</p>
-  </header>
-
   {{ dpr_ajax_urls|json_script:"dprAjaxUrls" }}
   {{ grid_defaults|json_script:"dprGridDefaults" }}
   {{ dpr_edit_payload|json_script:"dprEditPayload" }}

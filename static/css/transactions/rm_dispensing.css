@@ -16,27 +16,6 @@
   min-height: 0;
 }
 
-.rm-dispensing-page .rm-page-heading {
-  width: 100%;
-  text-align: left;
-}
-
-.rm-dispensing-page .rm-page-heading h1 {
-  font-size: 19px;
-  font-weight: 800;
-  color: var(--navy);
-  letter-spacing: -0.02em;
-  margin: 0 0 4px;
-}
-
-.rm-dispensing-page .rm-page-heading p {
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: var(--text-mid);
-  margin: 0;
-  max-width: 56rem;
-}
-
 .rm-dispensing-page .rm-grid-block {
   margin-top: 14px;
   display: flex;
@@ -234,4 +213,3 @@
 .rm-dispensing-page .rm-table--list td {
   width: calc(100% / 9);
 }
-

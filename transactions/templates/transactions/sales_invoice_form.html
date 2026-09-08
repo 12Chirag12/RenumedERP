@@ -4,11 +4,6 @@
 {% block content %}
 <div class="cu-page sinv-page" data-page-init="sales_invoice">
 
-  <header class="inw-page-heading">
-    <h1>Sales invoice</h1>
-    <p>{% if edit_instance %}Update invoice details, product batches, and charges.{% else %}Step 1 — invoice details and charges. Step 2 — products and FG batches. Save from step 1 after lines are filled.{% endif %}</p>
-  </header>
-
   {{ sales_invoice_ajax_urls|json_script:"siAjaxUrls" }}
   {{ sales_invoice_page_data|json_script:"siPageData" }}
 

@@ -14,27 +14,6 @@
   padding-bottom: 24px;
 }
 
-.batch-allocation-page .ba-page-heading {
-  width: 100%;
-  flex-shrink: 0;
-}
-
-.batch-allocation-page .ba-page-heading h1 {
-  font-size: 19px;
-  font-weight: 800;
-  color: var(--navy);
-  letter-spacing: -0.02em;
-  margin: 0 0 4px;
-}
-
-.batch-allocation-page .ba-page-heading p {
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: var(--text-mid);
-  margin: 0;
-  max-width: 52rem;
-}
-
 .batch-allocation-page .ba-form {
   display: flex;
   flex-direction: column;

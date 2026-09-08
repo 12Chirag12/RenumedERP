@@ -4,11 +4,6 @@
 {% block content %}
 <div class="cu-page sales-order-page" data-page-init="sales_order">
 
-  <header class="inw-page-heading">
-    <h1>Sales order</h1>
-    <p>{% if edit_instance %}Update header, products, and dispatch lines.{% else %}Step 1 — order details and document. Step 2 — products and dispatch schedule. Save from step 1 after lines are filled.{% endif %}</p>
-  </header>
-
   {{ products|json_script:"soProductsData" }}
   {{ sales_order_ajax_urls|json_script:"soAjaxUrls" }}
   {{ sales_order_page_data|json_script:"soPageData" }}

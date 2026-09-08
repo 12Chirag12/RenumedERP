@@ -4,11 +4,6 @@
 {% block content %}
 <div class="cu-page rm-dispensing-page" data-page-init="rm_dispensing">
 
-  <header class="rm-page-heading">
-    <h1>Raw material dispensing</h1>
-    <p>Allocate and issue RM against the selected BOM specification and production batch. Standard quantities are capped by BOM; use Additional Qty for extra issue.</p>
-  </header>
-
   {{ rm_dispensing_ajax_urls|json_script:"rmAjaxUrls" }}
   {% if rm_edit_payload %}{{ rm_edit_payload|json_script:"rmEditPayload" }}{% endif %}
 
@@ -219,4 +214,3 @@
   </div>
 </div>
 {% endblock %}
-

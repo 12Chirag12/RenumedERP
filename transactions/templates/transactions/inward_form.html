@@ -9,11 +9,6 @@
 {% block content %}
 <div class="cu-page inward-page" data-page-init="inward">
 
-  <header class="inw-page-heading">
-    <h1>Inward (GRN)</h1>
-    <p>{% if edit_instance %}Update header, transport, items, and batches — same as create.{% else %}Step 1 — document &amp; transport. Step 2 — items &amp; batches. Save from step 1 after items are filled.{% endif %}</p>
-  </header>
-
   {{ products|json_script:"inwProductsData" }}
   {{ grn_categories|json_script:"inwGrnCatData" }}
   {{ inward_ajax_urls|json_script:"inwAjaxUrls" }}

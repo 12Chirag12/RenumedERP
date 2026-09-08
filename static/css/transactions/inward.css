@@ -13,28 +13,6 @@
   padding-bottom: 24px;
 }
 
-/* Page title — distinct from generic .cu-heading */
-.inward-page .inw-page-heading {
-  width: 100%;
-  flex-shrink: 0;
-}
-
-.inward-page .inw-page-heading h1 {
-  font-size: 19px;
-  font-weight: 800;
-  color: var(--navy);
-  letter-spacing: -0.02em;
-  margin: 0 0 4px;
-}
-
-.inward-page .inw-page-heading p {
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: var(--text-mid);
-  margin: 0;
-  max-width: 52rem;
-}
-
 /* Legacy if any template still uses .cu-heading */
 .inward-page .cu-heading {
   width: 100%;

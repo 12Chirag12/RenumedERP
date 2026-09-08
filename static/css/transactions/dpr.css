@@ -16,29 +16,6 @@
   min-height: 0;
 }
 
-.dpr-page .dpr-page-heading {
-  width: 100%;
-  flex-shrink: 0;
-  text-align: left;
-  align-self: flex-start;
-}
-
-.dpr-page .dpr-page-heading h1 {
-  font-size: 19px;
-  font-weight: 800;
-  color: var(--navy);
-  letter-spacing: -0.02em;
-  margin: 0 0 4px;
-}
-
-.dpr-page .dpr-page-heading p {
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: var(--text-mid);
-  margin: 0;
-  max-width: 52rem;
-}
-
 /* Row 1: tighter date, machine status, shift; wider section and machine */
 .dpr-page .dpr-row-first {
   display: grid;

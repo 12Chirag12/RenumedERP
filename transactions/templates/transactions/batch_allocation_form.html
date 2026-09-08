@@ -4,11 +4,6 @@
 {% block content %}
 <div class="cu-page batch-allocation-page" data-page-init="batch_allocation">
 
-  <header class="ba-page-heading">
-    <h1>Batch allocation</h1>
-    <p>Select customer, sales order, and product. Enter batch size, number range, and MFG / EXP months, then create batches. Quantities are distributed evenly with the remainder on the last batch.</p>
-  </header>
-
   {{ batch_alloc_ajax_urls|json_script:"baAjaxUrls" }}
 
   <div class="cu-panel">

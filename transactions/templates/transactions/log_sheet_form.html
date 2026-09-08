@@ -4,11 +4,6 @@
 {% block content %}
 <div class="cu-page log-sheet-page" data-page-init="log_sheet">
 
-  <header class="ls-page-heading">
-    <h1>Log sheet</h1>
-    <p>Create a granulation log entry for a pending batch. Single-layer products: one log sheet per batch line. Double-layer products: two log sheets (first and second colour), each with half the batch quantity.</p>
-  </header>
-
   {{ logsheet_ajax_urls|json_script:"lsAjaxUrls" }}
   {{ grid_defaults|json_script:"lsGridDefaults" }}
 

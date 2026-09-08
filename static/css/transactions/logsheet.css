@@ -24,32 +24,6 @@
   min-height: 0;
 }
 
-/* Page title — left aligned like other transaction forms */
-.log-sheet-page .ls-page-heading {
-  width: 100%;
-  flex-shrink: 0;
-  text-align: left;
-  align-self: flex-start;
-}
-
-.log-sheet-page .ls-page-heading h1 {
-  font-size: 19px;
-  font-weight: 800;
-  color: var(--navy);
-  letter-spacing: -0.02em;
-  margin: 0 0 4px;
-  text-align: left;
-}
-
-.log-sheet-page .ls-page-heading p {
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: var(--text-mid);
-  margin: 0;
-  max-width: 52rem;
-  text-align: left;
-}
-
 /* Top row: entry fields (left) + pending batches (right), equal height */
 .log-sheet-page .ls-top-row {
   display: flex;
