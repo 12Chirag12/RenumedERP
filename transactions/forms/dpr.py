@@ -753,6 +753,7 @@ class DprForm(forms.Form):
                     row.no_of_helper = int(cd.get('no_of_helper') or 0)
                     row.remarks = (cd.get('remarks') or '').strip()[:500]
                     row.save()
+                    row.operators.set(cd.get('operators') or [])
                     row.input_batches.all().delete()
                     post_dpr_production_to_inventory(row)
             except IntegrityError:
