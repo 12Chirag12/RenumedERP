@@ -1,0 +1,69 @@
+/* Shared field typography. Load after page and Select2 styles so later page
+   styles cannot restore faint placeholders. Applies to dynamically added fields too. */
+:root {
+  --form-value-color: var(--text-dark, #0F1B2E);
+  --form-placeholder-color: var(--text-mid, #3A4F62);
+  --form-value-weight: 600;
+}
+
+/* Cover native fields (including search/filter controls) and the shared form
+   classes. Exclude inputs used as buttons or non-text controls. */
+body input:not([type="hidden"], [type="checkbox"], [type="radio"], [type="file"],
+  [type="range"], [type="color"], [type="button"], [type="submit"], [type="reset"], [type="image"]),
+body textarea,
+body select,
+.cu-page[data-page-init] :is(.cu-input, .cu-select, .cu-textarea, .grid-input, .grid-select) {
+  color: var(--form-value-color);
+  font-weight: var(--form-value-weight);
+}
+
+/* Placeholders remain distinct from entered values without becoming faint. */
+body :is(input, textarea)::placeholder,
+.cu-page[data-page-init] :is(.cu-input, .cu-textarea, .grid-input)::placeholder {
+  color: var(--form-placeholder-color);
+  font-weight: 500;
+  opacity: 1;
+}
+
+/* Keep disabled values legible; the muted fill and cursor indicate their state.
+   Read-only fields retain the same dark text as editable values. */
+body input:not([type="hidden"], [type="checkbox"], [type="radio"], [type="file"],
+  [type="range"], [type="color"], [type="button"], [type="submit"], [type="reset"], [type="image"]):disabled,
+body textarea:disabled,
+body select:disabled,
+.cu-page[data-page-init] :is(.cu-input, .cu-select, .cu-textarea, .grid-input, .grid-select):is(:disabled, .inw-input-disabled),
+.cu-page[data-page-init] .grid-input.lic-details:disabled {
+  color: var(--form-placeholder-color);
+  -webkit-text-fill-color: currentColor;
+  background-color: #f1f4f8;
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+/* Select2 renders the selected value outside the native select element. */
+.select2-container--default .select2-selection--single .select2-selection__rendered,
+.select2-container--default .select2-selection--multiple .select2-selection__choice,
+.select2-container--default .select2-search .select2-search__field {
+  color: var(--form-value-color);
+  font-weight: var(--form-value-weight);
+}
+
+.select2-container--default .select2-selection--single .select2-selection__placeholder {
+  color: var(--form-placeholder-color);
+  font-weight: 500;
+}
+
+.select2-container--default .select2-results__option {
+  font-weight: var(--form-value-weight);
+}
+
+.select2-container--default.select2-container--disabled .select2-selection--single,
+.select2-container--default.select2-container--disabled .select2-selection--multiple {
+  background-color: #f1f4f8;
+  opacity: 1;
+}
+
+.select2-container--default.select2-container--disabled .select2-selection--single .select2-selection__rendered,
+.select2-container--default.select2-container--disabled .select2-selection--multiple .select2-selection__choice {
+  color: var(--form-placeholder-color);
+}

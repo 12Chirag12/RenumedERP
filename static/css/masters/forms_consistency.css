@@ -301,6 +301,35 @@
   border-color: var(--border);
 }
 
+/* Transaction sections use a compact horizontal heading instead of a side rail. */
+.cu-page[data-page-init] .cu-section.txn-section {
+  flex-direction: column;
+}
+
+.cu-page[data-page-init] .txn-section-title {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  padding: 6px 12px;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(90deg, rgba(0, 119, 168, 0.08) 0%, rgba(0, 180, 216, 0.05) 100%);
+  color: var(--accent2);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cu-page[data-page-init] .cu-section.txn-section > .cu-section-fields {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
 .cu-page[data-page-init] .cu-section-label {
   border-right-color: var(--border);
 }

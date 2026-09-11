@@ -410,26 +410,6 @@
   min-width: 0;
 }
 
-.inward-page .inw-section-title {
-  margin: 0;
-  padding: 12px 10px;
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--accent2);
-  background: linear-gradient(180deg, rgba(0, 119, 168, 0.08) 0%, rgba(0, 180, 216, 0.05) 100%);
-  border-right: 1px solid var(--border);
-  border-radius: 0;
-  /* centered horizontal sidebar label */
-  flex-shrink: 0;
-  width: 80px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-
 .inward-page .cu-section {
   border: 1px solid var(--border);
   border-radius: 10px;

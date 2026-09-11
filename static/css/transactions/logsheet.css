@@ -61,14 +61,6 @@
   padding-left: 16px;
 }
 
-.log-sheet-page .ls-side-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--navy);
-  margin: 0;
-  flex-shrink: 0;
-}
-
 .log-sheet-page .ls-pending-section {
   margin-bottom: 0;
   flex: 1 1 auto;

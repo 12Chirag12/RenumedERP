@@ -1,0 +1,259 @@
+/* Shared compact search/filter toolbar for master and transaction record tables. */
+.record-filter-host {
+  flex-wrap: wrap;
+}
+
+.record-filter-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  margin-left: auto;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.record-filter-toolbar--standalone {
+  display: grid;
+  grid-template-columns: minmax(118px, 1fr) minmax(94px, 116px) minmax(104px, 132px) minmax(52px, max-content);
+  align-items: center;
+  width: 100%;
+  margin: 0 0 8px;
+  gap: 6px;
+}
+
+.record-filter-inline-host {
+  width: 100%;
+  min-width: 0;
+  container-type: inline-size;
+}
+
+.record-filter-toolbar--standalone .record-filter-search {
+  width: auto;
+  min-width: 0;
+}
+
+.record-filter-toolbar--standalone .record-filter-column,
+.record-filter-toolbar--standalone .record-filter-value {
+  width: 100%;
+  min-width: 0;
+}
+
+.record-filter-toolbar--standalone .record-filter-input,
+.record-filter-toolbar--standalone .record-filter-column,
+.record-filter-toolbar--standalone .record-filter-value,
+.record-filter-toolbar--standalone .record-filter-date {
+  height: 30px;
+  font-size: 11px;
+}
+
+.record-filter-toolbar--standalone .record-filter-count {
+  min-width: 52px;
+  font-size: 10px;
+}
+
+.record-filter-toolbar--standalone .record-filter-date-range:not([hidden]) {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+}
+
+.record-filter-toolbar--standalone .record-filter-date-range label,
+.record-filter-toolbar--standalone .record-filter-date {
+  min-width: 0;
+}
+
+.record-filter-toolbar--standalone .record-filter-date {
+  flex: 1 1 auto;
+  width: 100%;
+}
+
+.record-filter-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 180px;
+  width: min(260px, 30vw);
+}
+
+.record-filter-toolbar .record-filter-search > i {
+  position: absolute;
+  left: 10px;
+  color: var(--text-light);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.record-filter-input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.record-filter-input,
+.record-filter-column,
+.record-filter-value,
+.record-filter-date {
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--white);
+  color: var(--text-dark);
+  font: 600 11.5px/1 'Plus Jakarta Sans', sans-serif;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.record-filter-input {
+  width: 100%;
+  padding: 0 30px 0 29px;
+}
+
+.record-filter-input::placeholder {
+  color: var(--text-light);
+  font-weight: 500;
+  opacity: 1;
+}
+
+.record-filter-input:focus,
+.record-filter-column:focus,
+.record-filter-value:focus,
+.record-filter-date:focus {
+  border-color: var(--accent2);
+  box-shadow: 0 0 0 3px rgba(0, 90, 114, 0.12);
+}
+
+.record-filter-column,
+.record-filter-value {
+  width: 132px;
+  padding: 0 26px 0 9px;
+  cursor: pointer;
+}
+
+.record-filter-value {
+  width: 152px;
+}
+
+.record-filter-value:disabled {
+  background: var(--off-white);
+  color: var(--text-light);
+  cursor: default;
+}
+
+.record-filter-date-range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.record-filter-date-range[hidden] {
+  display: none;
+}
+
+.record-filter-date-range label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-mid);
+  font-size: 10.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.record-filter-date {
+  width: 132px;
+  padding: 0 7px;
+  cursor: pointer;
+}
+
+.record-filter-clear {
+  position: absolute;
+  right: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-mid);
+  cursor: pointer;
+}
+
+.record-filter-clear:hover:not(:disabled) {
+  background: var(--off-white);
+  color: var(--accent2);
+}
+
+.record-filter-clear:disabled {
+  visibility: hidden;
+  cursor: default;
+}
+
+.record-filter-toolbar .record-filter-clear > i {
+  color: inherit;
+  font-size: 12px;
+}
+
+.record-filter-count {
+  min-width: 66px;
+  color: var(--text-mid);
+  font-size: 10.5px;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+
+@container (max-width: 430px) {
+  .record-filter-toolbar--standalone {
+    grid-template-columns: minmax(0, 1fr) minmax(88px, 0.8fr) minmax(48px, max-content);
+  }
+
+  .record-filter-toolbar--standalone .record-filter-search {
+    grid-column: 1 / -1;
+  }
+
+  .record-filter-toolbar--standalone .record-filter-value {
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 760px) {
+  .record-filter-toolbar {
+    flex: 1 1 100%;
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .record-filter-toolbar--standalone {
+    justify-content: stretch;
+  }
+
+  .record-filter-search {
+    flex: 1 1 100%;
+    width: auto;
+  }
+
+  .record-filter-column,
+  .record-filter-value {
+    flex: 1 1 calc(50% - 4px);
+    width: auto;
+  }
+
+  .record-filter-date-range {
+    flex: 1 1 100%;
+  }
+
+  .record-filter-date-range label {
+    flex: 1 1 50%;
+  }
+
+  .record-filter-date {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .record-filter-count {
+    display: none;
+  }
+}
