@@ -135,7 +135,13 @@ class TrnDprAdmin(admin.ModelAdmin):
         'qty_nos',
     )
     list_filter = ('trn_dpr_dt', 'shift_id', 'machine_working', 'section')
-    search_fields = ('remarks', 'batch_line__batch_no', 'operator1__opt_name', 'operator2__opt_name')
+    search_fields = (
+        'remarks',
+        'batch_line__batch_no',
+        'operator1__opt_name',
+        'operator2__opt_name',
+        'operators__opt_name',
+    )
     inlines = [TrnDprInputBatchInline]
 
 

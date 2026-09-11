@@ -1247,6 +1247,7 @@ def get_dpr_edit_instance(pk):
             'operator1',
             'operator2',
         ).prefetch_related(
+            'operators',
             Prefetch(
                 'input_batches',
                 queryset=TrnDprInputBatch.objects.select_related(
@@ -1275,10 +1276,10 @@ def _dpr_edit_payload(instance):
         'spec_id': instance.specification_id,
     }
     if instance.machine_working == DPR_MACHINE_WORKING:
-        if instance.operator1_id:
-            payload['operator1_id'] = instance.operator1_id
-        if instance.operator2_id:
-            payload['operator2_id'] = instance.operator2_id
+        operator_ids = list(instance.operators.values_list('pk', flat=True))
+        if not operator_ids:
+            operator_ids = [operator_id for operator_id in (instance.operator1_id, instance.operator2_id) if operator_id]
+        payload['operator_ids'] = operator_ids
     if (
         instance.machine_working == DPR_MACHINE_WORKING
         and not instance.batch_line_id

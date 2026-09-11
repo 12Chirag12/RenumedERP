@@ -57,8 +57,10 @@
 
     var section = document.getElementById('dprSection');
     var machine = document.getElementById('dprMachine');
-    var op1 = document.getElementById('dprOp1');
-    var op2 = document.getElementById('dprOp2');
+    var operators = document.getElementById('dprOperators');
+    var operatorCount = document.getElementById('dprOperatorCount');
+    var operatorToggle = document.getElementById('dprOperatorToggle');
+    var operatorSelection = document.getElementById('dprOperatorSelection');
     var machineWorking = document.getElementById('dprMachineWorking');
     var customer = document.getElementById('dprCustomer');
     var product = document.getElementById('dprProduct');
@@ -94,13 +96,13 @@
 
     var multiLogCatalog = [];
     var multiSelected = [];
-    /** Last JSON rows from dpr_operators_ajax; used to rebuild op1/op2 with mutual exclusivity. */
+    /** Last JSON rows from dpr_operators_ajax; used to rebuild operators for the selected section. */
     var lastOperatorRows = [];
 
     var workingFieldIds = [
       'dprCustomer', 'dprProduct', 'dprBatchSelect', 'dprBatchAddSelect', 'dprSpecSelect',
       'dprBatchRem', 'dprLotNo', 'dprQtyKg', 'dprQtyNos', 'dprSectionQty', 'dprBatchSizeLakh',
-      'dprOp1', 'dprOp2', 'dprHelpers',
+      'dprOperatorToggle', 'dprOperators', 'dprHelpers',
     ];
 
     if (gridStart && gridDef.start) gridStart.value = gridDef.start;
@@ -243,6 +245,11 @@
         var el = document.getElementById(id);
         if (!el) return;
         el.disabled = !!dis;
+        if (el.id === 'dprOperators') {
+          [].forEach.call(el.querySelectorAll('input[name="operators"]'), function (input) {
+            input.disabled = !!dis;
+          });
+        }
         if (el.tagName === 'SELECT' && dis) {
           try {
             if (window.jQuery && jQuery(el).data('select2')) {
@@ -290,76 +297,97 @@
       }
     }
 
-    function rebuildOperatorOptions(rows, keep1, keep2, clearSelections) {
+    function rebuildOperatorOptions(rows, keepValues, clearSelections) {
       rows = rows || [];
-      var cur1 = op1 && op1.value ? String(op1.value) : '';
-      var cur2 = op2 && op2.value ? String(op2.value) : '';
-      var r1 = clearSelections ? '' : (keep1 != null && keep1 !== '' ? String(keep1) : cur1);
-      var r2 = clearSelections ? '' : (keep2 != null && keep2 !== '' ? String(keep2) : cur2);
-      if (r1 && r2 && r1 === r2) {
-        r2 = '';
-      }
-      var rowsForOp1 = rows.filter(function (r) {
-        return !r2 || String(r.opt_id) !== r2;
-      });
-      var rowsForOp2 = rows.filter(function (r) {
-        return !r1 || String(r.opt_id) !== r1;
-      });
-      function fill(el, placeholder, keepVal, filteredRows) {
-        if (!el) return;
-        var v = clearSelections ? '' : String(keepVal || '');
-        el.innerHTML = '';
-        var ph = document.createElement('option');
-        ph.value = '';
-        ph.textContent = placeholder;
-        el.appendChild(ph);
-        filteredRows.forEach(function (r) {
-          var o = document.createElement('option');
-          o.value = String(r.opt_id);
-          o.textContent = r.label || r.opt_name;
-          el.appendChild(o);
+      var selected = clearSelections ? [] : (keepValues || []).map(function (x) { return String(x); });
+      if (!selected.length && operators) {
+        selected = [].map.call(operators.querySelectorAll('input[name="operators"]:checked'), function (input) {
+          return String(input.value);
         });
-        if (v && [].some.call(el.options, function (x) { return x.value === v; })) {
-          el.value = v;
-        } else {
-          el.value = '';
-        }
       }
-      fill(op1, '— Select operator —', r1, rowsForOp1);
-      fill(op2, '— Optional —', r2, rowsForOp2);
-      if (typeof initSearchableDropdowns === 'function') {
-        initSearchableDropdowns(form);
+      if (!operators) return;
+      operators.innerHTML = '';
+      if (!rows.length) {
+        var empty = document.createElement('div');
+        empty.className = 'dpr-operator-empty';
+        empty.textContent = section && section.value ? 'No operators are assigned to this section.' : 'Select a section to load operators.';
+        operators.appendChild(empty);
       }
+      rows.forEach(function (r) {
+        var label = document.createElement('label');
+        label.className = 'dpr-operator-checkbox';
+        var input = document.createElement('input');
+        input.type = 'checkbox';
+        input.name = 'operators';
+        input.value = String(r.opt_id);
+        input.checked = selected.indexOf(input.value) !== -1;
+        var text = document.createElement('span');
+        text.textContent = r.label || r.opt_name;
+        label.appendChild(input);
+        label.appendChild(text);
+        operators.appendChild(label);
+      });
+      if (machineWorking && machineWorking.value !== 'working') {
+        [].forEach.call(operators.querySelectorAll('input[name="operators"]'), function (input) {
+          input.disabled = true;
+        });
+      }
+      updateOperatorCount();
+    }
+
+    function updateOperatorCount() {
+      if (!operatorCount || !operators) return;
+      var count = operators.querySelectorAll('input[name="operators"]:checked').length;
+      operatorCount.textContent = count + ' selected';
+      if (operatorSelection) {
+        operatorSelection.textContent = count ? count + ' operator' + (count === 1 ? '' : 's') + ' selected' : 'Choose operators';
+      }
+    }
+
+    function closeOperatorMenu() {
+      if (!operatorToggle || !operatorToggle.parentElement) return;
+      operatorToggle.parentElement.classList.remove('is-open');
+      operatorToggle.setAttribute('aria-expanded', 'false');
+    }
+
+    if (operatorToggle) {
+      operatorToggle.addEventListener('click', function () {
+        if (operatorToggle.disabled) return;
+        var dropdown = operatorToggle.parentElement;
+        var open = dropdown.classList.toggle('is-open');
+        operatorToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      document.addEventListener('click', function (event) {
+        if (!operatorToggle.parentElement.contains(event.target)) closeOperatorMenu();
+      });
     }
 
     function syncOperatorDropdownsFromCache() {
       if (lastOperatorRows.length) {
-        rebuildOperatorOptions(lastOperatorRows, null, null, false);
+        rebuildOperatorOptions(lastOperatorRows, null, false);
       }
     }
 
-    function loadOperators(keep1, keep2, clearSelections) {
+    function loadOperators(keepValues, clearSelections) {
       if (!urls.operators || !section || !section.value) {
         lastOperatorRows = [];
-        rebuildOperatorOptions([], '', '', true);
+        rebuildOperatorOptions([], [], true);
         return Promise.resolve();
       }
-      var k1 = keep1 != null && keep1 !== '' ? keep1 : null;
-      var k2 = keep2 != null && keep2 !== '' ? keep2 : null;
       return fetch(urls.operators + '?section_id=' + encodeURIComponent(section.value))
         .then(function (r) { return r.json(); })
         .then(function (data) {
           if (data.error) {
             lastOperatorRows = [];
-            rebuildOperatorOptions([], '', '', !!clearSelections);
+            rebuildOperatorOptions([], [], !!clearSelections);
             return;
           }
           lastOperatorRows = data.operators || [];
-          rebuildOperatorOptions(lastOperatorRows, k1, k2, !!clearSelections);
+          rebuildOperatorOptions(lastOperatorRows, keepValues, !!clearSelections);
         })
         .catch(function () {
           lastOperatorRows = [];
-          rebuildOperatorOptions([], '', '', true);
+          rebuildOperatorOptions([], [], true);
         });
     }
 
@@ -605,7 +633,7 @@
     if (section) {
       section.addEventListener('change', function () {
         loadMachines(null);
-        loadOperators(null, null, true);
+        loadOperators(null, true);
         toggleBatchLanes();
         applyMachineWorkingUi();
         if (customer && customer.value && product && product.value) {
@@ -620,11 +648,10 @@
       });
     }
 
-    if (op1) {
-      op1.addEventListener('change', syncOperatorDropdownsFromCache);
-    }
-    if (op2) {
-      op2.addEventListener('change', syncOperatorDropdownsFromCache);
+    if (operators) {
+      operators.addEventListener('change', function () {
+        updateOperatorCount();
+      });
     }
 
     if (customer) {
@@ -781,9 +808,16 @@
     applyMachineWorkingUi();
     if (section && section.value) {
       loadMachines(machine && machine.value ? machine.value : null).then(function () {
-        var k1 = editPayload.operator1_id != null ? editPayload.operator1_id : (op1 && op1.value);
-        var k2 = editPayload.operator2_id != null ? editPayload.operator2_id : (op2 && op2.value);
-        return loadOperators(k1, k2);
+        var selectedOperators = editPayload.operator_ids || [];
+        if (!selectedOperators.length && operators) {
+          selectedOperators = [].map.call(operators.querySelectorAll('input[name="operators"]:checked'), function (input) {
+            return input.value;
+          });
+        }
+        if (!selectedOperators.length && operators && operators.dataset.selectedOperators) {
+          selectedOperators = operators.dataset.selectedOperators.split(',').filter(Boolean);
+        }
+        return loadOperators(selectedOperators);
       });
     }
     if (customer && customer.value) {

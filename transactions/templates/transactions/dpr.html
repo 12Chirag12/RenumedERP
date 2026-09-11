@@ -192,15 +192,21 @@
                 </div>
 
                 <div class="dpr-row-operators">
-                  <div class="cu-field dpr-field--op">
-                    <label class="cu-label" for="dprOp1">Operator (1) <span class="req">*</span></label>
-                    {{ form.operator1 }}
-                    {% if form.operator1.errors %}<span class="field-error">{{ form.operator1.errors.0 }}</span>{% endif %}
-                  </div>
-                  <div class="cu-field dpr-field--op">
-                    <label class="cu-label" for="dprOp2">Operator (2)</label>
-                    {{ form.operator2 }}
-                    {% if form.operator2.errors %}<span class="field-error">{{ form.operator2.errors.0 }}</span>{% endif %}
+                  <div class="cu-field dpr-field--op dpr-field--operators">
+                    <div class="dpr-operator-heading">
+                      <div>
+                        <label class="cu-label" for="dprOperators">Operators <span class="req">*</span></label>
+                      </div>
+                      <span id="dprOperatorCount" class="dpr-operator-count">0 selected</span>
+                    </div>
+                    <div class="dpr-operator-dropdown">
+                      <button type="button" id="dprOperatorToggle" class="dpr-operator-toggle" aria-expanded="false" aria-controls="dprOperators">
+                        <span id="dprOperatorSelection">Choose operators</span>
+                        <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                      </button>
+                      <div id="dprOperators" class="dpr-operator-checkboxes" aria-label="Operators" data-selected-operators="{{ form.operators.value|join:',' }}"></div>
+                    </div>
+                    {% if form.operators.errors %}<span class="field-error">{{ form.operators.errors.0 }}</span>{% endif %}
                   </div>
                   <div class="cu-field dpr-field--helpers">
                     <label class="cu-label" for="dprHelpers">No. of helpers <span class="req">*</span></label>

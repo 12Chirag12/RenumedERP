@@ -332,7 +332,7 @@
             '</span>' + (uom ? '<span class="rm-uom">' + esc(uom) + '</span>' : '') + '</span></td>' +
             '<td class="rm-ro rm-perlakh">' + esc(perLakhTxt) + '</td>' +
             '<td class="rm-ro rm-stdqty">' + esc(autoStd + uomS) + '</td>' +
-            '<td><input type="number" class="cu-input rm-add rm-num" min="0" step="0.001" value="0"></td>' +
+            '<td><input type="number" class="cu-input rm-add rm-num" min="0" step="0.001" value=""></td>' +
             '<td><input type="date" class="cu-input rm-date" value="' + esc(defaultIssueDate()) + '"></td>' +
             '<td><input type="text" class="cu-input rm-rem" maxlength="20" value="" placeholder="Optional"></td>';
 

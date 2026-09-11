@@ -233,24 +233,15 @@ class DprForm(forms.Form):
         widget=forms.TimeInput(attrs={'class': 'cu-input', 'type': 'time', 'id': 'dprEndTime'}),
     )
 
-    operator1 = forms.ModelChoiceField(
+    operators = forms.ModelMultipleChoiceField(
         queryset=MstOperator.objects.none(),
         required=False,
-        label='Operator (1)',
-        empty_label='— Select operator —',
-        widget=forms.Select(attrs={'class': 'cu-select searchable-dropdown', 'id': 'dprOp1'}),
-    )
-    operator2 = forms.ModelChoiceField(
-        queryset=MstOperator.objects.none(),
-        required=False,
-        label='Operator (2)',
-        empty_label='— Optional —',
-        widget=forms.Select(attrs={'class': 'cu-select searchable-dropdown', 'id': 'dprOp2'}),
+        label='Operators',
+        widget=forms.SelectMultiple(attrs={'class': 'cu-select searchable-dropdown', 'id': 'dprOperators'}),
     )
     no_of_helper = forms.IntegerField(
         min_value=0,
         max_value=999,
-        initial=0,
         label='No. of helpers',
         widget=forms.NumberInput(attrs={'class': 'cu-input cu-num', 'id': 'dprHelpers', 'min': '0', 'max': '999'}),
     )
@@ -298,10 +289,10 @@ class DprForm(forms.Form):
                 inst_initial['section_qty'] = instance.section_qty
             inst_initial['start_time'] = instance.start_time
             inst_initial['end_time'] = instance.end_time
-            if instance.operator1_id:
-                inst_initial['operator1'] = instance.operator1_id
-            if instance.operator2_id:
-                inst_initial['operator2'] = instance.operator2_id
+            operator_ids = list(instance.operators.values_list('pk', flat=True))
+            if not operator_ids:
+                operator_ids = [operator_id for operator_id in (instance.operator1_id, instance.operator2_id) if operator_id]
+            inst_initial['operators'] = operator_ids
             inst_initial['no_of_helper'] = instance.no_of_helper
             inst_initial['remarks'] = instance.remarks or ''
 
@@ -336,8 +327,7 @@ class DprForm(forms.Form):
             if sec
             else MstOperator.objects.none()
         )
-        self.fields['operator1'].queryset = op_qs
-        self.fields['operator2'].queryset = op_qs
+        self.fields['operators'].queryset = op_qs
 
     def clean_trn_dpr_dt(self):
         d = self.cleaned_data.get('trn_dpr_dt')
@@ -359,11 +349,6 @@ class DprForm(forms.Form):
 
     def clean(self):
         cd = super().clean()
-        o1 = cd.get('operator1')
-        o2 = cd.get('operator2')
-        if o1 and o2 and o1.pk == o2.pk:
-            self.add_error('operator2', 'Operator (2) must be different from operator (1).')
-
         working = (cd.get('machine_working') or DPR_MACHINE_WORKING) == DPR_MACHINE_WORKING
         sec = cd.get('section')
 
@@ -464,8 +449,8 @@ class DprForm(forms.Form):
         if qty_nos is None or int(qty_nos) < 1:
             self.add_error('qty_nos', 'Qty (nos.) must be greater than zero.')
 
-        if not cd.get('operator1'):
-            self.add_error('operator1', 'Primary operator is required.')
+        if not cd.get('operators'):
+            self.add_error('operators', 'Select at least one operator.')
 
         cd['_multi_log_sheet_ids'] = id_list
         cd['_multi_batch_lines'] = None
@@ -533,8 +518,8 @@ class DprForm(forms.Form):
         if qty_nos is None or int(qty_nos) < 1:
             self.add_error('qty_nos', 'Qty (nos.) must be greater than zero.')
 
-        if not cd.get('operator1'):
-            self.add_error('operator1', 'Primary operator is required.')
+        if not cd.get('operators'):
+            self.add_error('operators', 'Select at least one operator.')
 
         used_qs = TrnDpr.objects.filter(batch_line=line, machine_working=DPR_MACHINE_WORKING)
         if self._instance and getattr(self._instance, 'pk', None):
@@ -615,6 +600,7 @@ class DprForm(forms.Form):
                     row.no_of_helper = 0
                     row.remarks = (cd.get('remarks') or '').strip()
                     row.save()
+                    row.operators.clear()
                     row.input_batches.all().delete()
                 return row
 
@@ -646,6 +632,7 @@ class DprForm(forms.Form):
             if user and user.is_authenticated:
                 row.created_by = user
             row.save()
+            row.operators.clear()
             row.input_batches.all().delete()
             return row
 
@@ -678,11 +665,12 @@ class DprForm(forms.Form):
                         row.start_time = cd['start_time']
                         row.end_time = cd['end_time']
                         row.total_time = total
-                        row.operator1 = cd.get('operator1')
-                        row.operator2 = cd.get('operator2')
+                        row.operator1 = (cd.get('operators') or [None])[0]
+                        row.operator2 = (cd.get('operators') or [None, None])[1] if len(cd.get('operators') or []) > 1 else None
                         row.no_of_helper = int(cd.get('no_of_helper') or 0)
                         row.remarks = (cd.get('remarks') or '').strip()[:500]
                         row.save()
+                        row.operators.set(cd.get('operators') or [])
                         _sync_dpr_input_batches(row, multi_ls_ids)
                         _mark_logsheets_for_dpr_multi(row)
                         post_dpr_production_to_inventory(row)
@@ -712,8 +700,8 @@ class DprForm(forms.Form):
                 start_time=cd['start_time'],
                 end_time=cd['end_time'],
                 total_time=total,
-                operator1=cd.get('operator1'),
-                operator2=cd.get('operator2'),
+                operator1=(cd.get('operators') or [None])[0],
+                operator2=(cd.get('operators') or [None, None])[1] if len(cd.get('operators') or []) > 1 else None,
                 no_of_helper=int(cd.get('no_of_helper') or 0),
                 remarks=(cd.get('remarks') or '').strip()[:500],
             )
@@ -722,6 +710,7 @@ class DprForm(forms.Form):
             try:
                 with db_transaction.atomic():
                     row.save()
+                    row.operators.set(cd.get('operators') or [])
                     _sync_dpr_input_batches(row, multi_ls_ids)
                     _mark_logsheets_for_dpr_multi(row)
                     post_dpr_production_to_inventory(row)
@@ -759,8 +748,8 @@ class DprForm(forms.Form):
                     row.start_time = cd['start_time']
                     row.end_time = cd['end_time']
                     row.total_time = total
-                    row.operator1 = cd.get('operator1')
-                    row.operator2 = cd.get('operator2')
+                    row.operator1 = (cd.get('operators') or [None])[0]
+                    row.operator2 = (cd.get('operators') or [None, None])[1] if len(cd.get('operators') or []) > 1 else None
                     row.no_of_helper = int(cd.get('no_of_helper') or 0)
                     row.remarks = (cd.get('remarks') or '').strip()[:500]
                     row.save()
@@ -792,8 +781,8 @@ class DprForm(forms.Form):
             start_time=cd['start_time'],
             end_time=cd['end_time'],
             total_time=total,
-            operator1=cd.get('operator1'),
-            operator2=cd.get('operator2'),
+            operator1=(cd.get('operators') or [None])[0],
+            operator2=(cd.get('operators') or [None, None])[1] if len(cd.get('operators') or []) > 1 else None,
             no_of_helper=int(cd.get('no_of_helper') or 0),
             remarks=(cd.get('remarks') or '').strip()[:500],
         )
@@ -802,6 +791,7 @@ class DprForm(forms.Form):
         try:
             with db_transaction.atomic():
                 row.save()
+                row.operators.set(cd.get('operators') or [])
                 row.input_batches.all().delete()
                 post_dpr_production_to_inventory(row)
         except IntegrityError:

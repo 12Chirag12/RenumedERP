@@ -1475,7 +1475,7 @@ class ItemForm(forms.Form):
         max_digits=10, decimal_places=3,
         required=False, label='Minimum Level',
         widget=forms.NumberInput(attrs={
-            'class': 'cu-input', 'placeholder': '0.000',
+            'class': 'cu-input',
             'id': 'minLevelInput', 'min': '0', 'step': '0.001',
         }),
     )
@@ -1484,7 +1484,7 @@ class ItemForm(forms.Form):
         max_digits=10, decimal_places=3,
         required=False, label='Maximum Level',
         widget=forms.NumberInput(attrs={
-            'class': 'cu-input', 'placeholder': '0.000',
+            'class': 'cu-input',
             'id': 'maxLevelInput', 'min': '0', 'step': '0.001',
         }),
     )
@@ -1509,9 +1509,9 @@ class ItemForm(forms.Form):
  
     last_purchase_rate = forms.DecimalField(
         max_digits=12, decimal_places=2,
-        initial='0.00', label='Last Purchase Rate',
+        label='Last Purchase Rate',
         widget=forms.NumberInput(attrs={
-            'class': 'cu-input', 'placeholder': '0.00',
+            'class': 'cu-input',
             'id': 'lastPurchaseRateInput', 'min': '0', 'step': '0.01',
         }),
     )
@@ -1519,11 +1519,9 @@ class ItemForm(forms.Form):
     sample_qty = forms.DecimalField(
         max_digits=10,
         decimal_places=3,
-        initial='0.000',
         label='Sample qty',
         widget=forms.NumberInput(attrs={
             'class': 'cu-input',
-            'placeholder': '0.000',
             'id': 'sampleQtyInput',
             'min': '0',
             'step': '0.001',

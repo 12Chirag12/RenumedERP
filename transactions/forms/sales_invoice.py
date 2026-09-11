@@ -250,7 +250,6 @@ class SalesInvoiceForm(forms.Form):
         required=False,
         max_digits=12,
         decimal_places=2,
-        initial=Decimal('0'),
         label='Packing / forwarding',
         widget=forms.NumberInput(attrs={'class': 'cu-input', 'id': 'siPkgFwd', 'step': '0.01', 'min': '0'}),
     )
@@ -258,7 +257,6 @@ class SalesInvoiceForm(forms.Form):
         required=False,
         max_digits=12,
         decimal_places=2,
-        initial=Decimal('0'),
         label='Freight',
         widget=forms.NumberInput(attrs={'class': 'cu-input', 'id': 'siFreight', 'step': '0.01', 'min': '0'}),
     )
@@ -266,7 +264,6 @@ class SalesInvoiceForm(forms.Form):
         required=False,
         max_digits=12,
         decimal_places=2,
-        initial=Decimal('0'),
         label='Other charges',
         widget=forms.NumberInput(attrs={'class': 'cu-input', 'id': 'siOthCharges', 'step': '0.01', 'min': '0'}),
     )
@@ -274,7 +271,6 @@ class SalesInvoiceForm(forms.Form):
         required=False,
         max_digits=6,
         decimal_places=2,
-        initial=Decimal('0'),
         label='Round off',
         widget=forms.NumberInput(attrs={'class': 'cu-input', 'id': 'siRoundOff', 'step': '0.01', 'min': '-1', 'max': '1'}),
     )

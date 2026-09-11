@@ -140,11 +140,16 @@ def _product_display(r: TrnDpr) -> str:
 
 
 def _operators_display(r: TrnDpr) -> str:
-    parts = []
-    if r.operator1_id:
-        parts.append((r.operator1.opt_name or '').strip())
-    if r.operator2_id:
-        parts.append((r.operator2.opt_name or '').strip())
+    parts = [
+        (operator.opt_name or '').strip()
+        for operator in r.operators.all()
+        if operator.opt_name
+    ]
+    if not parts:
+        if r.operator1_id:
+            parts.append((r.operator1.opt_name or '').strip())
+        if r.operator2_id:
+            parts.append((r.operator2.opt_name or '').strip())
     return ' / '.join(p for p in parts if p)
 
 
@@ -294,6 +299,7 @@ def run(payload: dict) -> dict:
             'specification',
             'log_sheet',
         )
+        .prefetch_related('operators')
         .prefetch_related(
             Prefetch(
                 'input_batches',

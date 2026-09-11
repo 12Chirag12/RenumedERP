@@ -1169,6 +1169,12 @@ class TrnDpr(models.Model):
         related_name='dpr_entries_secondary',
         verbose_name='Operator (2)',
     )
+    operators = models.ManyToManyField(
+        'masters.MstOperator',
+        blank=True,
+        related_name='dpr_entries',
+        verbose_name='Operators',
+    )
     no_of_helper = models.PositiveSmallIntegerField(
         db_column='No_of_Helper',
         default=0,
