@@ -57,6 +57,8 @@
   {% block extra_css %}{% endblock %}
   <link rel="stylesheet" href="{% static 'vendor/select2/select2.min.css' %}" />
   <link rel="stylesheet" href="{% static 'css/vendors/select2_pharmaerp.css' %}">
+  <link rel="stylesheet" href="{% static 'css/base/form_typography.css' %}">
+  <link rel="stylesheet" href="{% static 'css/base/record_table_filters.css' %}">
 
   <script src="{% static 'vendor/jquery/jquery.min.js' %}"></script>
   <script src="{% static 'vendor/select2/select2.min.js' %}"></script>
@@ -78,6 +80,7 @@
 
   <!-- Base JS -->
   <script src="{% static 'js/base.js' %}"></script>
+  <script src="{% static 'js/record_table_filters.js' %}"></script>
 
   <!-- All page JS preloaded once so HTMX swaps can call named init functions -->
   <script src="{% static 'js/masters/section.js' %}"></script>
