@@ -61,6 +61,26 @@ from ..models import (
 from .shared_utils import _parse_mmm_yyyy, _parse_month_any, _ym_key
 from ._constants import _BATCH_L_QUANTIZE, _BATCH_N_QUANTIZE, _QTY_QUANTIZE, _SO_QTY_QUANTIZE
 
+
+def _batch_allocation_required_qty_n(line):
+    return Decimal(str(line.no_of_tablets or 0)).quantize(_BATCH_N_QUANTIZE, rounding=ROUND_HALF_UP)
+
+
+def _batch_allocation_allocated_qty_n(line):
+    allocated = line.batch_headers.aggregate(total=models.Sum('lines__batch_qty_n'))['total']
+    return Decimal(str(allocated or 0)).quantize(_BATCH_N_QUANTIZE, rounding=ROUND_HALF_UP)
+
+
+def batch_allocation_remaining_qty(line):
+    required_n = _batch_allocation_required_qty_n(line)
+    allocated_n = _batch_allocation_allocated_qty_n(line)
+    remaining_n = max(required_n - allocated_n, Decimal('0'))
+    remaining_n = remaining_n.quantize(_BATCH_N_QUANTIZE, rounding=ROUND_HALF_UP)
+    return (
+        (remaining_n / Decimal('100000')).quantize(_BATCH_L_QUANTIZE, rounding=ROUND_HALF_UP),
+        remaining_n,
+    )
+
 def _batch_ladder_quantities(target, size, count, quant):
     """Split ``target`` into ``count`` parts: first (count-1) equal ``size``, last is remainder."""
     target = Decimal(str(target)).quantize(quant)
@@ -149,16 +169,6 @@ class BatchAllocationForm(forms.Form):
             'tabindex': '-1',
         }),
     )
-    batch_from = forms.IntegerField(
-        min_value=1,
-        label='Batch no. from',
-        widget=forms.NumberInput(attrs={'class': 'cu-input ba-seq-input', 'id': 'baBatchFrom', 'min': '1'}),
-    )
-    batch_to = forms.IntegerField(
-        min_value=1,
-        label='Batch no. to',
-        widget=forms.NumberInput(attrs={'class': 'cu-input ba-seq-input', 'id': 'baBatchTo', 'min': '1'}),
-    )
     mfg_dt = forms.CharField(
         max_length=8,
         label='MFG date',
@@ -229,12 +239,13 @@ class BatchAllocationForm(forms.Form):
 
         product = line.product
 
-        if line.is_completed or line.remaining_qty <= 0:
+        remaining_qty_l, remaining_qty_n = batch_allocation_remaining_qty(line)
+        if remaining_qty_l <= 0:
             self.add_error('order_line_id', 'This line is already completed.')
             return cd
 
-        order_qty_l = line.remaining_qty.quantize(_BATCH_L_QUANTIZE)
-        order_qty_n = (order_qty_l * Decimal('100000')).quantize(_BATCH_N_QUANTIZE, rounding=ROUND_HALF_UP)
+        order_qty_l = remaining_qty_l
+        order_qty_n = remaining_qty_n
         if order_qty_l <= 0:
             self.add_error('order_line_id', 'Remaining quantity (Lacs) must be greater than zero.')
             return cd
@@ -290,25 +301,6 @@ class BatchAllocationForm(forms.Form):
         if self.errors:
             return cd
 
-        bf = cd.get('batch_from')
-        bt = cd.get('batch_to')
-        if bf is None or bt is None:
-            return cd
-        if bf > bt:
-            self.add_error('batch_to', 'Invalid batch range.')
-            return cd
-        count = bt - bf + 1
-        if count < 1:
-            self.add_error('batch_to', 'Invalid batch range.')
-            return cd
-
-        overlap = TrnBatchHed.objects.filter(order_line=line).filter(
-            batch_from__lte=bt,
-            batch_to__gte=bf,
-        ).exists()
-        if overlap:
-            self.add_error('batch_from', 'Batch range overlaps with existing batches for this order and product.')
-
         bsl = cd.get('batch_size_l')
         if bsl is None:
             return cd
@@ -337,20 +329,32 @@ class BatchAllocationForm(forms.Form):
         if self.errors:
             return cd
 
-        try:
-            qtys_l = _batch_ladder_quantities(target_l, bsl, count, _BATCH_L_QUANTIZE)
-            qtys_n = _batch_ladder_quantities(target_n, bsn, count, _BATCH_N_QUANTIZE)
-        except forms.ValidationError as e:
-            self.add_error('batch_size_l', e)
+        count = int((target_n + bsn - 1) // bsn)
+        allocated_n = [bsn] * (count - 1)
+        allocated_n.append(target_n - (bsn * (count - 1)))
+        if allocated_n[-1] <= 0 or allocated_n[-1] > bsn:
+            self.add_error('batch_size_n', 'Generated batch quantities do not fit the selected batch size.')
             return cd
 
-        seqs = list(range(bf, bt + 1))
+        existing_numbers = TrnBatchDtl.objects.filter(
+            batch__batch_abbr=abbr,
+        ).values_list('batch_no', flat=True)
+        max_seq = 0
+        for batch_no in existing_numbers:
+            match = re.fullmatch(rf'{re.escape(abbr)}(\d+)', batch_no or '')
+            if match:
+                max_seq = max(max_seq, int(match.group(1)))
+        batch_from = max_seq + 1
+        batch_to = batch_from + count - 1
+
         lines = []
         batch_nos = []
-        for seq, ql, qn in zip(seqs, qtys_l, qtys_n):
+        for offset, qn in enumerate(allocated_n):
+            seq = batch_from + offset
+            ql = (qn / Decimal('100000')).quantize(_BATCH_L_QUANTIZE)
             bn = f'{abbr}{seq}'
             if len(bn) > 15:
-                self.add_error('batch_to', 'Generated batch number would exceed 15 characters.')
+                self.add_error('batch_size_l', 'Generated batch number would exceed 15 characters.')
                 return cd
             batch_nos.append(bn)
             lines.append({
@@ -361,7 +365,7 @@ class BatchAllocationForm(forms.Form):
 
         dup_exists = TrnBatchDtl.objects.filter(batch_no__in=batch_nos).exists()
         if dup_exists:
-            self.add_error('batch_from', 'Batch already exists.')
+            self.add_error('batch_size_l', 'Generated batch number already exists.')
 
         if self.errors:
             return cd
@@ -377,8 +381,8 @@ class BatchAllocationForm(forms.Form):
             'batch_abbr': abbr,
             'batch_size_l': bsl,
             'batch_size_n': bsn,
-            'batch_from': bf,
-            'batch_to': bt,
+            'batch_from': batch_from,
+            'batch_to': batch_to,
             'mfg_dt': mfg,
             'exp_dt': exp,
             'lines': lines,
@@ -396,15 +400,22 @@ class BatchAllocationForm(forms.Form):
                     .select_related('order', 'product')
                     .get(pk=ctx['order_line'].pk)
                 )
-                if locked_line.is_completed or locked_line.remaining_qty <= 0:
+                locked_remaining_l, _locked_remaining_n = batch_allocation_remaining_qty(locked_line)
+                if locked_remaining_l <= 0:
                     raise forms.ValidationError({'order_line_id': 'This line is already completed.'})
 
-                alloc_l = ctx['partial_qty_l'] if ctx['partial_yn'] == 'Y' else locked_line.remaining_qty
+                alloc_l = ctx['partial_qty_l'] if ctx['partial_yn'] == 'Y' else locked_remaining_l
                 alloc_l = Decimal(str(alloc_l)).quantize(_BATCH_L_QUANTIZE)
                 if alloc_l <= 0:
                     raise forms.ValidationError({'partial_qty_l': 'Allocation quantity must be greater than zero.'})
-                if alloc_l > locked_line.remaining_qty:
+                if alloc_l > locked_remaining_l:
                     raise forms.ValidationError({'partial_qty_l': 'Allocation exceeds remaining quantity.'})
+                generated_n = sum((row['batch_qty_n'] for row in lines), Decimal('0'))
+                expected_n = (alloc_l * Decimal('100000')).quantize(_BATCH_N_QUANTIZE, rounding=ROUND_HALF_UP)
+                if generated_n != expected_n:
+                    raise forms.ValidationError(
+                        {'batch_size_l': 'Batch preview is out of date. Please review the remaining quantity and try again.'}
+                    )
 
                 hed = TrnBatchHed(
                     customer=ctx['customer'],
@@ -433,12 +444,11 @@ class BatchAllocationForm(forms.Form):
                     ).save()
 
                 # Update remaining qty.
-                new_rem = (locked_line.remaining_qty - alloc_l).quantize(_BATCH_L_QUANTIZE, rounding=ROUND_HALF_UP)
+                new_rem = (locked_remaining_l - alloc_l).quantize(_BATCH_L_QUANTIZE, rounding=ROUND_HALF_UP)
                 if new_rem < 0:
                     new_rem = Decimal('0').quantize(_BATCH_L_QUANTIZE)
-                locked_line.remaining_qty = new_rem
                 locked_line.is_completed = (new_rem == 0)
-                locked_line.save(update_fields=['remaining_qty', 'is_completed'])
+                locked_line.save(update_fields=['is_completed'])
                 return hed
         except IntegrityError:
             raise forms.ValidationError(

@@ -66,6 +66,14 @@
       --form-field-grid-gap: 10px;
     }
 
+    /* Django server-side validation state, shared by every form surface. */
+    input.input-error,
+    select.input-error,
+    textarea.input-error {
+      border-color: var(--color-error) !important;
+      box-shadow: 0 0 0 2px rgba(183, 28, 28, 0.12);
+    }
+
     html {
       height: 100%;
     }

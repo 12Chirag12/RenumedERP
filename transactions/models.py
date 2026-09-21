@@ -11,7 +11,7 @@ outside the Django form (admin, scripts). Model.clean() + save(full_clean) adds
 cross-field checks (e.g. batch lines tied to Dtl1).
 """
 
-from decimal import ROUND_FLOOR, Decimal
+from decimal import ROUND_FLOOR, ROUND_HALF_UP, Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -582,6 +582,12 @@ class TrnSlsOrdDtl1(models.Model):
     def __str__(self):
         return f'SO {self.order_id} prod {self.product_id}'
 
+    @property
+    def no_of_tablets(self):
+        if not self.packing_style_id or self.packing_style is None:
+            return Decimal('0')
+        return Decimal(self.packing_style.pkg_style_value) * self.ord_qty_nos
+
     def clean(self):
         super().clean()
         if self.product_id and self.packing_style_id and self.product and self.packing_style:
@@ -591,6 +597,10 @@ class TrnSlsOrdDtl1(models.Model):
                 )
 
     def save(self, *args, **kwargs):
+        if self.rate is not None and self.ord_qty_nos is not None:
+            self.prod_amt = (self.rate * self.ord_qty_nos).quantize(
+                Decimal('0.01'), rounding=ROUND_HALF_UP,
+            )
         self.full_clean()
         super().save(*args, **kwargs)
 
@@ -632,6 +642,10 @@ class TrnSlsOrdDtl2(models.Model):
 
     def __str__(self):
         return f'SO {self.order_id} prod {self.product_id} @ {self.disp_sche_dt}'
+
+    @property
+    def disp_qty_nos(self):
+        return (self.disp_qty * Decimal('100000')).quantize(Decimal('1'))
 
     def save(self, *args, **kwargs):
         self.full_clean()

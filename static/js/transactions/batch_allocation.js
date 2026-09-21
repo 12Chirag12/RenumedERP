@@ -56,7 +56,7 @@
     return s;
   }
 
-  /** Remaining order qty display: Lacs max 2 dp; Nos whole number. */
+  /** Remaining tablet quantity display: Lacs max 2 dp; Nos whole number. */
   function formatOrderQtyLDisplay(raw) {
     if (raw == null || String(raw).trim() === '') return '—';
     var x = parseFloat(String(raw).replace(',', '.'));
@@ -126,8 +126,6 @@
     var partialN = document.getElementById('baPartialN');
     var batchSizeL = document.getElementById('baBatchSizeL');
     var batchSizeN = document.getElementById('baBatchSizeN');
-    var batchFrom = document.getElementById('baBatchFrom');
-    var batchTo = document.getElementById('baBatchTo');
     var mfg = document.getElementById('baMfgDt');
     var exp = document.getElementById('baExpDt');
     var previewBody = document.getElementById('baPreviewBody');
@@ -195,8 +193,6 @@
       partialN.value = '';
       batchSizeL.value = '';
       batchSizeN.value = '';
-      batchFrom.value = '';
-      batchTo.value = '';
       mfg.value = '';
       exp.value = '';
       previewBody.innerHTML = '';
@@ -228,34 +224,32 @@
     function updatePreview() {
       previewBody.innerHTML = '';
       var abbr = state.abbr;
-      var bf = parseInt(batchFrom.value, 10);
-      var bt = parseInt(batchTo.value, 10);
       var bsl = Number(batchSizeL.value);
-      if (!abbr || !state.abbrOk || !bf || !bt || bt < bf) return;
-
-      var count = bt - bf + 1;
+      if (!abbr || !state.abbrOk || !(bsl > 0)) return;
       var tg = currentTargets();
       if (isNaN(tg.l) || tg.l < 0) return;
 
-      var ladderL = ladderQuantities(tg.l, bsl, count);
-      var ladderN = ladderQuantities(tg.l * 100000, bsl * 100000, count);
-      if (!ladderL.ok || !ladderN.ok) return;
+      var targetN = Math.round(tg.l * 100000);
+      var sizeN = Math.round(bsl * 100000);
+      if (!(targetN > 0) || !(sizeN > 0) || sizeN > targetN) return;
+      var count = Math.ceil(targetN / sizeN);
+      var startSeq = state.nextBatchSeq || 1;
 
       for (var i = 0; i < count; i++) {
-        var seq = bf + i;
+        var qtyN = i === count - 1 ? targetN - sizeN * (count - 1) : sizeN;
         var tr = document.createElement('tr');
         tr.innerHTML =
           '<td>' +
           abbr +
-          seq +
+          (startSeq + i) +
           '</td><td>' +
           monthLabel(mfg.value || '') +
           '</td><td>' +
           monthLabel(exp.value || '') +
           '</td><td>' +
-          ladderL.rows[i] +
+          (qtyN / 100000) +
           ' L / ' +
-          ladderN.rows[i] +
+          qtyN +
           ' Nos</td>';
         previewBody.appendChild(tr);
       }
@@ -275,10 +269,6 @@
         if (isNaN(tg.l) || tg.l <= 0) ok = false;
       }
 
-      var bf = parseInt(batchFrom.value, 10);
-      var bt = parseInt(batchTo.value, 10);
-      if (!bf || !bt || bt < bf) ok = false;
-
       var bsl = Number(batchSizeL.value);
       if (!(bsl > 0)) ok = false;
 
@@ -291,10 +281,9 @@
       var ke = mmmKey(exp.value);
       if (km === null || ke === null || ke <= km) ok = false;
 
-      var count = bt - bf + 1;
-      var ladderL = ladderQuantities(tg.l, bsl, count);
-      var ladderN = ladderQuantities(tg.l * 100000, bsl * 100000, count);
-      if (!ladderL.ok || !ladderN.ok) ok = false;
+      var targetN = Math.round(tg.l * 100000);
+      var sizeN = Math.round(bsl * 100000);
+      if (!(targetN > 0) || !(sizeN > 0) || sizeN > targetN) ok = false;
 
       createBtn.setAttribute('aria-disabled', ok ? 'false' : 'true');
     }
@@ -372,6 +361,7 @@
             opt.value = ln.prod_id;
             opt.textContent = ln.prod_name + (ln.packing_style ? (' · ' + ln.packing_style) : '') + (ln.rate ? (' · Rate ' + ln.rate) : '');
             opt.dataset.lineId = ln.dtl1_id;
+            opt.dataset.tablets = ln.no_of_tablets || '0';
             opt.dataset.qtyL = ln.remaining_qty_l;
             opt.dataset.qtyN = ln.remaining_qty_n;
             opt.dataset.export = ln.export_type || '';
@@ -423,13 +413,13 @@
         .then(function (data) {
           prevBody.innerHTML = '';
           var rows = data.batches || [];
+          state.nextBatchSeq = 1;
           if (!rows.length) {
             prevBody.innerHTML = '<tr><td colspan="4" class="ba-muted">No previous batches</td></tr>';
-            if (batchFrom && !batchFrom.value) batchFrom.value = '1';
-            if (batchTo && !batchTo.value) batchTo.value = batchFrom.value;
+            updatePreview();
+            updateCreateBtn();
             return;
           }
-          // Auto-fill Batch From based on latest batch number.
           var maxSeq = 0;
           rows.forEach(function (b) {
             var bn = String(b.batch_no || '');
@@ -439,8 +429,7 @@
             }
           });
           var nextSeq = maxSeq ? (maxSeq + 1) : 1;
-          if (batchFrom && !batchFrom.value) batchFrom.value = String(nextSeq);
-          if (batchTo && !batchTo.value) batchTo.value = batchFrom.value;
+          state.nextBatchSeq = nextSeq;
           rows.forEach(function (b) {
             var tr = document.createElement('tr');
             tr.innerHTML =
@@ -457,6 +446,8 @@
               ' Nos</td>';
             prevBody.appendChild(tr);
           });
+          updatePreview();
+          updateCreateBtn();
         })
         .catch(function () {
           prevBody.innerHTML = '<tr><td colspan="4" class="ba-muted">Could not load</td></tr>';
@@ -478,7 +469,7 @@
       updateCreateBtn();
     });
 
-    [partialL, partialN, batchSizeL, batchSizeN, batchFrom, batchTo, mfg, exp].forEach(function (el) {
+    [partialL, partialN, batchSizeL, batchSizeN, mfg, exp].forEach(function (el) {
       if (el) el.addEventListener('input', updateDebounced);
       if (el) el.addEventListener('change', updateDebounced);
     });

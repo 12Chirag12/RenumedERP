@@ -54,6 +54,7 @@ from inventory.transaction_posting import reverse_inward_from_inventory, reverse
 from .constants import GRN_CATEGORY_IDS
 from .forms import (
     BatchAllocationForm,
+    batch_allocation_remaining_qty,
     DprForm,
     InwardForm,
     LogSheetForm,
@@ -581,13 +582,15 @@ def batch_allocation_products_ajax(request):
         return JsonResponse({'error': 'Invalid order selection'}, status=404)
 
     lines = (
-        TrnSlsOrdDtl1.objects.filter(order=o, is_completed=False)
-        .exclude(remaining_qty__lte=0)
+        TrnSlsOrdDtl1.objects.filter(order=o)
         .select_related('product', 'packing_style')
         .order_by('dtl1_id')
     )
     out = []
     for ln in lines:
+        remaining_qty_l, remaining_qty_n = batch_allocation_remaining_qty(ln)
+        if remaining_qty_l <= 0:
+            continue
         cp = MstCustProd.objects.filter(customer_id=cust_id, product_id=ln.product_id).first()
         abbr = (cp.batch_abbr or '').strip().upper() if cp else None
         disp = list(
@@ -602,8 +605,9 @@ def batch_allocation_products_ajax(request):
             'prod_name': ln.product.prod_name,
             'packing_style': ln.packing_style.pkg_style_name if ln.packing_style else '',
             'rate': str(ln.rate),
-            'remaining_qty_l': str(ln.remaining_qty),
-            'remaining_qty_n': str(ln.remaining_qty * 100000),
+            'no_of_tablets': str(ln.no_of_tablets),
+            'remaining_qty_l': str(remaining_qty_l),
+            'remaining_qty_n': str(remaining_qty_n),
             'export_type': ln.export_type,
             'batch_abbr': abbr,
             'abbr_ok': bool(abbr and len(abbr) == 3),

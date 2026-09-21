@@ -751,14 +751,7 @@
 .sales-order-page .inw-line-main {
   display: grid;
   /* Two-row layout for Sales Step 2 (product line card) */
-  grid-template-columns:
-    minmax(240px, 2.6fr)   /* product */
-    minmax(90px, 0.9fr)    /* hsn */
-    minmax(160px, 1.6fr)   /* packing */
-    minmax(90px, 0.9fr)    /* order qty */
-    minmax(90px, 0.9fr)    /* rate */
-    minmax(160px, 1.5fr)   /* export */
-    minmax(110px, 1.1fr);  /* product amount */
+  grid-template-columns: repeat(8, minmax(110px, 1fr));
   gap: 10px 12px;
   align-items: end;
   padding-left: 6px;
@@ -769,11 +762,11 @@
 .sales-order-page .inw-line-main .so-cell-hsn { grid-column: 2; grid-row: 1; }
 .sales-order-page .inw-line-main .so-cell-pack { grid-column: 3; grid-row: 1; }
 .sales-order-page .inw-line-main .so-cell-oqty { grid-column: 4; grid-row: 1; }
-.sales-order-page .inw-line-main .so-cell-rate { grid-column: 5; grid-row: 1; }
-.sales-order-page .inw-line-main .so-cell-export { grid-column: 6; grid-row: 1; }
-.sales-order-page .inw-line-main .so-cell-prod-amt { grid-column: 7; grid-row: 1; }
-
-.sales-order-page .inw-line-main .so-cell-ordnos { grid-column: 1; grid-row: 2; }
+.sales-order-page .inw-line-main .so-cell-ordnos { grid-column: 5; grid-row: 1; }
+.sales-order-page .inw-line-main .so-cell-tablets { grid-column: 6; grid-row: 1; }
+.sales-order-page .inw-line-main .so-cell-rate { grid-column: 7; grid-row: 1; }
+.sales-order-page .inw-line-main .so-cell-export { grid-column: 8; grid-row: 1; }
+.sales-order-page .inw-line-main .so-cell-prod-amt { grid-column: 1; grid-row: 2; }
 .sales-order-page .inw-line-main .so-cell-taxable { grid-column: 2; grid-row: 2; }
 .sales-order-page .inw-line-main .so-cell-gst-type { grid-column: 3; grid-row: 2; }
 .sales-order-page .inw-line-main .so-cell-gst-per { grid-column: 4; grid-row: 2; }
@@ -793,6 +786,7 @@
   .sales-order-page .inw-line-main .so-cell-rate,
   .sales-order-page .inw-line-main .so-cell-export,
   .sales-order-page .inw-line-main .so-cell-ordnos,
+  .sales-order-page .inw-line-main .so-cell-tablets,
   .sales-order-page .inw-line-main .so-cell-taxable,
   .sales-order-page .inw-line-main .so-cell-gst-type,
   .sales-order-page .inw-line-main .so-cell-gst-per,
@@ -896,14 +890,12 @@
 
 .sales-order-page .inw-batch-row {
   display: grid;
-  /* batch_no | mfg | exp | pack_style | qty | product | delete */
+  /* dispatch date | order qty/lakh | order qty/nos | remarks | delete */
   grid-template-columns:
     minmax(88px, 1.1fr)
-    minmax(96px, 0.8fr)
-    minmax(96px, 0.8fr)
-    minmax(120px, 1.4fr)
-    minmax(64px, 0.6fr)
-    minmax(140px, 1.6fr)
+    minmax(110px, 1fr)
+    minmax(110px, 1fr)
+    minmax(140px, 1.4fr)
     36px;
   gap: 8px 10px;
   align-items: end;
