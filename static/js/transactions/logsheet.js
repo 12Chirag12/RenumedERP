@@ -38,8 +38,10 @@
     var layerSlotInput = document.getElementById('lsLayerSlot');
     var ordDisp = document.getElementById('lsOrdDisplay');
     var batchNoDisp = document.getElementById('lsBatchNoDisplay');
-    var mfgDisp = document.getElementById('lsMfgDisplay');
-    var expDisp = document.getElementById('lsExpDisplay');
+    var mfgValue = document.getElementById('lsMfgValue');
+    var expValue = document.getElementById('lsExpValue');
+    var mfgPicker = document.getElementById('lsMfgDatePicker');
+    var expPicker = document.getElementById('lsExpDatePicker');
     var sizeLDisp = document.getElementById('lsBatchSizeL');
     var layerDisp = document.getElementById('lsTabletLayer');
     var colourSelect = document.getElementById('lsColour');
@@ -47,6 +49,32 @@
     var tabletLayer = '';
     var selectedBatch = null;
     var lastProductMeta = null;
+
+    function monthToPickerValue(value) {
+      var match = String(value || '').trim().toUpperCase().match(/^([A-Z]{3})-(\d{4})$/);
+      if (!match) return '';
+      var months = { JAN: '01', FEB: '02', MAR: '03', APR: '04', MAY: '05', JUN: '06', JUL: '07', AUG: '08', SEP: '09', OCT: '10', NOV: '11', DEC: '12' };
+      return months[match[1]] ? match[2] + '-' + months[match[1]] + '-01' : '';
+    }
+
+    function pickerValueToMonth(value) {
+      var match = String(value || '').match(/^(\d{4})-(\d{2})-\d{2}$/);
+      if (!match) return '';
+      var months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+      return months[Number(match[2]) - 1] + '-' + match[1];
+    }
+
+    function syncDateValues() {
+      if (mfgValue && mfgPicker) mfgValue.value = pickerValueToMonth(mfgPicker.value);
+      if (expValue && expPicker) expValue.value = pickerValueToMonth(expPicker.value);
+    }
+
+    function loadDateValues(mfg, exp) {
+      if (mfgValue) mfgValue.value = mfg || '';
+      if (expValue) expValue.value = exp || '';
+      if (mfgPicker) mfgPicker.value = monthToPickerValue(mfg);
+      if (expPicker) expPicker.value = monthToPickerValue(exp);
+    }
 
     if (gridStart && gridDef.start) gridStart.value = gridDef.start;
     if (gridEnd && gridDef.end) gridEnd.value = gridDef.end;
@@ -70,8 +98,7 @@
       selectedBatch = null;
       if (batchDtl) batchDtl.value = '';
       if (batchNoDisp) batchNoDisp.value = '';
-      if (mfgDisp) mfgDisp.value = '';
-      if (expDisp) expDisp.value = '';
+      loadDateValues('', '');
       if (sizeLDisp) sizeLDisp.value = '';
       if (ordDisp) ordDisp.value = '';
       if (layerSlotInput) layerSlotInput.value = 'S';
@@ -241,8 +268,7 @@
       selectedBatch = b;
       if (batchDtl) batchDtl.value = String(b.dtl_id);
       if (batchNoDisp) batchNoDisp.value = b.batch_no || '';
-      if (mfgDisp) mfgDisp.value = b.mfg_dt || '';
-      if (expDisp) expDisp.value = b.exp_dt || '';
+      loadDateValues(b.mfg_dt || '', b.exp_dt || '');
       var ord = (b.cust_ord_id || '').trim();
       var dt = (b.ord_rec_dt || '').trim();
       if (ordDisp) ordDisp.value = ord && dt ? ord + ' / ' + dt : (ord || dt || '');
@@ -350,6 +376,7 @@
     }
 
     form.addEventListener('change', function (ev) {
+      if (ev.target === mfgPicker || ev.target === expPicker) syncDateValues();
       if (ev.target.id === 'lsColour') {
         if (layerSlotInput) layerSlotInput.value = colourSelect.value || '';
         updateDoubleBatchSizeDisplay();
@@ -357,6 +384,7 @@
     });
 
     form.addEventListener('submit', function (e) {
+      syncDateValues();
       if (selectedBatch && (selectedBatch.tablet_layer || '') === 'Double') {
         var v = layerSlotInput ? layerSlotInput.value : '';
         if (v !== '1' && v !== '2') {

@@ -76,12 +76,16 @@
                     {% if form.layer_slot.errors %}<span class="field-error">{{ form.layer_slot.errors.0 }}</span>{% endif %}
                   </div>
                   <div class="cu-field">
-                    <label class="cu-label" for="lsMfgDisplay">MFG date</label>
-                    <input type="text" id="lsMfgDisplay" class="cu-input" readonly tabindex="-1" placeholder="—" autocomplete="off">
+                    <label class="cu-label" for="lsMfgDatePicker">MFG date</label>
+                    {{ form.mfg_dt }}
+                    <input type="date" id="lsMfgDatePicker" class="cu-input" autocomplete="off">
+                    {% if form.mfg_dt.errors %}<span class="field-error">{{ form.mfg_dt.errors.0 }}</span>{% endif %}
                   </div>
                   <div class="cu-field">
-                    <label class="cu-label" for="lsExpDisplay">EXP date</label>
-                    <input type="text" id="lsExpDisplay" class="cu-input" readonly tabindex="-1" placeholder="—" autocomplete="off">
+                    <label class="cu-label" for="lsExpDatePicker">EXP date</label>
+                    {{ form.exp_dt }}
+                    <input type="date" id="lsExpDatePicker" class="cu-input" autocomplete="off">
+                    {% if form.exp_dt.errors %}<span class="field-error">{{ form.exp_dt.errors.0 }}</span>{% endif %}
                   </div>
                 </div>
 

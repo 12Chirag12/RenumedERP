@@ -192,6 +192,111 @@ function initAlerts() {
   });
 }
 
+// Normalize server-rendered Django errors across the hand-written form templates.
+function initFormValidation() {
+  document.querySelectorAll('.field-error:not(.js-err)').forEach(function (errorEl) {
+    var field = errorEl.closest('.cu-field, .form-group, .form-field');
+    if (!field) return;
+
+    var control = field.querySelector('input[name], select[name], textarea[name]');
+    if (!control) return;
+
+    control.classList.add('input-error');
+    control.setAttribute('aria-invalid', 'true');
+    if (errorEl.parentElement === field) {
+      var controlContainer = control.parentElement;
+      if (errorEl.nextElementSibling !== controlContainer) {
+        field.insertBefore(errorEl, controlContainer);
+      }
+    }
+  });
+  initLineFieldErrors();
+}
+
+function initLineFieldErrors() {
+  document.querySelectorAll('.field-error.js-err:not(:empty)').forEach(function (errorEl) {
+    var message = (errorEl.textContent || '').trim();
+    var lineMatch = message.match(/^Line\s+(\d+)\s*:/i);
+    if (!lineMatch) return;
+
+    var page = errorEl.closest('.cu-page');
+    if (!page) return;
+    var lineIndex = parseInt(lineMatch[1], 10) - 1;
+    var lines = page.querySelectorAll('.inw-line-card, .so-line-card');
+    var line = lines[lineIndex];
+    if (!line) return;
+
+    var target = null;
+    if (/quantity/i.test(message)) {
+      target = line.querySelector('.inw-qty, .so-oqty');
+    }
+    if (!target) return;
+
+    target.classList.add('input-error');
+    target.setAttribute('aria-invalid', 'true');
+    var cell = target.closest('.inw-cell') || target.parentElement;
+    var localError = cell.querySelector('.grid-field-error');
+    if (!localError) {
+      localError = document.createElement('span');
+      localError.className = 'field-error grid-field-error';
+      cell.appendChild(localError);
+    }
+    localError.textContent = message;
+    errorEl.hidden = true;
+  });
+}
+
+var submittedFormSnapshot = null;
+
+function captureSubmittedForm(e) {
+  var elt = e && e.detail && e.detail.elt;
+  var form = elt && (elt.matches && elt.matches('form') ? elt : elt.closest && elt.closest('form'));
+  if (!form) return;
+
+  submittedFormSnapshot = { values: {}, formId: form.id || '' };
+  form.querySelectorAll('input[name], select[name], textarea[name]').forEach(function (control) {
+    var type = (control.type || '').toLowerCase();
+    if (type === 'password' || type === 'file') return;
+
+    if (type === 'checkbox' || type === 'radio') {
+      if (!submittedFormSnapshot.values[control.name]) submittedFormSnapshot.values[control.name] = [];
+      submittedFormSnapshot.values[control.name].push({ value: control.value, checked: control.checked });
+      return;
+    }
+
+    submittedFormSnapshot.values[control.name] = [control.value];
+  });
+}
+
+function restoreInvalidFormValues() {
+  if (!submittedFormSnapshot) return;
+
+  var hasError = document.querySelector('.field-error:not(.js-err), .field-error.js-err:not(:empty)');
+  if (!hasError) {
+    submittedFormSnapshot = null;
+    return;
+  }
+
+  Object.keys(submittedFormSnapshot.values).forEach(function (name) {
+    var controls = Array.prototype.filter.call(
+      document.querySelectorAll('[name]'),
+      function (control) { return control.name === name; }
+    );
+    var saved = submittedFormSnapshot.values[name];
+    controls.forEach(function (control, index) {
+      var type = (control.type || '').toLowerCase();
+      if (type === 'checkbox' || type === 'radio') {
+        var match = saved[index];
+        if (match) control.checked = match.checked;
+      } else if (saved[0]) {
+        control.value = saved[0];
+      }
+    });
+  });
+
+  submittedFormSnapshot = null;
+}
+
 
 // ════════════════════════════════════════════════════════════════════
 // PAGE CONTENT INIT
@@ -200,6 +305,7 @@ function initAlerts() {
 
 window.initPageContent = function() {
   initAlerts();
+  initFormValidation();
   updateActiveNav();
   if (typeof initSearchableDropdowns === 'function') {
     initSearchableDropdowns(document);
@@ -252,5 +358,9 @@ document.addEventListener('htmx:afterSettle', () => {
  * Re-init alerts here so they start their 4-second countdown right away.
  */
 document.addEventListener('htmx:afterSwap', () => {
+  restoreInvalidFormValues();
   initAlerts();
+  initFormValidation();
 });
+
+document.addEventListener('htmx:beforeRequest', captureSubmittedForm);

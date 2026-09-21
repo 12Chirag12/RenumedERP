@@ -105,6 +105,28 @@ class LogSheetForm(forms.Form):
         error_messages={'required': 'Select a pending batch.', 'invalid': 'Invalid batch selection.'},
         widget=forms.HiddenInput(attrs={'id': 'lsBatchDtlId'}),
     )
+    mfg_dt = forms.CharField(
+        max_length=8,
+        label='MFG date',
+        widget=forms.TextInput(attrs={
+            'class': 'cu-input',
+            'id': 'lsMfgValue',
+            'type': 'hidden',
+            'placeholder': 'MMM-YYYY',
+            'autocomplete': 'off',
+        }),
+    )
+    exp_dt = forms.CharField(
+        max_length=8,
+        label='EXP date',
+        widget=forms.TextInput(attrs={
+            'class': 'cu-input',
+            'id': 'lsExpValue',
+            'type': 'hidden',
+            'placeholder': 'MMM-YYYY',
+            'autocomplete': 'off',
+        }),
+    )
     layer_slot = forms.ChoiceField(
         label='Layer / colour',
         choices=LOGSHEET_LAYER_SLOT_CHOICES,
@@ -146,6 +168,16 @@ class LogSheetForm(forms.Form):
             if d > timezone.localdate():
                 raise forms.ValidationError('Granulation date cannot be in the future.')
         return d
+
+    def clean_mfg_dt(self):
+        raw = self.cleaned_data.get('mfg_dt')
+        _y, _m, norm = _parse_mmm_yyyy(raw, 'Manufacturing')
+        return norm
+
+    def clean_exp_dt(self):
+        raw = self.cleaned_data.get('exp_dt')
+        _y, _m, norm = _parse_mmm_yyyy(raw, 'Expiry')
+        return norm
 
     def clean(self):
         cd = super().clean()
@@ -191,17 +223,13 @@ class LogSheetForm(forms.Form):
         else:
             self.add_error('batch_dtl_id', 'Unsupported tablet layer on product.')
 
-        mfg = (line.mfg_dt or '').strip()
-        exp = (line.exp_dt or '').strip()
+        mfg = cd.get('mfg_dt')
+        exp = cd.get('exp_dt')
         if mfg and exp:
-            try:
-                y1, m1, _ = _parse_mmm_yyyy(mfg, 'Manufacturing')
-                y2, m2, _ = _parse_mmm_yyyy(exp, 'Expiry')
-            except forms.ValidationError as e:
-                self.add_error('batch_dtl_id', e)
-                return cd
+            y1, m1, _ = _parse_mmm_yyyy(mfg, 'Manufacturing')
+            y2, m2, _ = _parse_mmm_yyyy(exp, 'Expiry')
             if _ym_key(y2, m2) <= _ym_key(y1, m1):
-                self.add_error('batch_dtl_id', 'Batch expiry must be after manufacturing month.')
+                self.add_error('exp_dt', 'Batch expiry must be after manufacturing month.')
 
         cd['_batch_line'] = line
         return cd
@@ -225,6 +253,15 @@ class LogSheetForm(forms.Form):
                         raise forms.ValidationError({'batch_dtl_id': 'This batch is already used on a log sheet.'})
                 elif TrnLogSheet.objects.filter(batch_line_id=locked.pk, layer_slot=slot).exists():
                     raise forms.ValidationError({'batch_dtl_id': 'This colour is already logged for this batch.'})
+
+                mfg = cd['mfg_dt']
+                exp = cd['exp_dt']
+                y1, m1, _ = _parse_mmm_yyyy(mfg, 'Manufacturing')
+                y2, m2, _ = _parse_mmm_yyyy(exp, 'Expiry')
+                if _ym_key(y2, m2) <= _ym_key(y1, m1):
+                    raise forms.ValidationError({'exp_dt': 'Batch expiry must be after manufacturing month.'})
+                locked.mfg_dt = mfg
+                locked.exp_dt = exp
 
                 row = TrnLogSheet(
                     section=cd['section'],
@@ -250,7 +287,7 @@ class LogSheetForm(forms.Form):
                         layer_slot=LOGSHEET_LAYER_SLOT_SECOND,
                     ).exists()
                     locked.log_sheet_flg = 'Y' if has_first and has_second else 'N'
-                locked.save(update_fields=['log_sheet_flg'])
+                locked.save(update_fields=['mfg_dt', 'exp_dt', 'log_sheet_flg'])
                 return row
         except IntegrityError:
             raise forms.ValidationError(

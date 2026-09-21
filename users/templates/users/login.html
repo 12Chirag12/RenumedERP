@@ -169,6 +169,16 @@
     }
   </script>
 
+  <script>
+    document.querySelectorAll('.field-error').forEach(function (errorEl) {
+      var group = errorEl.closest('.form-group');
+      var control = group && group.querySelector('input[name], select[name], textarea[name]');
+      if (!control) return;
+      control.classList.add('input-error');
+      control.setAttribute('aria-invalid', 'true');
+      group.appendChild(errorEl);
+    });
+  </script>
 </body>
 
 </html>

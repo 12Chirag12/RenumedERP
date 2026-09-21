@@ -103,9 +103,9 @@
                         </div>
                       </div>
 
-                      <div class="cu-row-4-eq">
+                      <div class="cu-row-2-eq">
                         <div class="cu-field">
-                          <label class="cu-label" for="baBatchSizeL">Batch size (Lacs) <span class="req">*</span></label>
+                          <label class="cu-label" for="baBatchSizeL">Per batch size (Lacs) <span class="req">*</span></label>
                           {{ form.batch_size_l }}
                           {% if form.batch_size_l.errors %}<span class="field-error">{{ form.batch_size_l.errors.0 }}</span>{% endif %}
                         </div>
@@ -113,16 +113,6 @@
                           <label class="cu-label" for="baBatchSizeN">Batch size (Nos.) <span class="req">*</span></label>
                           {{ form.batch_size_n }}
                           {% if form.batch_size_n.errors %}<span class="field-error">{{ form.batch_size_n.errors.0 }}</span>{% endif %}
-                        </div>
-                        <div class="cu-field">
-                          <label class="cu-label" for="baBatchFrom">Batch No From <span class="req">*</span></label>
-                          {{ form.batch_from }}
-                          {% if form.batch_from.errors %}<span class="field-error">{{ form.batch_from.errors.0 }}</span>{% endif %}
-                        </div>
-                        <div class="cu-field">
-                          <label class="cu-label" for="baBatchTo">Batch No To <span class="req">*</span></label>
-                          {{ form.batch_to }}
-                          {% if form.batch_to.errors %}<span class="field-error">{{ form.batch_to.errors.0 }}</span>{% endif %}
                         </div>
                       </div>
 

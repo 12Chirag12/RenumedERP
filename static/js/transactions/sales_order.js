@@ -4,6 +4,8 @@
 function initPage_sales_order() {
   var form = document.getElementById('soForm');
   if (!form) return;
+  if (form.dataset.salesOrderInitialized === 'true') return;
+  form.dataset.salesOrderInitialized = 'true';
 
   var GST_EXEMPTED = 'EXEMPTED';
   var GST_IGST = 'IGST';
@@ -102,6 +104,7 @@ function initPage_sales_order() {
     var pv = line.pkg_style_value != null ? Number(line.pkg_style_value) : 0;
     // order_qty is captured in Lakhs; nos = lakhs * 100000
     line.ord_qty_nos = Math.round(pq * 100000);
+    line.no_of_tablets = pv > 0 ? pv * line.ord_qty_nos : 0;
     // Amount = ((qty_nos / packing_value) * rate)
     var packs = pv > 0 ? (Number(line.ord_qty_nos) / pv) : 0;
     line.taxable_amt = roundMoney(packs * rate);
@@ -110,7 +113,7 @@ function initPage_sales_order() {
     line.cgst_amt = parts.cg;
     line.sgst_amt = parts.sg;
     line.igst_amt = parts.ig;
-    line.prod_amt = roundMoney(line.taxable_amt + parts.cg + parts.sg + parts.ig);
+    line.prod_amt = Math.round(rate * 100) * line.ord_qty_nos / 100;
   }
 
   function moneyStr(v) {
@@ -121,6 +124,16 @@ function initPage_sales_order() {
     var n = Number(v);
     if (v == null || isNaN(n)) return '0';
     return String(Math.round(n));
+  }
+
+  function qtyNos(value) {
+    var text = String(value == null ? '' : value).trim();
+    if (!text) return 0;
+    var parts = text.split('.');
+    var whole = parseInt(parts[0], 10) || 0;
+    var fraction = (parts[1] || '').slice(0, 2).padEnd(2, '0');
+    var cents = parseInt(fraction, 10) || 0;
+    return whole * 100000 + cents * 1000;
   }
 
   function refreshHeaderTotals() {
@@ -306,9 +319,14 @@ function initPage_sales_order() {
         '<input type="date" class="cu-input so-d-dt" value="' + escHtml(d.disp_sche_dt) + '">' +
       '</div>' +
       '<div class="inw-br-field inw-br-qty">' +
-        '<label>Qty <span class="req">*</span></label>' +
+        '<label>Order qty/lakh <span class="req">*</span></label>' +
         '<input type="number" class="cu-input so-d-qty" min="0.01" step="0.01" value="' +
         escHtml(d.disp_qty) + '">' +
+      '</div>' +
+      '<div class="inw-br-field inw-br-qty-nos">' +
+        '<label>Ord. qty (nos.)</label>' +
+        '<input type="text" class="cu-input cu-num so-d-qty-nos" readonly tabindex="-1" value="' +
+        intStr(qtyNos(d.disp_qty)) + '">' +
       '</div>' +
       '<div class="inw-br-field inw-br-batchno">' +
         '<label>Remarks</label>' +
@@ -320,9 +338,15 @@ function initPage_sales_order() {
 
     var dt = wrap.querySelector('.so-d-dt');
     var qy = wrap.querySelector('.so-d-qty');
+    var qynos = wrap.querySelector('.so-d-qty-nos');
     var rm = wrap.querySelector('.so-d-rem');
     [dt, qy, rm].forEach(function (inp) {
       if (!inp) return;
+      if (inp === qy) {
+        inp.addEventListener('input', function () {
+          if (qynos) qynos.value = intStr(qtyNos(inp.value));
+        });
+      }
       inp.addEventListener('change', function () { patchDispatch(lineIdx, didx); });
       inp.addEventListener('input', function () { patchDispatch(lineIdx, didx); });
     });
@@ -461,6 +485,12 @@ function initPage_sales_order() {
         '<div class="inw-cell so-cell-oqty"><label>Order qty/lakh <span class="req">*</span></label>' +
           '<input type="number" class="cu-input so-oqty" min="0.01" step="0.01" data-idx="' + idx +
           '" value="' + escHtml(line.order_qty) + '"></div>' +
+        '<div class="inw-cell so-cell-ordnos"><label>Ord. qty (nos.)</label>' +
+          '<input type="text" class="cu-input cu-num" readonly tabindex="-1" value="' +
+          intStr(line.ord_qty_nos) + '"></div>' +
+        '<div class="inw-cell so-cell-tablets"><label>No. of tablets</label>' +
+          '<input type="text" class="cu-input cu-num" readonly tabindex="-1" value="' +
+          intStr(line.no_of_tablets) + '"></div>' +
         '<div class="inw-cell so-cell-rate"><label>Rate <span class="req">*</span></label>' +
           '<input type="number" class="cu-input so-rate" min="0.01" step="0.01" data-idx="' + idx +
           '" value="' + escHtml(line.rate) + '"></div>' +
@@ -468,9 +498,8 @@ function initPage_sales_order() {
           '<label>Export type <span class="req">*</span></label>' +
           '<input type="text" class="cu-input so-export" maxlength="100" data-idx="' + idx +
           '" value="' + escHtml(line.export_type) + '"></div>' +
-        '<div class="inw-cell so-cell-ordnos"><label>Ord. qty (nos.)</label>' +
-          '<input type="text" class="cu-input cu-num" readonly tabindex="-1" value="' +
-          intStr(line.ord_qty_nos) + '"></div>' +
+        '<div class="inw-cell so-cell-prod-amt"><label>Product amount</label>' +
+          '<input type="text" class="cu-input cu-num" readonly tabindex="-1" value="' + moneyStr(line.prod_amt) + '"></div>' +
         '<div class="inw-cell so-cell-taxable"><label>Taxable</label>' +
           '<input type="text" class="cu-input cu-num" readonly tabindex="-1" value="' +
           moneyStr(line.taxable_amt) + '"></div>' +
@@ -490,8 +519,6 @@ function initPage_sales_order() {
           '<input type="text" class="cu-input cu-num" readonly tabindex="-1" value="' + moneyStr(line.sgst_amt) + '"></div>' +
         '<div class="inw-cell so-cell-igst"><label>IGST</label>' +
           '<input type="text" class="cu-input cu-num" readonly tabindex="-1" value="' + moneyStr(line.igst_amt) + '"></div>' +
-        '<div class="inw-cell so-cell-prod-amt"><label>Product amount</label>' +
-          '<input type="text" class="cu-input cu-num" readonly tabindex="-1" value="' + moneyStr(line.prod_amt) + '"></div>' +
         '';
 
       body.appendChild(main);
@@ -680,6 +707,7 @@ function initPage_sales_order() {
       dispatchExpanded: false,
       taxable_amt: 0,
       ord_qty_nos: 0,
+      no_of_tablets: 0,
       cgst_amt: 0,
       sgst_amt: 0,
       igst_amt: 0,
@@ -834,8 +862,12 @@ function initPage_sales_order() {
   }
 
   if (btnAdd) btnAdd.addEventListener('click', addLine);
-  if (btnNext) btnNext.addEventListener('click', function () { window.goToSoProducts(); });
-  if (btnBack) btnBack.addEventListener('click', function () { window.goBackSoHeader(); });
+  form.addEventListener('click', function (e) {
+    var target = e.target && e.target.closest ? e.target.closest('#btnSoNext, #btnSoBack') : null;
+    if (!target || !form.contains(target)) return;
+    if (target.id === 'btnSoNext') window.goToSoProducts();
+    if (target.id === 'btnSoBack') window.goBackSoHeader();
+  });
 
   ['soPkgFwd', 'soFreight', 'soOthCharges', 'soRoundOff'].forEach(function (id) {
     var el = document.getElementById(id);
@@ -950,6 +982,7 @@ function initPage_sales_order() {
         dispatchExpanded: disp.length > 0,
         taxable_amt: 0,
         ord_qty_nos: 0,
+        no_of_tablets: 0,
         cgst_amt: 0,
         sgst_amt: 0,
         igst_amt: 0,
