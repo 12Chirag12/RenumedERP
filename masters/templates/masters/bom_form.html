@@ -4,11 +4,6 @@
 
 {% block content %}
 <div class="cu-page bom-page" data-page-init="bom">
-  <div class="cu-heading">
-    <h1>BOM Master</h1>
-    <p>Manage BOM RM and BOM PM specifications.</p>
-  </div>
-
   <div class="bom-selector">
     <a href="{% url 'bom' %}?type=rm"
        hx-get="{% url 'bom' %}?type=rm"

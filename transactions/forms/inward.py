@@ -387,7 +387,21 @@ class InwardForm(forms.Form):
             pkg_style = row.get('pkg_style')
             qty_raw = row.get('qty')
             rate_raw = row.get('rate')
-            batches_raw = row.get('batches') or []
+            batches_raw = row.get('batches', [])
+            if batches_raw is None:
+                batches_raw = []
+            if not isinstance(batches_raw, list):
+                raise forms.ValidationError(f'Line {idx}: invalid batches.')
+
+            use_batches_raw = row.get('use_batches')
+            if use_batches_raw is None:
+                # Backward compatibility for payloads saved before the
+                # per-line choice existed: batch rows imply an opt-in.
+                use_batches = bool(batches_raw)
+            elif isinstance(use_batches_raw, bool):
+                use_batches = use_batches_raw
+            else:
+                raise forms.ValidationError(f'Line {idx}: invalid batch selection.')
 
             if not item_id:
                 raise forms.ValidationError(f'Line {idx}: item is required.')
@@ -430,12 +444,13 @@ class InwardForm(forms.Form):
             rate = rate.quantize(_MONEY_QUANTIZE)
             if rate < 0:
                 raise forms.ValidationError(f'Line {idx}: rate cannot be negative.')
-            maintain_batch = item.maintain_batch == 'Y'
-            if not maintain_batch:
+            # Batch capture is optional for every inward item. The user opts in
+            # only when the source document provides batch details; otherwise
+            # the receipt is posted to the regular unbatched inventory bucket.
+            if not use_batches:
                 if batches_raw:
                     raise forms.ValidationError(
-                        f'Line {idx}: batches are not allowed for "{item.item_name}" '
-                        '(Maintain Batches is No on the item).'
+                        f'Line {idx}: turn on Use batch details before adding batches.'
                     )
                 validated.append({
                     'item': item,
@@ -446,13 +461,10 @@ class InwardForm(forms.Form):
                     'batches': [],
                 })
                 continue
-
             if not batches_raw:
                 raise forms.ValidationError(
-                    f'Line {idx}: batch lines are required for "{item.item_name}".'
+                    f'Line {idx}: add at least one batch or turn off Use batch details.'
                 )
-            if not isinstance(batches_raw, list):
-                raise forms.ValidationError(f'Line {idx}: invalid batches.')
 
             batch_nos = set()
             batch_sum = Decimal('0')

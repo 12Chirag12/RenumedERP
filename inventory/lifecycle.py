@@ -110,10 +110,9 @@ def _collect_inward_events(*, customer_id: int, item_id: int, batch_no: str) -> 
             if posted <= 0:
                 continue
             detail = f'Posted {_q(posted)} to inventory'
-            if b is not None:
-                recv = _q(b.batch_qty)
-                if recv > posted:
-                    detail = f'Posted {_q(posted)} (received {_q(recv)}, sample {_q(recv - posted)})'
+            received = _q(d1.quantity)
+            if received > posted:
+                detail = f'Posted {_q(posted)} (received {received}, sample {_q(received - posted)})'
             events.append(
                 _RawEvent(
                     trn_date=hed.inward_dt,

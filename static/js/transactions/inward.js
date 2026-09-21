@@ -285,16 +285,17 @@ function initPage_inward() {
         pkg_style: line.pkg_style,
         qty: line.qty,
         rate: line.rate,
+        use_batches: !!line.use_batches,
         batches: [],
       };
-      if (line.maintain_batch && line.batches && line.batches.length) {
+      if (line.use_batches && line.batches && line.batches.length) {
         line.batches.forEach(function (b) {
           row.batches.push({
             batch_no: b.batch_no,
             arn_no: b.arn_no,
             pack_style: b.pack_style,
-            mfg_dt: line.mfg_date_enabled ? b.mfg_dt : '',
-            exp_dt: line.exp_date_enabled ? b.exp_dt : '',
+            mfg_dt: b.mfg_dt,
+            exp_dt: b.exp_dt,
             batch_qty: b.batch_qty,
             prod_id: b.prod_id,
           });
@@ -312,9 +313,6 @@ function initPage_inward() {
     wrap.dataset.li = String(lineIdx);
     wrap.dataset.bi = String(bidx);
 
-    var mfgRO = !line.mfg_date_enabled;
-    var expRO = !line.exp_date_enabled;
-
     wrap.innerHTML =
       '<div class="inw-br-field inw-br-batch-arn">' +
         '<div class="inw-br-sub">' +
@@ -327,14 +325,12 @@ function initPage_inward() {
         '</div>' +
       '</div>' +
       '<div class="inw-br-field">' +
-        '<label>Manufacturing date</label>' +
-        '<input type="date" class="cu-input inw-b-mfg" value="' + escHtml(b.mfg_dt) + '"' +
-        (mfgRO ? ' readonly tabindex="-1"' : '') + '>' +
+        '<label>Manufacturing date' + (line.mfg_date_enabled ? ' <span class="req">*</span>' : '') + '</label>' +
+        '<input type="date" class="cu-input inw-b-mfg" value="' + escHtml(b.mfg_dt) + '">' +
       '</div>' +
       '<div class="inw-br-field">' +
-        '<label>Expiry date</label>' +
-        '<input type="date" class="cu-input inw-b-exp" value="' + escHtml(b.exp_dt) + '"' +
-        (expRO ? ' readonly tabindex="-1"' : '') + '>' +
+        '<label>Expiry date' + (line.exp_date_enabled ? ' <span class="req">*</span>' : '') + '</label>' +
+        '<input type="date" class="cu-input inw-b-exp" value="' + escHtml(b.exp_dt) + '">' +
       '</div>' +
       '<div class="inw-br-field inw-br-pack">' +
         '<label>Packing style <span class="req">*</span></label>' +
@@ -378,17 +374,9 @@ function initPage_inward() {
 
     wrap.querySelector('.inw-remove-batch').addEventListener('click', function () {
       state.lines[lineIdx].batches.splice(bidx, 1);
-      if (!state.lines[lineIdx].batches.length) state.lines[lineIdx].batchExpanded = false;
       render();
       serialize();
     });
-
-    if (mfgRO && mfg) {
-      mfg.classList.add('inw-input-disabled');
-    }
-    if (expRO && exp) {
-      exp.classList.add('inw-input-disabled');
-    }
 
     return wrap;
   }
@@ -401,8 +389,8 @@ function initPage_inward() {
     if (cls.indexOf('inw-b-batchno') >= 0) row.batch_no = val;
     if (cls.indexOf('inw-b-arn') >= 0) row.arn_no = val;
     if (cls.indexOf('inw-b-packstyle') >= 0) row.pack_style = val;
-    if (cls.indexOf('inw-b-mfg') >= 0 && line.mfg_date_enabled) row.mfg_dt = val;
-    if (cls.indexOf('inw-b-exp') >= 0 && line.exp_date_enabled) row.exp_dt = val;
+    if (cls.indexOf('inw-b-mfg') >= 0) row.mfg_dt = val;
+    if (cls.indexOf('inw-b-exp') >= 0) row.exp_dt = val;
     if (cls.indexOf('inw-b-qty') >= 0) row.batch_qty = val;
     if (cls.indexOf('inw-b-prod') >= 0) row.prod_id = val;
     serialize();
@@ -446,67 +434,91 @@ function initPage_inward() {
 
       card.appendChild(main);
 
-      if (line.maintain_batch) {
+      if (line.item_id) {
         var n = (line.batches && line.batches.length) ? line.batches.length : 0;
-        var bar = document.createElement('button');
-        bar.type = 'button';
-        bar.className = 'inw-batch-toggle' + (line.batchExpanded ? ' is-open' : '');
-        bar.setAttribute('aria-expanded', line.batchExpanded ? 'true' : 'false');
-        bar.dataset.idx = String(idx);
+        var bar = document.createElement('div');
+        bar.className = 'inw-batch-toggle inw-batch-option-bar' +
+          (line.use_batches && line.batchExpanded ? ' is-open' : '');
         bar.innerHTML =
-          '<span class="inw-batch-toggle-icon"><i class="bi bi-chevron-down"></i></span>' +
-          '<span class="inw-batch-toggle-text">Batches</span>' +
-          (n ? '<span class="inw-batch-count">' + n + '</span>' : '');
+          '<label class="inw-use-batch-label">' +
+            '<input type="checkbox" class="inw-use-batch"' + (line.use_batches ? ' checked' : '') + '>' +
+            '<span class="inw-batch-toggle-text">Use batch details</span>' +
+            '<span class="inw-batch-optional">Optional</span>' +
+          '</label>' +
+          (line.use_batches
+            ? '<button type="button" class="inw-batch-expand" aria-expanded="' +
+                (line.batchExpanded ? 'true' : 'false') + '" title="Show or hide batch details">' +
+                '<span class="inw-batch-toggle-icon"><i class="bi bi-chevron-down"></i></span>' +
+                (n ? '<span class="inw-batch-count">' + n + '</span>' : '') +
+              '</button>'
+            : '');
         card.appendChild(bar);
 
-        var panel = document.createElement('div');
-        panel.className = 'inw-batch-panel';
-        panel.style.display = line.batchExpanded ? 'block' : 'none';
-        panel.dataset.idx = String(idx);
-
-        var inner = document.createElement('div');
-        inner.className = 'inw-batch-inner';
-        (line.batches || []).forEach(function (b, bidx) {
-          inner.appendChild(renderBatchRow(idx, bidx, b, line));
-        });
-
-        var addBtn = document.createElement('button');
-        addBtn.type = 'button';
-        addBtn.className = 'inw-add-batch';
-        addBtn.dataset.idx = String(idx);
-        addBtn.innerHTML = '<i class="bi bi-plus-lg"></i><span>Add batch</span>';
-
-        panel.appendChild(inner);
-        panel.appendChild(addBtn);
-        card.appendChild(panel);
-
-        bar.addEventListener('click', function () {
-          var i = parseInt(bar.dataset.idx, 10);
-          var ln = state.lines[i];
-          if (!ln) return;
-          ln.batchExpanded = !ln.batchExpanded;
-          render();
-          serialize();
-        });
-
-        addBtn.addEventListener('click', function () {
-          var i = parseInt(addBtn.dataset.idx, 10);
-          var ln = state.lines[i];
-          if (!ln) return;
-          if (!ln.batches) ln.batches = [];
-          ln.batches.push({
-            batch_no: '',
-            arn_no: '',
-            pack_style: '',
-            mfg_dt: '',
-            exp_dt: '',
-            batch_qty: '',
-            prod_id: '',
+        var useBatch = bar.querySelector('.inw-use-batch');
+        if (useBatch) {
+          useBatch.addEventListener('change', function () {
+            var ln = state.lines[idx];
+            if (!ln) return;
+            ln.use_batches = useBatch.checked;
+            ln.batchExpanded = useBatch.checked;
+            if (!useBatch.checked) ln.batches = [];
+            render();
+            serialize();
           });
-          ln.batchExpanded = true;
-          render();
-          serialize();
-        });
+        }
+
+        var expandBtn = bar.querySelector('.inw-batch-expand');
+        if (expandBtn) {
+          expandBtn.addEventListener('click', function () {
+            var ln = state.lines[idx];
+            if (!ln) return;
+            ln.batchExpanded = !ln.batchExpanded;
+            render();
+            serialize();
+          });
+        }
+
+        if (line.use_batches) {
+          var panel = document.createElement('div');
+          panel.className = 'inw-batch-panel';
+          panel.style.display = line.batchExpanded ? 'block' : 'none';
+          panel.dataset.idx = String(idx);
+
+          var inner = document.createElement('div');
+          inner.className = 'inw-batch-inner';
+          (line.batches || []).forEach(function (b, bidx) {
+            inner.appendChild(renderBatchRow(idx, bidx, b, line));
+          });
+
+          var addBtn = document.createElement('button');
+          addBtn.type = 'button';
+          addBtn.className = 'inw-add-batch';
+          addBtn.dataset.idx = String(idx);
+          addBtn.innerHTML = '<i class="bi bi-plus-lg"></i><span>Add batch</span>';
+
+          panel.appendChild(inner);
+          panel.appendChild(addBtn);
+          card.appendChild(panel);
+
+          addBtn.addEventListener('click', function () {
+            var i = parseInt(addBtn.dataset.idx, 10);
+            var ln = state.lines[i];
+            if (!ln) return;
+            if (!ln.batches) ln.batches = [];
+            ln.batches.push({
+              batch_no: '',
+              arn_no: '',
+              pack_style: '',
+              mfg_dt: '',
+              exp_dt: '',
+              batch_qty: '',
+              prod_id: '',
+            });
+            ln.batchExpanded = true;
+            render();
+            serialize();
+          });
+        }
       }
 
       lineList.appendChild(card);
@@ -556,9 +568,9 @@ function initPage_inward() {
     line.item_id = itemId;
     line.uom_name = '';
     line.rate = '';
-    line.maintain_batch = false;
     line.mfg_date_enabled = false;
     line.exp_date_enabled = false;
+    line.use_batches = false;
     line.batches = [];
     line.batchExpanded = false;
     if (!itemId) {
@@ -571,7 +583,6 @@ function initPage_inward() {
         return;
       }
       line.uom_name = meta.uom_name || '';
-      line.maintain_batch = !!meta.maintain_batch;
       line.mfg_date_enabled = !!meta.mfg_date_enabled;
       line.exp_date_enabled = !!meta.exp_date_enabled;
       if (meta.last_purchase_rate != null && meta.last_purchase_rate !== '') {
@@ -595,9 +606,9 @@ function initPage_inward() {
       qty: '',
       rate: '',
       uom_name: '',
-      maintain_batch: false,
       mfg_date_enabled: false,
       exp_date_enabled: false,
+      use_batches: false,
       batches: [],
       batchExpanded: false,
     });
@@ -938,9 +949,9 @@ function initPage_inward() {
           qty: row.qty != null ? String(row.qty) : '',
           rate: row.rate != null && row.rate !== '' ? String(row.rate) : '0',
           uom_name: '',
-          maintain_batch: false,
           mfg_date_enabled: false,
           exp_date_enabled: false,
+          use_batches: row.use_batches === true || batches.length > 0,
           batches: batches,
           batchExpanded: batches.length > 0,
         });
@@ -950,7 +961,6 @@ function initPage_inward() {
         return fetchItemMeta(line.item_id).then(function (meta) {
           if (meta.error) return;
           line.uom_name = meta.uom_name || '';
-          line.maintain_batch = !!meta.maintain_batch;
           line.mfg_date_enabled = !!meta.mfg_date_enabled;
           line.exp_date_enabled = !!meta.exp_date_enabled;
         });

@@ -31,7 +31,6 @@ from transactions.models import (
     TrnBatchDtl,
     TrnDpr,
     TrnInwHed,
-    TrnInwDtl2,
     TrnlssDtl,
     TrnlssHed,
     TrnSlsDtl2,
@@ -57,36 +56,21 @@ def _q_inv_qty(d) -> Decimal:
     return Decimal(str(d or 0)).quantize(step, rounding=ROUND_HALF_UP)
 
 
-def _inward_item_inventory_postings(d1, hed: TrnInwHed):
+def _inward_item_inventory_postings(d1, _hed: TrnInwHed):
     """
-    Yields (batch_line_or_none, qty_to_inventory) for one inward Dtl1 line.
+    Yield one unbatched RM/PM inventory posting for an inward item line.
 
-    ``qty_to_inventory`` is inward quantity minus the item master ``sample_qty``
-    (sample is taken from the first batch lines in ``dtl2_id`` order until used up).
-    ``batch_line_or_none`` is ``TrnInwDtl2`` when batching is used, else ``None``
-    for a single no-batch bucket (empty batch key).
+    Optional ``TrnInwDtl2`` rows are receipt metadata only. Inventory is always
+    driven by ``TrnInwDtl1.quantity`` so changing supplier batch numbers cannot
+    split RM/PM stock into incompatible buckets. The first tuple value remains
+    ``None`` for compatibility with inventory lifecycle reconstruction.
     """
     item = d1.item
     sample_cap = _q_inv_qty(getattr(item, 'sample_qty', 0) or 0)
-
-    batches = list(
-        TrnInwDtl2.objects.filter(inward=hed, item_id=d1.item_id).order_by('dtl2_id')
-    )
-    if batches:
-        total_recv = _q_inv_qty(sum(_q_inv_qty(b.batch_qty) for b in batches))
-        remaining_sample = _q_inv_qty(min(sample_cap, total_recv))
-        for b in batches:
-            q = _q_inv_qty(b.batch_qty)
-            take = _q_inv_qty(min(q, remaining_sample))
-            posted = _q_inv_qty(q - take)
-            remaining_sample = _q_inv_qty(remaining_sample - take)
-            if posted > 0:
-                yield (b, posted)
-    else:
-        q = _q_inv_qty(d1.quantity)
-        posted = _q_inv_qty(q - min(sample_cap, q))
-        if posted > 0:
-            yield (None, posted)
+    received = _q_inv_qty(d1.quantity)
+    posted = _q_inv_qty(received - min(sample_cap, received))
+    if posted > 0:
+        yield (None, posted)
 
 
 def _batch_dtl_mfg_exp_dates(batch_line: TrnBatchDtl | None) -> tuple[date | None, date | None]:
@@ -107,7 +91,7 @@ def _batch_dtl_mfg_exp_dates(batch_line: TrnBatchDtl | None) -> tuple[date | Non
 
 
 def post_inward_to_inventory(hed: TrnInwHed) -> None:
-    """Add RM/PM stock from inward batch / line quantities (after item ``sample_qty``)."""
+    """Add RM/PM stock item-wise, always to the unbatched inventory bucket."""
     cust_id = hed.customer_id
     trn_dt = hed.inward_dt
     ref_id = hed.pk
@@ -116,41 +100,25 @@ def post_inward_to_inventory(hed: TrnInwHed) -> None:
     for d1 in d1_list:
         item = d1.item
         cat_id = item.item_category_id
-        for b, posted in _inward_item_inventory_postings(d1, hed):
-            if b is not None:
-                inventory_apply_batch_delta(
-                    customer_id=cust_id,
-                    product_id=None,
-                    item_id=item.pk,
-                    item_category_id=cat_id,
-                    batch_no=b.batch_no,
-                    mfg_date=b.mfg_dt,
-                    exp_date=b.exp_dt,
-                    qty_delta=posted,
-                    trn_date=trn_dt,
-                    last_trn_type=LAST_TRN_INWARD,
-                    ref_doc_id=ref_id,
-                    ref_doc_type=REF_DOC_INW,
-                )
-            else:
-                inventory_apply_batch_delta(
-                    customer_id=cust_id,
-                    product_id=None,
-                    item_id=item.pk,
-                    item_category_id=cat_id,
-                    batch_no='',
-                    mfg_date=None,
-                    exp_date=None,
-                    qty_delta=posted,
-                    trn_date=trn_dt,
-                    last_trn_type=LAST_TRN_INWARD,
-                    ref_doc_id=ref_id,
-                    ref_doc_type=REF_DOC_INW,
-                )
+        for _batch, posted in _inward_item_inventory_postings(d1, hed):
+            inventory_apply_batch_delta(
+                customer_id=cust_id,
+                product_id=None,
+                item_id=item.pk,
+                item_category_id=cat_id,
+                batch_no='',
+                mfg_date=None,
+                exp_date=None,
+                qty_delta=posted,
+                trn_date=trn_dt,
+                last_trn_type=LAST_TRN_INWARD,
+                ref_doc_id=ref_id,
+                ref_doc_type=REF_DOC_INW,
+            )
 
 
 def reverse_inward_from_inventory(hed: TrnInwHed) -> None:
-    """Undo ledger rows for this inward (same buckets and amounts as post, opposite sign)."""
+    """Reverse an inward from its item-level unbatched inventory bucket."""
     cust_id = hed.customer_id
     trn_dt = hed.inward_dt
     ref_id = hed.pk
@@ -158,37 +126,21 @@ def reverse_inward_from_inventory(hed: TrnInwHed) -> None:
     for d1 in hed.lines.select_related('item', 'item__item_category'):
         item = d1.item
         cat_id = item.item_category_id
-        for b, posted in _inward_item_inventory_postings(d1, hed):
-            if b is not None:
-                inventory_apply_batch_delta(
-                    customer_id=cust_id,
-                    product_id=None,
-                    item_id=item.pk,
-                    item_category_id=cat_id,
-                    batch_no=b.batch_no,
-                    mfg_date=b.mfg_dt,
-                    exp_date=b.exp_dt,
-                    qty_delta=-posted,
-                    trn_date=trn_dt,
-                    last_trn_type=LAST_TRN_INWARD,
-                    ref_doc_id=ref_id,
-                    ref_doc_type=REF_DOC_INW,
-                )
-            else:
-                inventory_apply_batch_delta(
-                    customer_id=cust_id,
-                    product_id=None,
-                    item_id=item.pk,
-                    item_category_id=cat_id,
-                    batch_no='',
-                    mfg_date=None,
-                    exp_date=None,
-                    qty_delta=-posted,
-                    trn_date=trn_dt,
-                    last_trn_type=LAST_TRN_INWARD,
-                    ref_doc_id=ref_id,
-                    ref_doc_type=REF_DOC_INW,
-                )
+        for _batch, posted in _inward_item_inventory_postings(d1, hed):
+            inventory_apply_batch_delta(
+                customer_id=cust_id,
+                product_id=None,
+                item_id=item.pk,
+                item_category_id=cat_id,
+                batch_no='',
+                mfg_date=None,
+                exp_date=None,
+                qty_delta=-posted,
+                trn_date=trn_dt,
+                last_trn_type=LAST_TRN_INWARD,
+                ref_doc_id=ref_id,
+                ref_doc_type=REF_DOC_INW,
+            )
 
 
 def _rm_line_issue_total(ln: TrnlssDtl) -> Decimal:

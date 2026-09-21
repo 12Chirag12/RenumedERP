@@ -4,7 +4,7 @@ Transaction models — Inward (RM/PM).
 Spec tables TrnInwHed / TrnInwDtl1 / TrnInwDtl2 map to masters:
 - Customer (MstCust), Supplier (mstSupplier), Transporter (MstTransport)
 - GRN category = MstProdCat (RM / PM — 2-char prod_cat_id)
-- Item batch behaviour = MstItem.maintain_batch ('Y' / 'N')
+- Inward batch capture is optional per item line
 
 Database CHECK constraints mirror business rules so invalid rows are rejected even
 outside the Django form (admin, scripts). Model.clean() + save(full_clean) adds
@@ -270,7 +270,7 @@ class TrnInwDtl1(models.Model):
 
 
 class TrnInwDtl2(models.Model):
-    """Batch-level split for one item line (only when item.maintain_batch = Y)."""
+    """Optional batch-level split for one inward item line."""
 
     dtl2_id = models.AutoField(primary_key=True)
     inward = models.ForeignKey(
@@ -358,11 +358,6 @@ class TrnInwDtl2(models.Model):
             raise ValidationError({'exp_dt': _('Expiry date must be after manufacturing date.')})
         if self.mfg_dt is None and self.exp_dt is not None:
             raise ValidationError({'mfg_dt': _('Manufacturing date is required when expiry date is set.')})
-
-        if self.item_id and getattr(self.item, 'maintain_batch', None) != 'Y':
-            raise ValidationError(
-                _('Batch lines are only allowed when the item has Maintain Batches set to Yes.')
-            )
 
         if self.inward_id and self.item_id:
             if not TrnInwDtl1.objects.filter(inward_id=self.inward_id, item_id=self.item_id).exists():
