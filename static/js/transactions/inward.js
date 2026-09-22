@@ -4,6 +4,11 @@
 function initPage_inward() {
   var form = document.getElementById('inwForm');
   if (!form) return;
+  // base_partial.html initializes swapped pages and the HTMX lifecycle may
+  // attempt the same initialization again. Keep bindings single-shot for the
+  // current form node while allowing a newly swapped form to initialize.
+  if (form.dataset.inwardInitialized === 'true') return;
+  form.dataset.inwardInitialized = 'true';
 
   var step1 = document.getElementById('inwStep1');
   var step2 = document.getElementById('inwStep2');
@@ -32,6 +37,7 @@ function initPage_inward() {
   var docPreviewPdf = document.getElementById('inwDocPreviewPdf');
   var DOC_HINT_DEFAULT = 'PDF or image — max 15 MB';
   var docBlobUrl = null;
+  var currentStep = 1;
 
   var pageData = {};
   try {
@@ -214,16 +220,23 @@ function initPage_inward() {
   }
 
   function setStep(step) {
+    currentStep = step === 2 ? 2 : 1;
     if (step1) {
-      step1.style.display = step === 1 ? 'flex' : 'none';
+      step1.style.display = currentStep === 1 ? 'flex' : 'none';
       step1.style.flexDirection = 'column';
     }
     if (step2) {
-      step2.style.display = step === 2 ? 'flex' : 'none';
+      step2.style.display = currentStep === 2 ? 'flex' : 'none';
       step2.style.flexDirection = 'column';
     }
-    setHeader(step);
+    setHeader(currentStep);
   }
+
+  // Apply the server-selected step synchronously. Previously this happened
+  // after asynchronous item hydration, so a late initialization callback
+  // could undo a user's click on Items after a validation-error response.
+  var initialStep = parseInt(pageData.startStep, 10) || 1;
+  setStep(initialStep === 2 ? 2 : 1);
 
   function productOptions(selected) {
     var o = '<option value=""></option>';
@@ -649,8 +662,12 @@ function initPage_inward() {
       setLinesErr('Select GRN type first.');
       return;
     }
+
+    // Navigation must not depend on an AJAX round trip. Show the step first,
+    // then refresh its item choices in the background.
+    setStep(2);
     fetchItemsForGrn().then(function () {
-      setStep(2);
+      if (currentStep === 2) render();
     });
   };
 
@@ -976,10 +993,28 @@ function initPage_inward() {
   }).then(function () {
     if (!state.lines.length) render();
     if (!isEdit) applySuggestedGrn(false);
-    var ss = parseInt(pageData.startStep, 10) || 1;
-    setStep(ss === 2 ? 2 : 1);
     updateSaveState();
   });
 }
 
 window.initPage_inward = initPage_inward;
+
+// A failed HTMX form submission replaces #mainContent with the validation
+// response. Some browsers/HTMX flows do not execute the inline initializer in
+// base_partial.html, leaving the newly rendered Inward form without its Items
+// click handler (the empty dynamic card title is another visible symptom).
+// This listener lives in the globally loaded script and reliably initializes
+// the new form after every relevant swap. initPage_inward's form-node guard
+// keeps this safe when the inline initializer did already run.
+if (!window.__inwardAfterSwapInitBound) {
+  window.__inwardAfterSwapInitBound = true;
+  document.addEventListener('htmx:afterSwap', function (event) {
+    var target = event && event.detail ? event.detail.target : null;
+    if (!target || typeof target.querySelector !== 'function') return;
+    if (target.matches && target.matches('#inwForm')) {
+      initPage_inward();
+      return;
+    }
+    if (target.querySelector('#inwForm')) initPage_inward();
+  });
+}

@@ -204,9 +204,14 @@ function initFormValidation() {
     control.classList.add('input-error');
     control.setAttribute('aria-invalid', 'true');
     if (errorEl.parentElement === field) {
-      var controlContainer = control.parentElement;
-      if (errorEl.nextElementSibling !== controlContainer) {
-        field.insertBefore(errorEl, controlContainer);
+      // Some templates put the control directly inside .cu-field while
+      // others wrap it.  insertBefore requires a *child* of `field` as its
+      // reference node; using `field` itself caused a NotFoundError and
+      // stopped all page-specific JavaScript after a validation response.
+      var referenceNode = control.parentElement === field ? control : control.parentElement;
+      if (referenceNode && referenceNode.parentElement === field &&
+          errorEl !== referenceNode && errorEl.nextElementSibling !== referenceNode) {
+        field.insertBefore(errorEl, referenceNode);
       }
     }
   });
@@ -312,6 +317,23 @@ window.initPageContent = function() {
   }
 };
 
+// Initialise the transaction/master controller for the page that was just
+// rendered.  HTMX replaces #mainContent without firing DOMContentLoaded, so
+// dynamic forms must be explicitly wired again after a validation response.
+function initRenderedPage(root) {
+  var scope = root && typeof root.querySelector === 'function' ? root : document;
+  var el = (scope.matches && scope.matches('[data-page-init]'))
+    ? scope
+    : scope.querySelector('[data-page-init]');
+  if (!el && scope !== document) {
+    el = document.querySelector('#mainContent [data-page-init]')
+      || document.querySelector('[data-page-init]');
+  }
+  if (!el) return;
+  var fn = window['initPage_' + el.dataset.pageInit];
+  if (typeof fn === 'function') fn();
+}
+
 
 // ════════════════════════════════════════════════════════════════════
 // INITIAL PAGE LOAD
@@ -328,12 +350,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // Initialise alerts + active nav
   initPageContent();
 
-  var el = document.querySelector('#mainContent [data-page-init]')
-    || document.querySelector('[data-page-init]');
-  if (el) {
-    var fn = window['initPage_' + el.dataset.pageInit];
-    if (typeof fn === 'function') fn();
-  }
+  initRenderedPage(document.querySelector('#mainContent') || document);
 
   // Delete modal: close on backdrop click or Escape
   const modal = document.getElementById('globalDeleteModal');
@@ -357,10 +374,11 @@ document.addEventListener('htmx:afterSettle', () => {
  * htmx:afterSwap fires immediately after the DOM swap (before settle).
  * Re-init alerts here so they start their 4-second countdown right away.
  */
-document.addEventListener('htmx:afterSwap', () => {
+document.addEventListener('htmx:afterSwap', (event) => {
   restoreInvalidFormValues();
   initAlerts();
   initFormValidation();
+  initRenderedPage(event && event.detail ? event.detail.target : document);
 });
 
 document.addEventListener('htmx:beforeRequest', captureSubmittedForm);

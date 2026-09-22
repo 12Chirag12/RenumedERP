@@ -40,6 +40,7 @@ function initPage_sales_order() {
   var roTotal = document.getElementById('soRoTotal');
   var DOC_HINT_DEFAULT = 'PDF or image — max 15 MB';
   var docBlobUrl = null;
+  var currentStep = 1;
 
   var pageData = {};
   try {
@@ -202,17 +203,35 @@ function initPage_sales_order() {
   }
 
   function setStep(step) {
+    currentStep = step === 2 ? 2 : 1;
     if (step1) {
-      step1.style.display = step === 1 ? 'flex' : 'none';
+      step1.style.display = currentStep === 1 ? 'flex' : 'none';
       step1.style.flexDirection = 'column';
     }
     if (step2) {
-      step2.style.display = step === 2 ? 'flex' : 'none';
+      step2.style.display = currentStep === 2 ? 'flex' : 'none';
       step2.style.flexDirection = 'column';
     }
-    setHeader(step);
-    if (step === 1) refreshHeaderTotals();
+    setHeader(currentStep);
+    if (currentStep === 1) refreshHeaderTotals();
   }
+
+  function readRecoveryLinesJson() {
+    var el = document.getElementById('soRecoveryLinesJson');
+    if (!el) return '';
+    try {
+      var value = JSON.parse(el.textContent || '""');
+      return typeof value === 'string' ? value.trim() : '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  // Set the server-selected step before asynchronous product hydration. A
+  // late hydration callback must never undo a user's Products/Back click after
+  // the form has been returned with validation errors.
+  var initialStep = parseInt(pageData.startStep, 10) || 1;
+  setStep(initialStep === 2 ? 2 : 1);
 
   function productOptions(selected) {
     var o = '<option value=""></option>';
@@ -746,10 +765,12 @@ function initPage_sales_order() {
     return typeof elt.closest === 'function' && elt.closest('form') === form;
   }
 
-  window.goToSoProducts = function () {
+  function showProductsStep() {
     setLinesErr('');
     setStep(2);
-  };
+  }
+
+  window.goToSoProducts = showProductsStep;
 
   window.goBackSoHeader = function () {
     setStep(1);
@@ -865,9 +886,29 @@ function initPage_sales_order() {
   form.addEventListener('click', function (e) {
     var target = e.target && e.target.closest ? e.target.closest('#btnSoNext, #btnSoBack') : null;
     if (!target || !form.contains(target)) return;
-    if (target.id === 'btnSoNext') window.goToSoProducts();
+    // Keep wizard navigation local to this form.  It must work even while
+    // asynchronous product recovery is still completing after a failed POST.
+    if (target.id === 'btnSoNext') showProductsStep();
     if (target.id === 'btnSoBack') window.goBackSoHeader();
   });
+
+  // Clear a stale server-side Customer order no. error as soon as the user
+  // corrects the field. The next save still performs the authoritative
+  // required/duplicate validation on the server.
+  var custOrderInput = document.getElementById('soCustOrdId');
+  if (custOrderInput) {
+    custOrderInput.addEventListener('input', function () {
+      if (!custOrderInput.value.trim()) return;
+      custOrderInput.classList.remove('input-error');
+      custOrderInput.removeAttribute('aria-invalid');
+      var field = custOrderInput.closest('.cu-field');
+      if (field) {
+        field.querySelectorAll('.field-error:not(.js-err)').forEach(function (errorEl) {
+          errorEl.remove();
+        });
+      }
+    });
+  }
 
   ['soPkgFwd', 'soFreight', 'soOthCharges', 'soRoundOff'].forEach(function (id) {
     var el = document.getElementById(id);
@@ -952,6 +993,9 @@ function initPage_sales_order() {
 
   function hydrateFromHidden() {
     var raw = (linesHidden && linesHidden.value) ? linesHidden.value.trim() : '';
+    // The server keeps the original POST payload as a fallback when line
+    // validation fails, so the user can correct the invalid dispatch in place.
+    if (!raw || raw === '[]') raw = readRecoveryLinesJson();
     if (!raw || raw === '[]') return Promise.resolve();
     var parsed;
     try {
@@ -1012,11 +1056,12 @@ function initPage_sales_order() {
   }
 
   var custSel = document.getElementById('soCustomer');
+  // Select2 can emit an initial change while enhancing this control. It is
+  // not a user change and must not clear lines restored after an invalid POST.
+  var activeCustomerId = custSel ? String(custSel.value || '') : '';
 
   hydrateFromHidden().then(function () {
     if (!state.lines.length) render();
-    var ss = parseInt(pageData.startStep, 10) || 1;
-    setStep(ss === 2 ? 2 : 1);
     updateSaveState();
     refreshHeaderTotals();
     var cid = custSel ? custSel.value : '';
@@ -1029,7 +1074,11 @@ function initPage_sales_order() {
   // Customer-filtered products: reload product list when customer changes.
   function onCustomerChanged() {
     var cid = custSel ? custSel.value : '';
+    if (String(cid || '') === activeCustomerId) return;
+    activeCustomerId = String(cid || '');
     loadProductsForCustomer(cid).then(function () {
+      // Ignore a stale request if the customer was changed again meanwhile.
+      if (String(custSel ? custSel.value : '') !== activeCustomerId) return;
       // Clear lines when customer changes to avoid invalid products.
       state.lines = [];
       render();
@@ -1043,3 +1092,19 @@ function initPage_sales_order() {
 }
 
 window.initPage_sales_order = initPage_sales_order;
+
+// Keep the Sales Order wizard functional when a validation response is
+// swapped into #mainContent by HTMX. The per-form initialization guard above
+// prevents duplicate event handlers when the page was already initialized.
+if (!window.__salesOrderAfterSwapInitBound) {
+  window.__salesOrderAfterSwapInitBound = true;
+  document.addEventListener('htmx:afterSwap', function (event) {
+    var target = event && event.detail ? event.detail.target : null;
+    if (!target || typeof target.querySelector !== 'function') return;
+    if (target.matches && target.matches('#soForm')) {
+      initPage_sales_order();
+      return;
+    }
+    if (target.querySelector('#soForm')) initPage_sales_order();
+  });
+}
