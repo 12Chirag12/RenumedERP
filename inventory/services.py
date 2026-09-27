@@ -35,12 +35,24 @@ def _q(d) -> Decimal:
 
 
 def inventory_available_item_qty(customer_id: int, item_id: int) -> Decimal:
-    """Sum open ``InventoryStock`` qty for a customer item (all batch buckets)."""
+    """Sum open ``StockHed`` closing qty for a customer item (unbatched). Falls back to ``InventoryStock`` if StockHed is empty."""
     from django.db.models import Sum
 
-    from .models import InventoryStock
+    from .models import InventoryStock, StockHed
 
     t = (
+        StockHed.objects.filter(
+            customer_id=customer_id,
+            item_id=item_id,
+            product_id__isnull=True,
+            is_closed=False,
+        ).aggregate(s=Sum('closing_qty'))['s']
+    )
+    if t is not None:
+        return _q(t)
+
+    # Fallback for transition before cutover
+    fallback = (
         InventoryStock.objects.filter(
             customer_id=customer_id,
             item_id=item_id,
@@ -48,7 +60,7 @@ def inventory_available_item_qty(customer_id: int, item_id: int) -> Decimal:
             is_closed=False,
         ).aggregate(s=Sum('qty'))['s']
     )
-    return _q(t)
+    return _q(fallback)
 
 
 def inventory_apply_batch_delta(
@@ -215,8 +227,12 @@ def inventory_apply_batch_delta(
 
 
 def post_stock_adjustment_to_inventory(header: TrnStkAdjHed) -> None:
-    """Apply all batch lines from a saved adjustment header to InventoryStock."""
+    """Apply all batch lines from a saved adjustment header to StockHed/StockDtl and InventoryStock."""
+    from .ledger_service import post_stock_adjustment_ledger
     from .models import TrnStkAdjHed
+
+    # Post to new central ledger (StockHed + StockDtl)
+    post_stock_adjustment_ledger(header)
 
     trn_type = (
         LAST_TRN_OPENING if header.stk_adj_type == TrnStkAdjHed.TYPE_OPENING else LAST_TRN_ADJUST
@@ -253,7 +269,11 @@ def post_stock_adjustment_to_inventory(header: TrnStkAdjHed) -> None:
 
 def reverse_stock_adjustment_from_inventory(header: TrnStkAdjHed) -> None:
     """Undo ledger impact of this header (same batches with opposite sign)."""
+    from .ledger_service import reverse_stock_adjustment_ledger
     from .models import TrnStkAdjHed
+
+    # Reverse from new central ledger (StockHed + StockDtl)
+    reverse_stock_adjustment_ledger(header)
 
     trn_type = (
         LAST_TRN_OPENING if header.stk_adj_type == TrnStkAdjHed.TYPE_OPENING else LAST_TRN_ADJUST

@@ -128,8 +128,8 @@ class SalesOrderForm(forms.Form):
     )
     cust_ord_id = forms.CharField(
         max_length=20,
-        label='Customer order ID',
-        error_messages={'required': 'Customer order ID is required.'},
+        label='Customer order no.',
+        error_messages={'required': 'Customer order no. is required.'},
         widget=forms.TextInput(attrs={'class': 'cu-input', 'id': 'soCustOrdId', 'autocomplete': 'off'}),
     )
     cust_ord_date = forms.DateField(
@@ -252,7 +252,7 @@ class SalesOrderForm(forms.Form):
     def clean_cust_ord_id(self):
         raw = (self.cleaned_data.get('cust_ord_id') or '').strip()
         if not raw:
-            raise forms.ValidationError('Customer order ID is required.')
+            raise forms.ValidationError('Customer order no. is required.')
         cust = self.cleaned_data.get('customer')
         if cust:
             qs = TrnSlsOrdHed.objects.filter(customer=cust, cust_ord_id=raw)
@@ -260,7 +260,7 @@ class SalesOrderForm(forms.Form):
                 qs = qs.exclude(pk=self.instance.pk)
             if qs.exists():
                 raise forms.ValidationError(
-                    f'Customer order ID "{raw}" already exists for this customer.'
+                    f'Customer order no. "{raw}" already exists for this customer.'
                 )
         return raw
 

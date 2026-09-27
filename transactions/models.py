@@ -112,6 +112,8 @@ class TrnInwHed(models.Model):
         db_column='transport_id',
         related_name='inwards',
         verbose_name='Transporter',
+        blank=True,
+        null=True,
     )
 
     vehicle_no = models.CharField(

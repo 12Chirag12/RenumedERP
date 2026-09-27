@@ -56,8 +56,10 @@ class InwardInventoryPostingTests(SimpleTestCase):
             [(None, Decimal('19.750'))],
         )
 
+    @patch('inventory.transaction_posting.reverse_inward_ledger')
+    @patch('inventory.transaction_posting.post_inward_ledger')
     @patch('inventory.transaction_posting.inventory_apply_batch_delta')
-    def test_post_and_reverse_use_the_same_unbatched_bucket(self, apply_delta):
+    def test_post_and_reverse_use_the_same_unbatched_bucket(self, apply_delta, mock_post, mock_rev):
         _line, inward = self._objects(quantity='20', sample_qty='0')
 
         post_inward_to_inventory(inward)

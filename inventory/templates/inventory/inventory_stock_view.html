@@ -4,23 +4,39 @@
 {% block content %}
 <div class="cu-page inv-stk-view-page" data-page-init="inventory_stock" data-lifecycle-url="{% url 'inventory:inventory_stock_lifecycle_ajax' %}">
 
-  <header class="inw-page-heading">
-    <h1>Inventory</h1>
-    <p>
-   <strong>Inventory Stock View</strong> is a tool that allows you to view the stock of your products and items.
+  <header class="inv-stk-header">
+    <div class="inv-stk-header-main">
+      <div class="inv-stk-title-row">
+        <h1>Inventory Stock Ledger</h1>
+        <span class="inv-stk-header-badge">
+          {% if is_periodic %}<i class="bi bi-calendar-range"></i> Periodic Movement{% else %}<i class="bi bi-activity"></i> Live Register{% endif %}
+        </span>
+      </div>
+      <p class="inv-stk-header-sub">Central perpetual stock ledger, batch balances, and date-range movement audit.</p>
+    </div>
+    <div class="inv-stk-header-actions">
+      <a href="?{{ export_query }}" hx-boost="false" download class="inv-stk-btn-header-export" title="Export current filtered stock register to Excel (.xlsx)">
+        <i class="bi bi-file-earmark-excel-fill"></i>
+        <span>Export Excel</span>
+      </a>
+      <a href="{% url 'inventory:stock_adjustment' %}" class="inv-stk-btn-header-adj" title="Create New Stock Adjustment">
+        <i class="bi bi-plus-circle-fill"></i>
+        <span>Stock Adjustment</span>
+      </a>
+    </div>
   </header>
 
   <div class="cu-panel inv-stk-view-panel">
     <div class="cu-card-header inv-stk-view-card-head">
-      <div class="icon-wrap"><i class="bi bi-box-seam"></i></div>
+      <div class="icon-wrap"><i class="bi bi-funnel-fill"></i></div>
       <div>
-        <h2>Filters</h2>
-        <p>Choose criteria and click <strong>Apply</strong>. Product and item lists reflect SKUs that currently have ledger rows (optionally scoped by customer).</p>
+        <h2>Filter & Date Range</h2>
+        <p>Filter by customer, category, SKU, batch, or specify a date/month window to compute Opening, Inward, Outward & Closing.</p>
       </div>
     </div>
 
     <div class="cu-card-body inv-stk-view-body">
-      <form method="get" class="inv-stk-filters" id="invStkFilterForm" action="">
+      <form method="get" class="inv-stk-filters" id="invStkFilterForm" action="{% url 'inventory:inventory_stock' %}">
         <div class="inv-stk-filter-grid">
           <div class="cu-field">
             <label class="cu-label" for="id_inv_stk_customer">Customer</label>
@@ -66,6 +82,16 @@
               {% endfor %}
             </select>
           </div>
+          <div class="cu-field">
+            <label class="cu-label" for="id_inv_stk_from_date">From date / month</label>
+            <input type="date" name="from_date" id="id_inv_stk_from_date" class="cu-input"
+                   value="{{ sel_from_date|default:'' }}">
+          </div>
+          <div class="cu-field">
+            <label class="cu-label" for="id_inv_stk_to_date">To date / month</label>
+            <input type="date" name="to_date" id="id_inv_stk_to_date" class="cu-input"
+                   value="{{ sel_to_date|default:'' }}">
+          </div>
           <div class="cu-field inv-stk-filter-span-2">
             <label class="cu-label" for="id_inv_stk_batch">Batch no. contains</label>
             <input type="text" name="batch" id="id_inv_stk_batch" class="cu-input" maxlength="100"
@@ -79,15 +105,47 @@
             </label>
           </div>
           <div class="cu-field inv-stk-filter-actions">
-            <label class="cu-label">&nbsp;</label>
-            <button type="submit" class="btn-primary">Apply</button>
+            <button type="submit" class="btn-primary">
+              <i class="bi bi-funnel-fill"></i> Apply Filters
+            </button>
+            {% if filter_query %}
+              <a href="?" class="inv-stk-btn-reset" title="Reset all filters">
+                <i class="bi bi-arrow-counterclockwise"></i> Reset
+              </a>
+            {% endif %}
           </div>
         </div>
       </form>
 
-      <p class="inv-stk-summary">
-        {{ result_summary }}
-      </p>
+      <div class="inv-stk-table-toolbar">
+        <div class="inv-stk-toolbar-left">
+          <div class="inv-stk-records-pill">
+            <i class="bi bi-layers-fill"></i>
+            <span><strong>{{ total }}</strong> record{{ total|pluralize:"s" }}</span>
+          </div>
+          {% if is_periodic %}
+            <div class="inv-stk-period-pill">
+              <i class="bi bi-calendar3"></i>
+              <span>Period: <strong>{{ sel_from_date_display|default:"Start" }}</strong> → <strong>{{ sel_to_date_display|default:"Today" }}</strong></span>
+            </div>
+          {% else %}
+            <div class="inv-stk-mode-pill">
+              <i class="bi bi-shield-check"></i>
+              <span>Current Balances</span>
+            </div>
+          {% endif %}
+          {% if sel_show_zero %}
+            <span class="inv-stk-zero-pill">Zero Balances Included</span>
+          {% endif %}
+        </div>
+        <div class="inv-stk-toolbar-right">
+          <a href="?{{ export_query }}" hx-boost="false" download class="inv-stk-btn-excel" title="Download Excel report with Opening, Inward, Outward & Closing quantities">
+            <i class="bi bi-file-earmark-excel-fill"></i>
+            <span>Export to Excel</span>
+            <span class="inv-stk-btn-excel-ext">.XLSX</span>
+          </a>
+        </div>
+      </div>
 
       {% if page_obj.paginator.count == 0 %}
         <p class="inv-stk-empty">No rows match these filters. Widen the search or enable “Include zero balance rows”.</p>
@@ -100,14 +158,13 @@
                 <th>Category</th>
                 <th>SKU</th>
                 <th>Batch</th>
-                <th>Mfg</th>
-                <th>Exp</th>
-                <th class="num">Available</th>
+                <th class="num">Opening</th>
+                <th class="num">Receipts (+)</th>
+                <th class="num">Issues (-)</th>
+                <th class="num">Closing</th>
                 <th class="num">Reserved</th>
                 <th>Status</th>
                 <th>Opened FY</th>
-                <th>Last trn</th>
-                <th class="inv-stk-muted">Ref</th>
                 <th class="inv-stk-actions">History</th>
               </tr>
             </thead>
@@ -124,12 +181,19 @@
                     {% endif %}
                   </td>
                   <td>{{ row.batch_no|default:"—" }}</td>
-                  <td class="inv-stk-muted">{% if row.mfg_date %}{{ row.mfg_date }}{% else %}—{% endif %}</td>
-                  <td class="inv-stk-muted">{% if row.exp_date %}{{ row.exp_date }}{% else %}—{% endif %}</td>
                   <td class="num">
-                    {{ row.qty }}{% if row.product_id and row.product.uom %} {{ row.product.uom.short_name }}{% elif row.item_id and row.item.uom %} {{ row.item.uom.short_name }}{% endif %}
+                    {{ row.display_opening_qty }}{% if row.product_id and row.product.uom %} {{ row.product.uom.short_name }}{% elif row.item_id and row.item.uom %} {{ row.item.uom.short_name }}{% endif %}
                   </td>
-                  <td class="num">
+                  <td class="num" style="color:#0d6efd;">
+                    {{ row.display_rcpt_qty }}{% if row.product_id and row.product.uom %} {{ row.product.uom.short_name }}{% elif row.item_id and row.item.uom %} {{ row.item.uom.short_name }}{% endif %}
+                  </td>
+                  <td class="num" style="color:#dc3545;">
+                    {{ row.display_issue_qty }}{% if row.product_id and row.product.uom %} {{ row.product.uom.short_name }}{% elif row.item_id and row.item.uom %} {{ row.item.uom.short_name }}{% endif %}
+                  </td>
+                  <td class="num" style="font-weight:600;">
+                    {{ row.display_closing_qty }}{% if row.product_id and row.product.uom %} {{ row.product.uom.short_name }}{% elif row.item_id and row.item.uom %} {{ row.item.uom.short_name }}{% endif %}
+                  </td>
+                  <td class="num inv-stk-muted">
                     {{ row.reserved_qty }}{% if row.product_id and row.product.uom %} {{ row.product.uom.short_name }}{% elif row.item_id and row.item.uom %} {{ row.item.uom.short_name }}{% endif %}
                   </td>
                   <td>
@@ -139,11 +203,9 @@
                       <span class="inv-stk-badge inv-stk-badge--open">Open</span>
                     {% endif %}
                   </td>
-                  <td class="inv-stk-muted">{% if row.opened_in_fy %}{{ row.opened_in_fy.fy_display }}{% else %}—{% endif %}</td>
-                  <td class="inv-stk-muted">{% if row.last_trn_date %}{{ row.last_trn_date }} {{ row.last_trn_type }}{% else %}—{% endif %}</td>
-                  <td class="inv-stk-muted" style="font-size:11px;">{% if row.ref_doc_type %}{{ row.ref_doc_type }} #{{ row.ref_doc_id }}{% else %}—{% endif %}</td>
+                  <td class="inv-stk-muted">{% if row.financial_year %}{{ row.financial_year.fy_display }}{% elif row.opened_in_fy %}{{ row.opened_in_fy.fy_display }}{% else %}—{% endif %}</td>
                   <td class="inv-stk-actions">
-                    <button type="button" class="btn-action inv-stk-lifecycle-btn" data-inv-id="{{ row.inv_id }}" title="View stock lifecycle">
+                    <button type="button" class="btn-action inv-stk-lifecycle-btn" data-inv-id="{% if row.stock_lnkno %}{{ row.stock_lnkno }}{% else %}{{ row.inv_id }}{% endif %}" title="View stock movements">
                       <i class="bi bi-clock-history"></i>
                     </button>
                   </td>

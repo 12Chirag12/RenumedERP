@@ -3,10 +3,97 @@ from django.contrib import admin
 from .models import (
     InvCustMonthlyStock,
     InventoryStock,
+    StockDtl,
+    StockHed,
     TrnStkAdjDtl1,
     TrnStkAdjDtl2,
     TrnStkAdjHed,
 )
+
+
+class StockDtlInline(admin.TabularInline):
+    model = StockDtl
+    extra = 0
+    readonly_fields = (
+        'tran_id',
+        'trn_type',
+        'trn_no',
+        'trn_date',
+        'quantity',
+        'source_line_id',
+        'is_reversal',
+        'reversal_of',
+        'created_at',
+    )
+    can_delete = False
+
+
+@admin.register(StockHed)
+class StockHedAdmin(admin.ModelAdmin):
+    list_display = (
+        'stock_lnkno',
+        'financial_year',
+        'customer',
+        'product',
+        'item',
+        'batch_no',
+        'opn_qty',
+        'rcpt_qty',
+        'issue_qty',
+        'closing_qty',
+        'is_closed',
+        'last_trn_date',
+        'last_trn_type',
+    )
+    list_filter = ('financial_year', 'is_closed', 'item_category')
+    search_fields = (
+        'customer__cust_name',
+        'product__prod_name',
+        'item__item_name',
+        'batch_no',
+    )
+    raw_id_fields = ('customer', 'product', 'item', 'item_category', 'financial_year')
+    readonly_fields = ('closing_qty', 'created_at', 'updated_at')
+    inlines = (StockDtlInline,)
+
+
+@admin.register(StockDtl)
+class StockDtlAdmin(admin.ModelAdmin):
+    list_display = (
+        'stock_dtl_id',
+        'stock',
+        'tran_id',
+        'trn_type',
+        'trn_no',
+        'trn_date',
+        'quantity',
+        'source_line_id',
+        'is_reversal',
+        'reversal_of',
+        'created_at',
+    )
+    list_filter = ('tran_id', 'trn_type', 'is_reversal', 'trn_date')
+    search_fields = (
+        'trn_no',
+        'source_line_id',
+        'remarks',
+        'stock__customer__cust_name',
+        'stock__product__prod_name',
+        'stock__item__item_name',
+    )
+    raw_id_fields = ('stock', 'reversal_of')
+    readonly_fields = (
+        'stock',
+        'tran_id',
+        'trn_type',
+        'trn_no',
+        'trn_date',
+        'quantity',
+        'source_line_id',
+        'is_reversal',
+        'reversal_of',
+        'created_at',
+    )
 
 
 @admin.register(InvCustMonthlyStock)
