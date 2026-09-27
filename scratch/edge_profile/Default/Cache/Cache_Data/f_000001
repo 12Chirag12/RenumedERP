@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<!--
+  base.html — Full-page shell. Loaded ONCE on first visit.
+  HTMX then intercepts sidebar links and form submits, swapping only
+  #mainContent. Topbar and sidebar never reload.
+-->
+
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inward (GRN) — PharmaERP</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/vendors/bootstrap-icons/bootstrap-icons.css" />
+  <link rel="stylesheet" href="/static/css/base/base.css">
+
+  <!-- All page CSS preloaded once — no flash of unstyled content on HTMX swaps -->
+  <link rel="stylesheet" href="/static/css/dashboard/dashboard.css">
+  <link rel="stylesheet" href="/static/css/masters/section.css">
+  <link rel="stylesheet" href="/static/css/masters/machine.css">
+  <link rel="stylesheet" href="/static/css/masters/operator.css">
+  <link rel="stylesheet" href="/static/css/masters/uom.css">
+  <link rel="stylesheet" href="/static/css/masters/state.css">
+  <link rel="stylesheet" href="/static/css/masters/product_attr.css">
+  <link rel="stylesheet" href="/static/css/masters/logistics.css">
+  <link rel="stylesheet" href="/static/css/masters/prod_stage.css">
+  <link rel="stylesheet" href="/static/css/masters/item_type.css">
+  <link rel="stylesheet" href="/static/css/masters/pkg_style.css">
+  <link rel="stylesheet" href="/static/css/masters/expenses.css">
+  <link rel="stylesheet" href="/static/css/masters/product.css">
+  <link rel="stylesheet" href="/static/css/masters/item.css">
+  <link rel="stylesheet" href="/static/css/masters/customer.css">
+  <link rel="stylesheet" href="/static/css/masters/supplier.css">
+  <link rel="stylesheet" href="/static/css/masters/bom.css">
+  <link rel="stylesheet" href="/static/css/transactions/inward.css">
+  <link rel="stylesheet" href="/static/css/transactions/sales_order.css">
+  <link rel="stylesheet" href="/static/css/transactions/sales_invoice.css">
+  <link rel="stylesheet" href="/static/css/transactions/batch_allocation.css">
+  <link rel="stylesheet" href="/static/css/transactions/logsheet.css">
+  <link rel="stylesheet" href="/static/css/transactions/rm_dispensing.css">
+  <link rel="stylesheet" href="/static/css/transactions/dpr.css">
+  <link rel="stylesheet" href="/static/css/transactions/pkg_cont.css">
+  <link rel="stylesheet" href="/static/css/masters/forms_consistency.css">
+  <link rel="stylesheet" href="/static/css/users/user_list.css">
+  <link rel="stylesheet" href="/static/css/users/create_user.css">
+  <link rel="stylesheet" href="/static/css/users/change_password.css">
+  <link rel="stylesheet" href="/static/css/users/change_user_password.css">
+  <link rel="stylesheet" href="/static/css/users/access_control.css">
+  <link rel="stylesheet" href="/static/css/admin_utils/financial_year.css">
+  <link rel="stylesheet" href="/static/css/admin_utils/database_backup.css">
+  <link rel="stylesheet" href="/static/css/reports/master_reports.css">
+  <link rel="stylesheet" href="/static/css/reports/transaction_reports.css">
+  <link rel="stylesheet" href="/static/css/inventory/inventory_stock_view.css">
+  <link rel="stylesheet" href="/static/css/inventory/stock_adjustment.css">
+  
+  <link rel="stylesheet" href="/static/vendor/select2/select2.min.css" />
+  <link rel="stylesheet" href="/static/css/vendors/select2_pharmaerp.css">
+  <link rel="stylesheet" href="/static/css/base/form_typography.css">
+  <link rel="stylesheet" href="/static/css/base/record_table_filters.css">
+
+  <script src="/static/vendor/jquery/jquery.min.js"></script>
+  <script src="/static/vendor/select2/select2.min.js"></script>
+  <script src="/static/js/searchable_dropdown.js"></script>
+
+  <!-- HTMX -->
+  <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js"></script>
+  <script>
+    // Send Django CSRF token as X-CSRFToken header on every HTMX request.
+    // Forms with <input type="hidden" name="csrfmiddlewaretoken" value="vgilQs9fHasDMoTl6d2dc8RRPCc7Vdve7w4S18RjytswwYlo7B0toxb5DHv3fJ9I"> already include it in POST body, but this
+    // covers hx-post on non-form elements and is belt-and-suspenders safe.
+    document.addEventListener('htmx:configRequest', function (e) {
+      var token = (document.cookie.split(';')
+        .map(function (c) { return c.trim(); })
+        .filter(function (c) { return c.startsWith('csrftoken='); })[0] || '').split('=')[1];
+      if (token) e.detail.headers['X-CSRFToken'] = token;
+    });
+  </script>
+
+  <!-- Base JS -->
+  <script src="/static/js/base.js"></script>
+  <script src="/static/js/record_table_filters.js"></script>
+
+  <!-- All page JS preloaded once so HTMX swaps can call named init functions -->
+  <script src="/static/js/masters/section.js"></script>
+  <script src="/static/js/masters/machine.js"></script>
+  <script src="/static/js/masters/operator.js"></script>
+  <script src="/static/js/masters/uom.js"></script>
+  <script src="/static/js/masters/state.js"></script>
+  <script src="/static/js/masters/product_attr.js"></script>
+  <script src="/static/js/masters/logistics.js"></script>
+  <script src="/static/js/masters/prod_stage.js"></script>
+  <script src="/static/js/masters/item_type.js"></script>
+  <script src="/static/js/masters/pkg_style.js"></script>
+  <script src="/static/js/masters/expenses.js"></script>
+  <script src="/static/js/masters/product.js"></script>
+  <script src="/static/js/masters/customer.js"></script>
+  <script src="/static/js/masters/supplier.js"></script>
+  <script src="/static/js/masters/bom.js"></script>
+  <script src="/static/js/masters/item.js"></script>
+  <script src="/static/js/transactions/prefixed_serial_no_input.js"></script>
+  <script src="/static/js/transactions/inward.js"></script>
+  <script src="/static/js/transactions/sales_order.js"></script>
+  <script src="/static/js/transactions/sales_invoice.js"></script>
+  <script src="/static/js/transactions/batch_allocation.js"></script>
+  <script src="/static/js/transactions/logsheet.js"></script>
+  <script src="/static/js/transactions/rm_dispensing.js"></script>
+  <script src="/static/js/transactions/dpr.js"></script>
+  <script src="/static/js/transactions/pkg_cont.js"></script>
+  <script src="/static/js/reports/master_reports.js"></script>
+  <script src="/static/js/reports/transaction_reports.js"></script>
+  <script src="/static/js/inventory/stock_adjustment.js"></script>
+  <script src="/static/js/inventory/inventory_stock_view.js"></script>
+  <script src="/static/js/create_user.js"></script>
+
+  <!-- Slim progress bar shown while HTMX fetches -->
+  <style>
+    #page-loader {
+      display: none;
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 3px;
+      background: linear-gradient(90deg, #4f46e5 0%, #818cf8 100%);
+      z-index: 9999;
+      animation: loader-slide 1s ease infinite;
+    }
+    #page-loader.htmx-request { display: block; }
+    @keyframes loader-slide {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="page-loader"></div>
+
+  <!-- TOP NAVBAR -->
+  <nav class="topbar">
+    <div class="topbar-left">
+      <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">
+        <i class="bi bi-list"></i>
+      </button>
+      <a href="/dashboard/"
+         hx-get="/dashboard/"
+         hx-target="#mainContent"
+         hx-swap="innerHTML"
+         hx-push-url="true"
+         hx-indicator="#page-loader"
+         class="topbar-logo">
+        <div class="logo-icon">
+          <img src="/static/images/RPL_Logo.jpg" alt="RPL Logo">
+        </div>
+        <div class="brand-lockup">
+          <div class="brand-name">RENUMED Pharmaceuticals Labs.</div>
+          <div class="brand-slogan">(Better Nutrition, Better Life, in service since 1984)</div>
+        </div>
+      </a>
+    </div>
+    <div class="topbar-right">
+      <div class="user-info">
+        <div class="user-details">
+          <div class="user-name">
+            System Admin
+          </div>
+          <div class="user-role">
+            admin
+          </div>
+        </div>
+        <div class="user-avatar">A</div>
+      </div>
+      <div class="topbar-divider"></div>
+      <form method="POST" action="/logout/" style="margin:0">
+        <input type="hidden" name="csrfmiddlewaretoken" value="vgilQs9fHasDMoTl6d2dc8RRPCc7Vdve7w4S18RjytswwYlo7B0toxb5DHv3fJ9I">
+        <button type="submit" class="btn-logout">
+          <i class="bi bi-box-arrow-right"></i> Logout
+        </button>
+      </form>
+    </div>
+  </nav>
+
+  <!-- LEFT SIDEBAR
+       hx-boost  : intercepts every <a> click inside
+       hx-target : swaps into #mainContent, not the sidebar
+       hx-push-url: browser URL bar stays in sync (back/forward work)
+  -->
+  <aside class="sidebar" id="sidebar"
+         hx-boost="true"
+         hx-target="#mainContent"
+         hx-swap="innerHTML"
+         hx-push-url="true"
+         hx-indicator="#page-loader">
+
+    <a href="/dashboard/" class="menu-direct" data-label="Dashboard">
+  <i class="bi bi-speedometer2"></i><span>Dashboard</span>
+</a>
+
+<div class="sidebar-divider"></div>
+
+
+  
+  <div class="menu-parent" id="parent-masters" data-label="Masters" onclick="toggleMenu('masters')">
+    <i class="bi bi-box-seam m-icon"></i>
+    <span>Masters</span>
+    <i class="bi bi-chevron-right chevron"></i>
+  </div>
+  <div class="submenu" id="submenu-masters">
+    
+    <a href="/masters/section/" class="submenu-item">Section</a>
+    
+    <a href="/masters/machine/" class="submenu-item">Machines</a>
+    
+    <a href="/masters/operator/" class="submenu-item">Operators</a>
+    
+    <a href="/masters/product-attributes/" class="submenu-item">Product Attributes</a>
+    
+    <a href="/masters/uom/" class="submenu-item">Unit Of Measurement (UOM)</a>
+    
+    <a href="/masters/prod-stage/" class="submenu-item">Production Stage</a>
+    
+    <a href="/masters/logistics/" class="submenu-item">Logistics</a>
+    
+    <a href="/masters/item-type/" class="submenu-item">Item Types</a>
+    
+    <a href="/masters/packing-style/" class="submenu-item">Packing Style</a>
+    
+    <a href="/masters/expenses/" class="submenu-item">Expenses</a>
+    
+    <a href="/masters/item/" class="submenu-item">Items</a>
+    
+    <a href="/masters/product/" class="submenu-item">Products</a>
+    
+    <a href="/masters/customer/" class="submenu-item">Customer</a>
+    
+    <a href="/masters/supplier/" class="submenu-item">Supplier</a>
+    
+    <a href="/masters/bom/" class="submenu-item">BOM</a>
+    
+  </div>
+
+  
+  <div class="menu-parent" id="parent-transactions" data-label="Transactions" onclick="toggleMenu('transactions')">
+    <i class="bi bi-arrow-left-right m-icon"></i>
+    <span>Transactions</span>
+    <i class="bi bi-chevron-right chevron"></i>
+  </div>
+  <div class="submenu" id="submenu-transactions">
+    
+    <a href="/transactions/inward/" class="submenu-item">Inward (GRN)</a>
+    
+    <a href="/transactions/sales-order/" class="submenu-item">Sales order</a>
+    
+    <a href="/transactions/batch-allocation/" class="submenu-item">Batch allocation</a>
+    
+    <a href="/transactions/log-sheet/" class="submenu-item">Log sheet</a>
+    
+    <a href="/transactions/rm-dispensing/" class="submenu-item">Dispensing (RM)</a>
+    
+    <a href="/transactions/dpr/" class="submenu-item">Daily production report (DPR)</a>
+    
+    <a href="/transactions/daily-packing-contractors/" class="submenu-item">Daily packing (contractors)</a>
+    
+    <a href="/transactions/sales-invoice/" class="submenu-item">Sales invoice</a>
+    
+  </div>
+
+  
+  <div class="menu-parent" id="parent-reports" data-label="Reports" onclick="toggleMenu('reports')">
+    <i class="bi bi-bar-chart-line m-icon"></i>
+    <span>Reports</span>
+    <i class="bi bi-chevron-right chevron"></i>
+  </div>
+  <div class="submenu" id="submenu-reports">
+    
+    <a href="/reports/master-reports/" class="submenu-item">Master Reports</a>
+    
+    <a href="/reports/transaction-reports/" class="submenu-item">Transaction Reports</a>
+    
+  </div>
+
+  
+  <div class="menu-parent" id="parent-inventory" data-label="Inventory" onclick="toggleMenu('inventory')">
+    <i class="bi bi-boxes m-icon"></i>
+    <span>Inventory</span>
+    <i class="bi bi-chevron-right chevron"></i>
+  </div>
+  <div class="submenu" id="submenu-inventory">
+    
+    <a href="/inventory/stock/" class="submenu-item">Inventory</a>
+    
+    <a href="/inventory/stock-adjustment/" class="submenu-item">Stock adjustment</a>
+    
+  </div>
+
+  <div class="sidebar-divider"></div>
+  <div class="menu-parent" id="parent-utilities" data-label="Utilities" onclick="toggleMenu('utilities')">
+    <i class="bi bi-gear m-icon"></i>
+    <span>Utilities</span>
+    <i class="bi bi-chevron-right chevron"></i>
+  </div>
+  <div class="submenu" id="submenu-utilities">
+    
+    <a href="/users/" class="submenu-item">User Management</a>
+    
+    <a href="/change-password/" class="submenu-item">Change Password</a>
+    
+    <a href="/admin/utilities/financial-years/" class="submenu-item">Financial Years</a>
+    
+    <a href="/admin/utilities/database-backup/" class="submenu-item">Database backup</a>
+    
+    <a href="/utilities/access-control/" class="submenu-item">Access Control</a>
+    
+  </div>
+
+
+
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-footer">PharmaERP v1.0 &nbsp;|&nbsp; Internal</div>
+  </aside>
+
+
+  <!-- MAIN CONTENT
+       hx-boost  : intercepts form submits inside this area
+       Result swaps back into #mainContent (target="this" semantics via id)
+  -->
+  <main class="main-content" id="mainContent"
+        hx-boost="true"
+        hx-target="#mainContent"
+        hx-swap="innerHTML"
+        hx-push-url="true"
+        hx-indicator="#page-loader">
+
+    
+
+    
+<div class="cu-page inward-page" data-page-init="inward">
+
+  <script id="inwProductsData" type="application/json">[{"prod_id": 11, "prod_name": "Aceclofenac Tablet 100mg"}, {"prod_id": 12, "prod_name": "Aclomol Tablet"}, {"prod_id": 13, "prod_name": "Alkasalwy Tablet"}, {"prod_id": 14, "prod_name": "Baramol Tablet"}, {"prod_id": 15, "prod_name": "Biopile Tablet"}, {"prod_id": 16, "prod_name": "Bisacodyl 5mg Tablet"}, {"prod_id": 17, "prod_name": "Boncal-500 Tablet"}, {"prod_id": 18, "prod_name": "Bromhexine Hydrochloride 8mg"}, {"prod_id": 19, "prod_name": "Calcibon Tablet"}, {"prod_id": 1, "prod_name": "Cesaflam Tablet"}, {"prod_id": 22, "prod_name": "Chlorpheniramine BP Tablet 4mg"}, {"prod_id": 27, "prod_name": "Clomol Tablet"}, {"prod_id": 23, "prod_name": "Cotrimex 480 Tablet"}, {"prod_id": 2, "prod_name": "Dexamethasone Tablet BP 0.5mg"}, {"prod_id": 24, "prod_name": "Diclofenac Tablets 50mg"}, {"prod_id": 3, "prod_name": "Dicodol Plus Tablet"}, {"prod_id": 28, "prod_name": "Digestin Tablet"}, {"prod_id": 4, "prod_name": "Fak-50 Tablets"}, {"prod_id": 5, "prod_name": "Fakpar Plus Tablet (500mg)"}, {"prod_id": 29, "prod_name": "Flucin-500 (Paracetamol Tablet 500mg)"}, {"prod_id": 31, "prod_name": "Flucin-650 (Paracetamol Tab. 650mg)"}, {"prod_id": 9, "prod_name": "Fortu + Tablet"}, {"prod_id": 6, "prod_name": "Ibuprofene Tablets BP 400mg"}, {"prod_id": 7, "prod_name": "Medik-55 Tablet"}, {"prod_id": 8, "prod_name": "Megyl Tablet 250mg"}, {"prod_id": 10, "prod_name": "Multivitamin Tablet"}, {"prod_id": 25, "prod_name": "Paracetamol Tablets BP 500mg"}, {"prod_id": 26, "prod_name": "Paramol"}, {"prod_id": 20, "prod_name": "Pyridoxine (Vitamin B6) Tablet"}, {"prod_id": 30, "prod_name": "Vitamin B-Complex"}, {"prod_id": 21, "prod_name": "Zorito Plus Tablet"}]</script>
+  <script id="inwGrnCatData" type="application/json">[{"prod_cat_id": "PM", "prod_cat_name": "Packing Materials"}, {"prod_cat_id": "RM", "prod_cat_name": "Raw Materials"}]</script>
+  <script id="inwAjaxUrls" type="application/json">{"items": "/transactions/ajax/inward-items/", "itemMeta": "/transactions/ajax/inward-item-meta/", "nextNumbers": "/transactions/ajax/inward-next-numbers/", "suggestGrn": "/api/suggest-grn/"}</script>
+  <script id="inwPageData" type="application/json">{"startStep": 1, "isEdit": false, "numberSuggest": {"register_no": "R-37628153", "grn_seq": 632, "working_year": "2026-27"}}</script>
+
+  <div class="cu-panel">
+    <div class="cu-card-header">
+      <div class="icon-wrap">
+        <i class="bi" id="inwHeaderIcon"></i>
+      </div>
+      <div>
+        <h2 id="inwHeaderTitle"></h2>
+        <p id="inwHeaderSub"></p>
+      </div>
+      <div class="step-indicator">
+        <span class="step-dot" id="inwDot1"></span>
+        <span class="step-line"></span>
+        <span class="step-dot" id="inwDot2"></span>
+      </div>
+    </div>
+
+    <div class="cu-card-body">
+
+      
+
+
+
+
+      <form method="post"
+            action="/transactions/inward/"
+            id="inwForm"
+            enctype="multipart/form-data"
+            novalidate>
+        <input type="hidden" name="csrfmiddlewaretoken" value="vgilQs9fHasDMoTl6d2dc8RRPCc7Vdve7w4S18RjytswwYlo7B0toxb5DHv3fJ9I">
+        
+        <input type="hidden" name="lines_json" id="inwLinesJson">
+
+        <!-- Step 1: 65% inward+transport | 35% document (tall preview) -->
+        <div id="inwStep1" class="cust-step">
+          <div class="inw-step1-grid">
+          <div class="inw-step1-main-row">
+          <div class="inw-step1-left">
+          <div class="cu-section txn-section inw-section-block inw-section-inward-details">
+            <h3 class="txn-section-title">Inward details</h3>
+            <div class="cu-section-fields">
+              <div class="cu-row-2-eq">
+                <div class="cu-field">
+                  <label class="cu-label">Inward date <span class="req">*</span></label>
+                  <input type="date" name="inward_dt" value="2026-09-27" class="cu-input" id="inwInwardDt" required>
+                  
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">Register no. <span class="req">*</span></label>
+                  <input type="text" name="register_no" value="R-37628153" class="cu-input" id="inwRegisterNo" placeholder="R-00001" autocomplete="off" inputmode="numeric" spellcheck="false" maxlength="20" required>
+                  
+                </div>
+              </div>
+              <div class="cu-row-2-eq">
+                <div class="cu-field">
+                  <label class="cu-label">GRN type <span class="req">*</span></label>
+                  <select name="grn_category" class="cu-select searchable-dropdown" id="inwGrnCategory" required>
+  <option value="" selected>— RM / PM —</option>
+
+  <option value="PM">PM – Packing Materials</option>
+
+  <option value="RM">RM – Raw Materials</option>
+
+</select>
+                  
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">GRN no. <span class="req">*</span></label>
+                  <input type="text" name="grn_no" class="cu-input" id="inwGrnNo" placeholder="RM-00001" autocomplete="off" inputmode="numeric" spellcheck="false" maxlength="50" required>
+                  
+                </div>
+              </div>
+              <div class="cu-row-2-eq">
+                <div class="cu-field">
+                  <label class="cu-label">Customer <span class="req">*</span></label>
+                  <select name="customer" class="cu-select searchable-dropdown" id="inwCustomer" required>
+  <option value="" selected>— Select Customer —</option>
+
+  <option value="1">Aura Pharmaceuticals Pvt Ltd (AURA)</option>
+
+  <option value="7">Lyphochem Pharmaceutical (LYPHO)</option>
+
+  <option value="8">Renumed Pharmaceutical Labs (RPL)</option>
+
+  <option value="9">Stanmarc Enterprises (STANMARC)</option>
+
+</select>
+                  
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">Supplier <span class="req">*</span></label>
+                  <select name="supplier" class="cu-select searchable-dropdown" id="inwSupplier" required>
+  <option value="" selected>— Select Supplier —</option>
+
+  <option value="7">Aashirwad Print N Pack</option>
+
+  <option value="8">Add Biotec</option>
+
+  <option value="9">Amcure Chemicals</option>
+
+  <option value="10">Anu Pharma</option>
+
+  <option value="2">Archk Pharma Co.</option>
+
+  <option value="11">Atman Pharma Private Limited</option>
+
+  <option value="12">C and C Pharmachem</option>
+
+  <option value="13">Cynergy Pharma</option>
+
+  <option value="14">Deccan Packaging</option>
+
+  <option value="15">Dhanashree Lamination</option>
+
+  <option value="16">HAP Enterprise</option>
+
+  <option value="17">Hemanshu Trade Corporation</option>
+
+  <option value="18">Integrity Packaging LLP</option>
+
+  <option value="19">Jay Malhar Folding</option>
+
+  <option value="22">M Sure Pharmachem LLP</option>
+
+  <option value="20">Mahesh Plastic Industries</option>
+
+  <option value="21">Mayur Printers</option>
+
+  <option value="3">Mini International Inc</option>
+
+  <option value="23">N Sunderlal &amp; Co.</option>
+
+  <option value="24">Neel Pack</option>
+
+  <option value="25">Nice Industries</option>
+
+  <option value="26">Nikeon Corporation</option>
+
+  <option value="27">Nilraj Lifecare</option>
+
+  <option value="28">Oscar Globe Packaging</option>
+
+  <option value="29">P.R.Prints</option>
+
+  <option value="1">Pavesha Pharma Pack (-)</option>
+
+  <option value="41">Pooja Wooden Box Packaging</option>
+
+  <option value="39">Poonam Impex</option>
+
+  <option value="30">Pratham Corrugating Industrial Pvt Ltd</option>
+
+  <option value="40">Primeiro Healthcare Pvt Ltd</option>
+
+  <option value="42">Raksh Bio Sciences Pvt Ltd</option>
+
+  <option value="43">Ramesh Trading Co.(Bombay) Pvt.ltd</option>
+
+  <option value="45">Sadhana Enterprises</option>
+
+  <option value="31">Sai Datta Packaging</option>
+
+  <option value="33">samir Pharma</option>
+
+  <option value="46">Sampatti New Life Pvt.Ltd</option>
+
+  <option value="32">Saniya Enterprises</option>
+
+  <option value="34">saurav Paper  Box Industries</option>
+
+  <option value="47">Shah H. Punamchand &amp; Co</option>
+
+  <option value="35">sharad &amp; Sons</option>
+
+  <option value="48">Sheetal Chem</option>
+
+  <option value="49">sheth Impression LLP</option>
+
+  <option value="36">Sheth XL Impression Pvt.Ltd</option>
+
+  <option value="50">Shree Anant Labdhi</option>
+
+  <option value="51">shree Ganesh Printers</option>
+
+  <option value="6">Shree kheteshwar General Store</option>
+
+  <option value="37">shree packaging</option>
+
+  <option value="52">Shrikrishna Pharma Foils Pvt. Ltd.</option>
+
+  <option value="44">SJ Enterprises</option>
+
+  <option value="53">SMS Pharmaceuticals Ltd</option>
+
+  <option value="54">Sneha Medicare Pvt. Ltd.</option>
+
+  <option value="55">Sohan Print O Paper</option>
+
+  <option value="5">Sorich Foils Limited</option>
+
+  <option value="56">Spark Alchemy Pvt Ltd</option>
+
+  <option value="57">Stanmarc Enterprises</option>
+
+  <option value="60">Sun Rise Enterprises</option>
+
+  <option value="58">Sunil Healthcare Limited</option>
+
+  <option value="59">Sunn Karton Industries</option>
+
+  <option value="61">Supharma chem</option>
+
+  <option value="62">Tagoor Laboratories Pvt Ltd</option>
+
+  <option value="38">Tejas Packaging</option>
+
+  <option value="63">Universe Capsules Biotech Pvt.Ltd</option>
+
+  <option value="64">Usan Pharmaceuticals Pvt.Ltd</option>
+
+  <option value="65">V.N. Pharma</option>
+
+  <option value="4">V.N.Chemical</option>
+
+  <option value="66">Valiant Laboratories Limited</option>
+
+  <option value="67">Vardhman Healthcare</option>
+
+  <option value="68">Varun Pharmachem</option>
+
+  <option value="69">Vasudha Pharmachem Limited</option>
+
+  <option value="70">Vikram Thermo (INDIA) Limited</option>
+
+  <option value="71">Vinraj Plastic Industries</option>
+
+  <option value="72">Viraj Pharmaceuticals Pvt. Ltd.</option>
+
+  <option value="73">Vision Pharma</option>
+
+  <option value="74">Vital Laboratories Pvt. Ltd.</option>
+
+  <option value="75">Vrushika Pharmachem</option>
+
+  <option value="76">Wastern Drugs Limited</option>
+
+  <option value="77">Yash Packaging</option>
+
+</select>
+                  
+                </div>
+              </div>
+              <div class="cu-row-2-eq">
+                <div class="cu-field">
+                  <label class="cu-label">Invoice no. <span class="req">*</span></label>
+                  <input type="text" name="inv_no" class="cu-input" id="inwInvNo" autocomplete="off" maxlength="100" required>
+                  
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">Invoice date <span class="req">*</span></label>
+                  <input type="date" name="inv_dt" class="cu-input" id="inwInvDt" required>
+                  
+                </div>
+              </div>
+              <div class="cu-field">
+                <label class="cu-label">Remarks</label>
+                <textarea name="remarks" cols="40" rows="2" class="cu-textarea" id="inwRemarks" placeholder="Optional notes…">
+</textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="cu-section txn-section inw-section-block inw-section-transport">
+            <h3 class="txn-section-title">Transport details</h3>
+            <div class="cu-section-fields">
+              <div class="cu-row-2-eq">
+                <div class="cu-field">
+                  <label class="cu-label">Transporter </label>
+                  <select name="transporter" class="cu-select searchable-dropdown" id="inwTransport">
+  <option value="" selected>— Select Transporter —</option>
+
+  <option value="9">Aashirwad Goods Carrier</option>
+
+  <option value="4">Lalji Mulji Transport</option>
+
+  <option value="1">Masandevi Transport</option>
+
+  <option value="8">Not Available</option>
+
+  <option value="2">Palghar Golden Transport</option>
+
+  <option value="7">S. P. Transport</option>
+
+  <option value="5">Sagar Golden Transport</option>
+
+  <option value="6">Self Vehicle</option>
+
+  <option value="3">V-trans (India) Pvt. Ltd.</option>
+
+</select>
+                  
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">Vehicle no. </label>
+                  <input type="text" name="vehicle_no" class="cu-input" id="inwVehicle" autocomplete="off" maxlength="50">
+                  
+                </div>
+              </div>
+              <div class="cu-row-2-eq">
+                <div class="cu-field">
+                  <label class="cu-label">Driver name</label>
+                  <input type="text" name="driver_name" class="cu-input" id="inwDriverName" autocomplete="off" maxlength="150">
+                  
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">Driver contact</label>
+                  <input type="text" name="driver_no" class="cu-input" placeholder="10-digit contact" id="inwDriverNo" autocomplete="tel-national" maxlength="10">
+                  
+                </div>
+              </div>
+            </div>
+          </div>
+          </div>
+
+          <div class="inw-step1-right">
+          <div class="cu-section txn-section inw-section-block inw-section-doc-upload">
+            <h3 class="txn-section-title">Document</h3>
+            <div class="cu-section-fields inw-doc-upload-fields">
+              <div class="inw-doc-preview-box"
+                   id="inwDocPreviewShell"
+                   >
+                <div class="inw-doc-placeholder" id="inwDocPlaceholder">
+                  <i class="bi bi-file-earmark-image"></i>
+                  <span>No preview</span>
+                </div>
+                <img id="inwDocPreviewImg" class="inw-doc-preview-img" alt="Document preview" />
+                <iframe id="inwDocPreviewPdf" class="inw-doc-preview-iframe" title="PDF preview"></iframe>
+              </div>
+              
+              <div class="inw-doc-upload-area">
+                <input type="file" name="header_document" class="inw-header-doc-input" id="inwHeaderDocInput" accept=".pdf,image/*">
+                <button type="button" class="btn-upload inw-doc-upload-btn" id="inwDocUploadBtn">
+                  <i class="bi bi-upload"></i> Upload
+                </button>
+                <span class="upload-hint inw-doc-hint" id="inwDocHint">PDF or image — max 15 MB</span>
+              </div>
+              
+            </div>
+          </div>
+          </div>
+          </div>
+          </div>
+
+          <div class="cu-actions inw-step1-actions">
+            <button type="button" class="btn-save btn-item-details" id="btnInwNext"><i class="bi bi-grid-3x3-gap"></i> Items</button>
+            
+            <button type="submit" class="btn-save btn-save-main" id="btnInwSave"
+              aria-disabled="true">
+              <i class="bi bi-check2-circle"></i> Save Inward
+            </button>
+            <button type="button" class="btn-cancel" id="btnInwClear" onclick="resetInwardForm()"><i class="bi bi-x-lg"></i> Clear</button>
+            
+          </div>
+          <span class="field-error js-err" id="err-lines_json_step1"></span>
+        </div>
+
+        <!-- Step 2: lines + batches -->
+        <div id="inwStep2" class="cust-step inw-step2" style="display: none;">
+          <span class="field-error js-err" id="err-lines_json"></span>
+
+          <div class="prod-grid-wrap inw-items-panel">
+            <div class="prod-grid-toolbar inw-items-toolbar">
+              <span class="prod-grid-label"><i class="bi bi-box-seam"></i> Items</span>
+              <button type="button" class="btn-add-row" id="btnInwAddLine"><i class="bi bi-plus-lg"></i> Add line</button>
+            </div>
+            <div class="inw-lines-outer">
+              <div id="inwLineList" class="inw-line-list"></div>
+              <p class="prod-grid-empty inw-line-empty" id="inwLineEmpty">No items yet. Use <strong>Add line</strong> to start.</p>
+            </div>
+          </div>
+
+          <div class="cu-actions inw-step2-actions">
+            <button type="button" class="btn-cancel" id="btnInwBack"><i class="bi bi-arrow-left"></i> Back</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-card-header">
+      <i class="bi bi-list-ul"></i>
+      <h3>Recent inwards (6)</h3>
+    </div>
+    <div class="table-scroll-body">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>ID</th>
+            <th>Date</th>
+            <th>GRN</th>
+            <th>Type</th>
+            <th>Customer</th>
+            <th>Supplier</th>
+            <th>Invoice</th>
+            <th>Document</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+          <tr >
+            <td class="col-idx">1</td>
+            <td>7</td>
+            <td>2026-09-21</td>
+            <td><strong>RM-00631</strong></td>
+            <td><span class="type-badge">RM</span></td>
+            <td>Renumed Pharmaceutical Labs</td>
+            <td>Aashirwad Print N Pack</td>
+            <td>123</td>
+            <td class="col-doc">
+              <span class="inw-table-doc-empty">—</span>
+            </td>
+            <td class="col-actions">
+              <a href="/transactions/inward/?edit_pk=7" class="btn-action btn-edit" title="Edit"><i class="bi bi-pencil"></i></a>
+              <button type="button" class="btn-action btn-delete" title="Delete"
+                data-delete-url="/transactions/inward/7/delete/"
+                data-delete-name="RM\u002D00631"
+                onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>
+          
+          <tr >
+            <td class="col-idx">2</td>
+            <td>6</td>
+            <td>2026-09-12</td>
+            <td><strong>RM-00630</strong></td>
+            <td><span class="type-badge">RM</span></td>
+            <td>Renumed Pharmaceutical Labs</td>
+            <td>Varun Pharmachem</td>
+            <td>TEST-PVPK30-20KG-120926</td>
+            <td class="col-doc">
+              <span class="inw-table-doc-empty">—</span>
+            </td>
+            <td class="col-actions">
+              <a href="/transactions/inward/?edit_pk=6" class="btn-action btn-edit" title="Edit"><i class="bi bi-pencil"></i></a>
+              <button type="button" class="btn-action btn-delete" title="Delete"
+                data-delete-url="/transactions/inward/6/delete/"
+                data-delete-name="RM\u002D00630"
+                onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>
+          
+          <tr >
+            <td class="col-idx">3</td>
+            <td>5</td>
+            <td>2026-09-09</td>
+            <td><strong>RM-00004</strong></td>
+            <td><span class="type-badge">RM</span></td>
+            <td>Aura Pharmaceuticals Pvt Ltd</td>
+            <td>Amcure Chemicals</td>
+            <td>DEMO-20260909-01</td>
+            <td class="col-doc">
+              <span class="inw-table-doc-empty">—</span>
+            </td>
+            <td class="col-actions">
+              <a href="/transactions/inward/?edit_pk=5" class="btn-action btn-edit" title="Edit"><i class="bi bi-pencil"></i></a>
+              <button type="button" class="btn-action btn-delete" title="Delete"
+                data-delete-url="/transactions/inward/5/delete/"
+                data-delete-name="RM\u002D00004"
+                onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>
+          
+          <tr >
+            <td class="col-idx">4</td>
+            <td>3</td>
+            <td>2026-04-02</td>
+            <td><strong>PM-00003</strong></td>
+            <td><span class="type-badge">PM</span></td>
+            <td>Stanmarc Enterprises</td>
+            <td>Mini International Inc</td>
+            <td>002</td>
+            <td class="col-doc">
+              <span class="inw-table-doc-empty">—</span>
+            </td>
+            <td class="col-actions">
+              <a href="/transactions/inward/?edit_pk=3" class="btn-action btn-edit" title="Edit"><i class="bi bi-pencil"></i></a>
+              <button type="button" class="btn-action btn-delete" title="Delete"
+                data-delete-url="/transactions/inward/3/delete/"
+                data-delete-name="PM\u002D00003"
+                onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>
+          
+          <tr >
+            <td class="col-idx">5</td>
+            <td>2</td>
+            <td>2026-08-29</td>
+            <td><strong>RM-0629</strong></td>
+            <td><span class="type-badge">RM</span></td>
+            <td>Renumed Pharmaceutical Labs</td>
+            <td>Varun Pharmachem</td>
+            <td>VPC275</td>
+            <td class="col-doc">
+              <span class="inw-table-doc-empty">—</span>
+            </td>
+            <td class="col-actions">
+              <a href="/transactions/inward/?edit_pk=2" class="btn-action btn-edit" title="Edit"><i class="bi bi-pencil"></i></a>
+              <button type="button" class="btn-action btn-delete" title="Delete"
+                data-delete-url="/transactions/inward/2/delete/"
+                data-delete-name="RM\u002D0629"
+                onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>
+          
+          <tr >
+            <td class="col-idx">6</td>
+            <td>1</td>
+            <td>2026-04-01</td>
+            <td><strong>PM-00001</strong></td>
+            <td><span class="type-badge">PM</span></td>
+            <td>Aura Pharmaceuticals Pvt Ltd</td>
+            <td>Pavesha Pharma Pack</td>
+            <td>1214/25-26</td>
+            <td class="col-doc">
+              
+              <a href="/media/inward_documents/R-37627522_Pavesha_Pharma_Pack_2026-04-01.pdf" target="_blank" rel="noopener" class="inw-table-doc-link" title="inward_documents/R-37627522_Pavesha_Pharma_Pack_2026-04-01.pdf"><i class="bi bi-file-earmark"></i></a>
+              
+            </td>
+            <td class="col-actions">
+              <a href="/transactions/inward/?edit_pk=1" class="btn-action btn-edit" title="Edit"><i class="bi bi-pencil"></i></a>
+              <button type="button" class="btn-action btn-delete" title="Delete"
+                data-delete-url="/transactions/inward/1/delete/"
+                data-delete-name="PM\u002D00001"
+                onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>
+          
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+
+  </main>
+
+  
+
+  <!-- GLOBAL DELETE MODAL — outside #mainContent so it persists across swaps -->
+  <div id="globalDeleteModal" class="modal-overlay" style="display:none">
+    <div class="modal-box">
+      <div class="modal-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+      <h3 class="modal-title">Confirm Delete</h3>
+      <p class="modal-msg">You are about to delete <strong id="deleteModalItemName"></strong>. This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeDeleteModal()">
+          <i class="bi bi-x"></i> Cancel
+        </button>
+        <form id="globalDeleteForm" method="POST" action=""
+              hx-post=""
+              hx-target="#mainContent"
+              hx-swap="innerHTML"
+              hx-push-url="true"
+              hx-indicator="#page-loader">
+          <input type="hidden" name="csrfmiddlewaretoken" value="vgilQs9fHasDMoTl6d2dc8RRPCc7Vdve7w4S18RjytswwYlo7B0toxb5DHv3fJ9I">
+          <button type="submit" class="btn-danger">
+            <i class="bi bi-trash"></i> Yes, Delete
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

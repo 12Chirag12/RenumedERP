@@ -1,28 +1,51 @@
-"""
-Inventory views: ledger browse, stock adjustment, AJAX helpers.
-"""
-
+import calendar
 import json
-from datetime import date
+from datetime import date, datetime
+from decimal import Decimal, ROUND_HALF_UP
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db.models import Q
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_http_methods
 
 from masters.models import MstCust, MstCustProd, MstItem, MstItemType, MstProd, MstProdCat
+from transactions.constants import QTY_DECIMAL_PLACES
 
 from .lifecycle import build_inventory_lifecycle
-from .models import InventoryStock, TrnStkAdjHed
+from .models import InventoryStock, StockDtl, StockHed, TrnStkAdjHed
 from .services import save_stock_adjustment_document
 from .stock_adjustment_validation import (
     parse_stock_adjustment_body,
     validate_stock_adjustment_payload,
 )
+
+
+def _parse_flexible_date(raw: str | None, is_end: bool = False) -> date | None:
+    """Parse date from multiple possible input formats (ISO, DD-MM-YYYY, DD/MM/YYYY, YYYY-MM, etc.)."""
+    if not raw or not str(raw).strip():
+        return None
+    s = str(raw).strip()
+    # Try full date formats
+    for fmt in ('%Y-%m-%d', '%d-%m-%Y', '%d/%m/%Y', '%Y/%m/%d'):
+        try:
+            return datetime.strptime(s, fmt).date()
+        except ValueError:
+            pass
+    # Try month-only formats (e.g. 2026-05, 05-2026, 05/2026)
+    for fmt in ('%Y-%m', '%m-%Y', '%m/%Y'):
+        try:
+            dt = datetime.strptime(s, fmt).date()
+            if is_end:
+                _, last_day = calendar.monthrange(dt.year, dt.month)
+                return date(dt.year, dt.month, last_day)
+            return date(dt.year, dt.month, 1)
+        except ValueError:
+            pass
+    return None
 
 
 def _int_or_none(val) -> int | None:
@@ -45,10 +68,96 @@ def _category_id_from_get(raw: str | None) -> str:
     return s
 
 
+from io import BytesIO
+from django.http import HttpResponse, JsonResponse
+from django.utils.dateparse import parse_date
+from .ledger_service import compute_periodic_stock_movements
+
+
+def export_stock_movement_excel(rows_data: list[dict], period_title: str) -> BytesIO:
+    """Build a styled Excel sheet with stock movements."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+    from openpyxl.utils import get_column_letter
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Stock Movement'
+
+    # Title header
+    ws.merge_cells('A1:L1')
+    title_cell = ws['A1']
+    title_cell.value = f'RENAMED PHARMACEUTICALS - STOCK MOVEMENT REPORT ({period_title})'
+    title_cell.font = Font(size=12, bold=True, color='FFFFFF')
+    title_cell.fill = PatternFill(start_color='1B365D', end_color='1B365D', fill_type='solid')
+    title_cell.alignment = Alignment(horizontal='center', vertical='center')
+    ws.row_dimensions[1].height = 28
+
+    headers = [
+        'Customer', 'Category', 'SKU / Item', 'Type', 'Batch No',
+        'Mfg Date', 'Exp Date', 'Opening Qty', 'Receipts (+)', 'Issues (-)', 'Closing Qty', 'UOM'
+    ]
+    ws.append([])
+    ws.append(headers)
+    ws.row_dimensions[3].height = 22
+
+    header_font = Font(bold=True, color='FFFFFF', size=11)
+    header_fill = PatternFill(start_color='2C3E50', end_color='2C3E50', fill_type='solid')
+    thin_border = Border(
+        left=Side(style='thin', color='DDDDDD'),
+        right=Side(style='thin', color='DDDDDD'),
+        top=Side(style='thin', color='DDDDDD'),
+        bottom=Side(style='thin', color='DDDDDD'),
+    )
+
+    for col_idx in range(1, len(headers) + 1):
+        cell = ws.cell(row=3, column=col_idx)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center' if col_idx in (2, 4, 5, 6, 7, 12) else ('right' if col_idx in (8, 9, 10, 11) else 'left'), vertical='center')
+
+    for r_idx, r in enumerate(rows_data, start=4):
+        ws.append([
+            r['customer'],
+            r['category'],
+            r['sku'],
+            r['sku_kind'],
+            r['batch_no'],
+            r['mfg_date'],
+            r['exp_date'],
+            float(r['opening_qty']),
+            float(r['receipt_qty']),
+            float(r['issue_qty']),
+            float(r['closing_qty']),
+            r['uom'],
+        ])
+        for c_idx in range(1, len(headers) + 1):
+            c = ws.cell(row=r_idx, column=c_idx)
+            c.border = thin_border
+            if c_idx in (8, 9, 10, 11):
+                c.number_format = '#,##0.000'
+                c.alignment = Alignment(horizontal='right', vertical='center')
+            elif c_idx in (2, 4, 5, 6, 7, 12):
+                c.alignment = Alignment(horizontal='center', vertical='center')
+            else:
+                c.alignment = Alignment(horizontal='left', vertical='center')
+
+    # Auto column widths
+    for col in ws.columns:
+        max_len = max(len(str(cell.value or '')) for cell in col)
+        col_letter = get_column_letter(col[0].column)
+        ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
+
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return buf
+
+
 @login_required
 @require_GET
 def inventory_stock_view(request):
-    """Read-only browse of ``InventoryStock`` with GET filters and pagination."""
+    """Read-only browse of central stock ledger with periodic / monthly movement calculation."""
     customers = MstCust.objects.order_by('cust_name')
     categories = MstProdCat.objects.order_by('prod_cat_name')
 
@@ -67,60 +176,200 @@ def inventory_stock_view(request):
 
     batch_q = (request.GET.get('batch') or '').strip()[:100]
     show_zero = request.GET.get('show_zero') == '1'
+    export_excel = request.GET.get('export') == 'excel'
 
-    stock_opts = InventoryStock.objects.all()
-    if customer_id is not None:
-        stock_opts = stock_opts.filter(customer_id=customer_id)
+    from_date_raw = (request.GET.get('from_date') or '').strip()
+    to_date_raw = (request.GET.get('to_date') or '').strip()
+    from_date = _parse_flexible_date(from_date_raw, is_end=False)
+    to_date = _parse_flexible_date(to_date_raw, is_end=True)
 
-    pids = stock_opts.exclude(product__isnull=True).values_list('product_id', flat=True).distinct()
-    products = MstProd.objects.filter(pk__in=pids).order_by('prod_name')
-    iids = stock_opts.exclude(item__isnull=True).values_list('item_id', flat=True).distinct()
-    items = MstItem.objects.filter(pk__in=iids).order_by('item_name')
+    if from_date and to_date and from_date > to_date:
+        from_date, to_date = to_date, from_date
 
-    allowed_pids = set(products.values_list('pk', flat=True))
-    if product_id is not None and product_id not in allowed_pids:
-        product_id = None
-    allowed_iids = set(items.values_list('pk', flat=True))
-    if item_id is not None and item_id not in allowed_iids:
-        item_id = None
+    is_periodic = bool(from_date or to_date)
+    use_new_ledger = StockHed.objects.exists()
 
-    qs = InventoryStock.objects.select_related(
-        'customer',
-        'product',
-        'product__uom',
-        'item',
-        'item__uom',
-        'item_category',
-        'opened_in_fy',
-    ).order_by('customer__cust_name', 'product__prod_name', 'item__item_name', 'batch_no')
+    if use_new_ledger:
+        stock_opts = StockHed.objects.all()
+        if customer_id is not None:
+            stock_opts = stock_opts.filter(customer_id=customer_id)
 
-    if customer_id is not None:
-        qs = qs.filter(customer_id=customer_id)
-    if category_id:
-        qs = qs.filter(item_category_id=category_id)
-    if product_id is not None:
-        qs = qs.filter(product_id=product_id)
-    if item_id is not None:
-        qs = qs.filter(item_id=item_id)
-    if sku_kind == 'product':
-        qs = qs.filter(product__isnull=False)
-    elif sku_kind == 'item':
-        qs = qs.filter(item__isnull=False)
-    if batch_q:
-        qs = qs.filter(batch_no__icontains=batch_q)
-    if not show_zero:
-        qs = qs.filter(Q(qty__gt=0) | Q(reserved_qty__gt=0))
+        pids = stock_opts.exclude(product__isnull=True).values_list('product_id', flat=True).distinct()
+        products = MstProd.objects.filter(pk__in=pids).order_by('prod_name')
+        iids = stock_opts.exclude(item__isnull=True).values_list('item_id', flat=True).distinct()
+        items = MstItem.objects.filter(pk__in=iids).order_by('item_name')
 
-    paginator = Paginator(qs, 50)
-    page_num = _int_or_none(request.GET.get('page')) or 1
-    page_obj = paginator.get_page(page_num)
+        allowed_pids = set(products.values_list('pk', flat=True))
+        if product_id is not None and product_id not in allowed_pids:
+            product_id = None
+        allowed_iids = set(items.values_list('pk', flat=True))
+        if item_id is not None and item_id not in allowed_iids:
+            item_id = None
+
+        qs = StockHed.objects.select_related(
+            'customer',
+            'product',
+            'product__uom',
+            'item',
+            'item__uom',
+            'item_category',
+            'financial_year',
+        ).order_by('customer__cust_name', 'product__prod_name', 'item__item_name', 'batch_no')
+
+        if customer_id is not None:
+            qs = qs.filter(customer_id=customer_id)
+        if category_id:
+            qs = qs.filter(item_category_id=category_id)
+        if product_id is not None:
+            qs = qs.filter(product_id=product_id)
+        if item_id is not None:
+            qs = qs.filter(item_id=item_id)
+        if sku_kind == 'product':
+            qs = qs.filter(product__isnull=False)
+        elif sku_kind == 'item':
+            qs = qs.filter(item__isnull=False)
+        if batch_q:
+            qs = qs.filter(batch_no__icontains=batch_q)
+
+        all_hed_rows = list(qs)
+        hed_ids = [r.pk for r in all_hed_rows]
+
+        # Compute movement quantities (either periodic or full ledger running totals)
+        if is_periodic:
+            period_data = compute_periodic_stock_movements(hed_ids, from_date=from_date, to_date=to_date)
+        else:
+            period_data = {}
+
+        processed_rows = []
+        for r in all_hed_rows:
+            if is_periodic:
+                mv = period_data.get(r.pk, {})
+                op_qty = mv.get('opening_qty', Decimal('0'))
+                rc_qty = mv.get('receipt_qty', Decimal('0'))
+                is_qty = mv.get('issue_qty', Decimal('0'))
+                cl_qty = mv.get('closing_qty', Decimal('0'))
+            else:
+                op_qty = r.opn_qty
+                rc_qty = r.rcpt_qty
+                is_qty = r.issue_qty
+                cl_qty = r.closing_qty
+
+            r.display_opening_qty = op_qty
+            r.display_rcpt_qty = rc_qty
+            r.display_issue_qty = is_qty
+            r.display_closing_qty = cl_qty
+
+            if not show_zero:
+                if cl_qty == Decimal('0') and rc_qty == Decimal('0') and is_qty == Decimal('0') and Decimal(str(r.reserved_qty or 0)) == Decimal('0'):
+                    continue
+
+            processed_rows.append(r)
+
+        if export_excel:
+            rows_export = []
+            for r in processed_rows:
+                uom_name = ''
+                if r.product_id and r.product.uom:
+                    uom_name = r.product.uom.short_name
+                elif r.item_id and r.item.uom:
+                    uom_name = r.item.uom.short_name
+                rows_export.append({
+                    'customer': r.customer.cust_name,
+                    'category': r.item_category.prod_cat_id if r.item_category else '',
+                    'sku': r.product.prod_name if r.product_id else r.item.item_name,
+                    'sku_kind': 'FG' if r.product_id else 'RM/PM',
+                    'batch_no': r.batch_no or '—',
+                    'mfg_date': r.mfg_date.strftime('%d-%m-%Y') if r.mfg_date else '—',
+                    'exp_date': r.exp_date.strftime('%d-%m-%Y') if r.exp_date else '—',
+                    'opening_qty': r.display_opening_qty,
+                    'receipt_qty': r.display_rcpt_qty,
+                    'issue_qty': r.display_issue_qty,
+                    'closing_qty': r.display_closing_qty,
+                    'uom': uom_name,
+                })
+            period_str = f'{from_date_raw or "Beginning"} to {to_date_raw or "Current"}' if is_periodic else 'All Time / Current'
+            buf = export_stock_movement_excel(rows_export, period_str)
+            response = HttpResponse(
+                buf.getvalue(),
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            )
+            response['Content-Disposition'] = f'attachment; filename="Stock_Movement_{from_date_raw or "start"}_to_{to_date_raw or "today"}.xlsx"'
+            return response
+
+        paginator = Paginator(processed_rows, 50)
+        page_num = _int_or_none(request.GET.get('page')) or 1
+        page_obj = paginator.get_page(page_num)
+
+        total = len(processed_rows)
+        period_label = f' for period {from_date_raw or "start"} to {to_date_raw or "today"}' if is_periodic else ''
+        result_summary = f'Showing {len(page_obj.object_list)} row(s) on this page — {total} match(es) in total{period_label}.'
+    else:
+        stock_opts = InventoryStock.objects.all()
+        if customer_id is not None:
+            stock_opts = stock_opts.filter(customer_id=customer_id)
+
+        pids = stock_opts.exclude(product__isnull=True).values_list('product_id', flat=True).distinct()
+        products = MstProd.objects.filter(pk__in=pids).order_by('prod_name')
+        iids = stock_opts.exclude(item__isnull=True).values_list('item_id', flat=True).distinct()
+        items = MstItem.objects.filter(pk__in=iids).order_by('item_name')
+
+        allowed_pids = set(products.values_list('pk', flat=True))
+        if product_id is not None and product_id not in allowed_pids:
+            product_id = None
+        allowed_iids = set(items.values_list('pk', flat=True))
+        if item_id is not None and item_id not in allowed_iids:
+            item_id = None
+
+        qs = InventoryStock.objects.select_related(
+            'customer',
+            'product',
+            'product__uom',
+            'item',
+            'item__uom',
+            'item_category',
+            'opened_in_fy',
+        ).order_by('customer__cust_name', 'product__prod_name', 'item__item_name', 'batch_no')
+
+        if customer_id is not None:
+            qs = qs.filter(customer_id=customer_id)
+        if category_id:
+            qs = qs.filter(item_category_id=category_id)
+        if product_id is not None:
+            qs = qs.filter(product_id=product_id)
+        if item_id is not None:
+            qs = qs.filter(item_id=item_id)
+        if sku_kind == 'product':
+            qs = qs.filter(product__isnull=False)
+        elif sku_kind == 'item':
+            qs = qs.filter(item__isnull=False)
+        if batch_q:
+            qs = qs.filter(batch_no__icontains=batch_q)
+        if not show_zero:
+            qs = qs.filter(Q(qty__gt=0) | Q(reserved_qty__gt=0))
+
+        all_inv_rows = list(qs)
+        for r in all_inv_rows:
+            r.display_opening_qty = Decimal('0')
+            r.display_rcpt_qty = r.qty
+            r.display_issue_qty = Decimal('0')
+            r.display_closing_qty = r.qty
+
+        paginator = Paginator(all_inv_rows, 50)
+        page_num = _int_or_none(request.GET.get('page')) or 1
+        page_obj = paginator.get_page(page_num)
+
+        total = len(all_inv_rows)
+        result_summary = f'Showing {len(page_obj.object_list)} row(s) on this page — {total} match(es) in total.'
 
     q = request.GET.copy()
     q.pop('page', None)
+    q.pop('export', None)
+    if from_date:
+        q['from_date'] = from_date.isoformat()
+    if to_date:
+        q['to_date'] = to_date.isoformat()
     filter_query = q.urlencode()
-
-    total = paginator.count
-    result_summary = f'Showing {len(page_obj.object_list)} row(s) on this page — {total} match(es) in total.'
+    export_query = f'{filter_query}&export=excel' if filter_query else 'export=excel'
 
     return render(
         request,
@@ -132,6 +381,7 @@ def inventory_stock_view(request):
             'items': items,
             'page_obj': page_obj,
             'filter_query': filter_query,
+            'export_query': export_query,
             'result_summary': result_summary,
             'sel_customer_id': customer_id,
             'sel_category_id': category_id,
@@ -140,6 +390,13 @@ def inventory_stock_view(request):
             'sel_sku_kind': sku_kind,
             'sel_batch': batch_q,
             'sel_show_zero': show_zero,
+            'sel_from_date': from_date.isoformat() if from_date else '',
+            'sel_to_date': to_date.isoformat() if to_date else '',
+            'sel_from_date_display': from_date.strftime('%d-%m-%Y') if from_date else '',
+            'sel_to_date_display': to_date.strftime('%d-%m-%Y') if to_date else '',
+            'is_periodic': is_periodic,
+            'using_stock_hed': use_new_ledger,
+            'total': total,
         },
     )
 
@@ -151,6 +408,58 @@ def inventory_stock_lifecycle_ajax(request):
     inv_id = _int_or_none(request.GET.get('inv_id'))
     if inv_id is None:
         return JsonResponse({'error': 'inv_id is required.'}, status=400)
+
+    # Check StockHed first
+    hed_row = StockHed.objects.select_related('customer', 'product', 'item').filter(pk=inv_id).first()
+    if hed_row:
+        movements = list(hed_row.movements.all().order_by('trn_date', 'stock_dtl_id'))
+        events = []
+        running_bal = Decimal('0')
+        step = Decimal('1').scaleb(-QTY_DECIMAL_PLACES)
+        for m in movements:
+            if m.trn_type in (StockDtl.TYPE_OPENING, StockDtl.TYPE_RECEIPT):
+                delta = -m.quantity if m.is_reversal else m.quantity
+            else:
+                delta = m.quantity if m.is_reversal else -m.quantity
+            running_bal = (running_bal + delta).quantize(step, rounding=ROUND_HALF_UP)
+            rev_tag = ' (Reversal)' if m.is_reversal else ''
+            events.append({
+                'trn_date': m.trn_date.isoformat(),
+                'type_key': m.tran_id,
+                'label': f'{m.get_tran_id_display()}{rev_tag}',
+                'qty_delta': str(delta),
+                'qty_delta_display': f'{delta:+f}',
+                'balance_after': str(running_bal),
+                'doc_type': m.tran_id,
+                'doc_id': m.trn_no,
+                'doc_display': f'{m.tran_id} #{m.trn_no}',
+                'detail': m.remarks or '',
+                'doc_url': '',
+            })
+
+        sku_name = hed_row.product.prod_name if hed_row.product else hed_row.item.item_name
+        uom_str = ''
+        if hed_row.product and hed_row.product.uom:
+            uom_str = hed_row.product.uom.short_name
+        elif hed_row.item and hed_row.item.uom:
+            uom_str = hed_row.item.uom.short_name
+
+        payload = {
+            'inv_id': hed_row.stock_lnkno,
+            'customer_name': hed_row.customer.cust_name,
+            'sku_name': sku_name,
+            'sku_kind': 'product' if hed_row.product_id else 'item',
+            'batch_no': hed_row.batch_no or '—',
+            'uom': uom_str,
+            'ledger_qty': str(hed_row.closing_qty),
+            'computed_balance': str(running_bal),
+            'balance_matches_ledger': hed_row.closing_qty == running_bal,
+            'events': events,
+            'item_level_events': [],
+            'ledger_episodes': [],
+            'note': '',
+        }
+        return JsonResponse(payload)
 
     row = get_object_or_404(
         InventoryStock.objects.select_related('customer', 'product', 'item'),
@@ -284,20 +593,39 @@ def stock_adjustment_inv_defaults_ajax(request):
     if customer_id <= 0 or master_id <= 0 or kind not in ('P', 'I'):
         return JsonResponse({'mfg_date': '', 'exp_date': ''})
 
-    flt: dict = {'customer_id': customer_id, 'batch_no': batch_no}
+    flt_hed: dict = {'customer_id': customer_id}
     if kind == 'P':
-        flt['product_id'] = master_id
-        flt['item_id'] = None
+        flt_hed['product_id'] = master_id
+        flt_hed['batch_no'] = batch_no
+        flt_hed['item_id__isnull'] = True
     else:
-        flt['item_id'] = master_id
-        flt['product_id'] = None
-    row = InventoryStock.objects.filter(**flt, is_closed=False).first()
-    if not row:
+        flt_hed['item_id'] = master_id
+        flt_hed['batch_no'] = ''
+        flt_hed['product_id__isnull'] = True
+
+    row = StockHed.objects.filter(**flt_hed, is_closed=False).first()
+    if row and (row.mfg_date or row.exp_date):
+        return JsonResponse(
+            {
+                'mfg_date': row.mfg_date.isoformat() if row.mfg_date else '',
+                'exp_date': row.exp_date.isoformat() if row.exp_date else '',
+            }
+        )
+
+    flt_old: dict = {'customer_id': customer_id, 'batch_no': batch_no}
+    if kind == 'P':
+        flt_old['product_id'] = master_id
+        flt_old['item_id'] = None
+    else:
+        flt_old['item_id'] = master_id
+        flt_old['product_id'] = None
+    old_row = InventoryStock.objects.filter(**flt_old, is_closed=False).first()
+    if not old_row:
         return JsonResponse({'mfg_date': '', 'exp_date': ''})
     return JsonResponse(
         {
-            'mfg_date': row.mfg_date.isoformat() if row.mfg_date else '',
-            'exp_date': row.exp_date.isoformat() if row.exp_date else '',
+            'mfg_date': old_row.mfg_date.isoformat() if old_row.mfg_date else '',
+            'exp_date': old_row.exp_date.isoformat() if old_row.exp_date else '',
         }
     )
 

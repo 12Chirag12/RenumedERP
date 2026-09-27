@@ -1,0 +1,384 @@
+/**
+ * base.js
+ * ────────────────────────────────────────────────────────────────────────────
+ * Global JS for PharmaERP.
+ *
+ * What changed from the original:
+ *   1. Active-nav highlight is now URL-based (updateActiveNav) instead of
+ *      being driven by Django template blocks.  This means it works both on
+ *      full page loads AND after every HTMX partial swap.
+ *
+ *   2. initPageContent() encapsulates everything that must run after the
+ *      #mainContent innerHTML is replaced.  It is called:
+ *        • on DOMContentLoaded  (full page load)
+ *        • from the inline <script> at the bottom of base_partial.html
+ *          (after each HTMX swap)
+ *
+ *   3. htmx:afterSettle listener updates the active nav and open submenu
+ *      after every navigation so the sidebar always reflects the current URL.
+ * ────────────────────────────────────────────────────────────────────────────
+ */
+
+// ════════════════════════════════════════════════════════════════════
+// SIDEBAR TOGGLE
+// ════════════════════════════════════════════════════════════════════
+
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const main    = document.getElementById('mainContent');
+  sidebar.classList.toggle('collapsed');
+  main.classList.toggle('collapsed');
+  localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+}
+
+
+// ════════════════════════════════════════════════════════════════════
+// ACCORDION MENU
+// ════════════════════════════════════════════════════════════════════
+
+function toggleMenu(id) {
+  const submenu = document.getElementById('submenu-' + id);
+  const parent  = document.getElementById('parent-'  + id);
+  const isOpen  = submenu.classList.contains('open');
+
+  // Close all
+  document.querySelectorAll('.submenu').forEach(el  => el.classList.remove('open'));
+  document.querySelectorAll('.menu-parent').forEach(el => el.classList.remove('open'));
+
+  // Open the clicked one (if it was closed)
+  if (!isOpen) {
+    submenu.classList.add('open');
+    parent.classList.add('open');
+    localStorage.setItem('openMenu', id);
+  } else {
+    localStorage.removeItem('openMenu');
+  }
+}
+
+
+// ════════════════════════════════════════════════════════════════════
+// ACTIVE NAV — URL-based (replaces Django block nav_* approach)
+// ════════════════════════════════════════════════════════════════════
+
+/**
+ * updateActiveNav()
+ *
+ * Marks the sidebar link whose href best matches the current pathname.
+ * Also opens the parent submenu that contains the active link.
+ *
+ * Strategy:
+ *   1. Strip query strings — compare only the path portion.
+ *   2. Longest-prefix match wins (so /masters/section/ beats /masters/).
+ *   3. Exact match for the Dashboard direct-link.
+ */
+function updateActiveNav() {
+  const currentPath = window.location.pathname;
+
+  // Clear existing active state
+  document.querySelectorAll('.submenu-item.active, .menu-direct.active')
+    .forEach(el => el.classList.remove('active'));
+
+  let bestMatch = null;
+  let bestLen   = 0;
+
+  document.querySelectorAll('.submenu-item[href], .menu-direct[href]').forEach(link => {
+    const href = link.getAttribute('href');
+    if (!href || href === '#') return;
+
+    // Exact or startsWith match; prefer longer matches
+    if (currentPath === href || currentPath.startsWith(href)) {
+      if (href.length > bestLen) {
+        bestLen   = href.length;
+        bestMatch = link;
+      }
+    }
+  });
+
+  if (bestMatch) {
+    bestMatch.classList.add('active');
+
+    // Open the submenu that contains this link
+    const parentSubmenu = bestMatch.closest('.submenu');
+    if (parentSubmenu) {
+      const menuId = parentSubmenu.id.replace('submenu-', '');
+      const sub    = document.getElementById('submenu-' + menuId);
+      const par    = document.getElementById('parent-'  + menuId);
+      if (sub) sub.classList.add('open');
+      if (par) par.classList.add('open');
+      localStorage.setItem('openMenu', menuId);
+    }
+  }
+}
+
+
+// ════════════════════════════════════════════════════════════════════
+// REUSABLE DELETE MODAL
+// ════════════════════════════════════════════════════════════════════
+
+window.openDeleteModal = function(deleteUrl, itemName) {
+  document.getElementById('deleteModalItemName').textContent = itemName;
+  var form = document.getElementById('globalDeleteForm');
+  // Set hx-post so HTMX sends the delete as a boosted POST to the correct URL.
+  // htmx.process() is required so HTMX re-evaluates the changed attribute.
+  form.setAttribute('hx-post', deleteUrl);
+  if (window.htmx) htmx.process(form);
+  document.getElementById('globalDeleteModal').style.display = 'flex';
+};
+
+window.closeDeleteModal = function() {
+  document.getElementById('globalDeleteModal').style.display = 'none';
+};
+
+
+// ════════════════════════════════════════════════════════════════════
+// MASTER FORMS — clear validation UI (server + client) on "Clear"
+// ════════════════════════════════════════════════════════════════════
+
+/**
+ * Remove Django-rendered field errors, non-field banners, and reset client error state.
+ * Keeps persistent placeholders such as .js-err and #prodGridError (customer grid).
+ *
+ * @param {HTMLFormElement} formEl — the master form element
+ */
+window.clearMasterFormValidationUI = function (formEl) {
+  if (!formEl || typeof formEl.closest !== 'function') return;
+  var root = formEl.closest('.cu-card-body') || formEl.parentElement;
+  if (!root) return;
+
+  root.querySelectorAll('.field-error:not(.js-err)').forEach(function (el) {
+    el.remove();
+  });
+
+  root.querySelectorAll('.cu-error-banner').forEach(function (el) {
+    if (el.id === 'prodGridError') return;
+    el.remove();
+  });
+
+  root.querySelectorAll('.js-err').forEach(function (el) {
+    el.textContent = '';
+  });
+
+  root.querySelectorAll('.input-error').forEach(function (el) {
+    el.classList.remove('input-error');
+  });
+  root.querySelectorAll('[aria-invalid="true"]').forEach(function (el) {
+    el.removeAttribute('aria-invalid');
+  });
+  root.querySelectorAll('.cell-error').forEach(function (el) {
+    el.classList.remove('cell-error');
+  });
+  root.querySelectorAll('.cell-err-msg').forEach(function (el) {
+    el.remove();
+  });
+};
+
+
+// ════════════════════════════════════════════════════════════════════
+// AUTO-DISMISS ALERTS
+// ════════════════════════════════════════════════════════════════════
+
+function initAlerts() {
+  document.querySelectorAll('.alert').forEach(alert => {
+    // Avoid double-registering on the same element
+    if (alert.dataset.timerSet) return;
+    alert.dataset.timerSet = 'true';
+
+    setTimeout(() => {
+      alert.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+      alert.style.opacity    = '0';
+      alert.style.transform  = 'translateX(24px)';
+      setTimeout(() => alert.remove(), 300);
+    }, 4000);
+  });
+}
+
+// Normalize server-rendered Django errors across the hand-written form templates.
+function initFormValidation() {
+  document.querySelectorAll('.field-error:not(.js-err)').forEach(function (errorEl) {
+    var field = errorEl.closest('.cu-field, .form-group, .form-field');
+    if (!field) return;
+
+    var control = field.querySelector('input[name], select[name], textarea[name]');
+    if (!control) return;
+
+    control.classList.add('input-error');
+    control.setAttribute('aria-invalid', 'true');
+    if (errorEl.parentElement === field) {
+      // Some templates put the control directly inside .cu-field while
+      // others wrap it.  insertBefore requires a *child* of `field` as its
+      // reference node; using `field` itself caused a NotFoundError and
+      // stopped all page-specific JavaScript after a validation response.
+      var referenceNode = control.parentElement === field ? control : control.parentElement;
+      if (referenceNode && referenceNode.parentElement === field &&
+          errorEl !== referenceNode && errorEl.nextElementSibling !== referenceNode) {
+        field.insertBefore(errorEl, referenceNode);
+      }
+    }
+  });
+  initLineFieldErrors();
+}
+
+function initLineFieldErrors() {
+  document.querySelectorAll('.field-error.js-err:not(:empty)').forEach(function (errorEl) {
+    var message = (errorEl.textContent || '').trim();
+    var lineMatch = message.match(/^Line\s+(\d+)\s*:/i);
+    if (!lineMatch) return;
+
+    var page = errorEl.closest('.cu-page');
+    if (!page) return;
+    var lineIndex = parseInt(lineMatch[1], 10) - 1;
+    var lines = page.querySelectorAll('.inw-line-card, .so-line-card');
+    var line = lines[lineIndex];
+    if (!line) return;
+
+    var target = null;
+    if (/quantity/i.test(message)) {
+      target = line.querySelector('.inw-qty, .so-oqty');
+    }
+    if (!target) return;
+
+    target.classList.add('input-error');
+    target.setAttribute('aria-invalid', 'true');
+    var cell = target.closest('.inw-cell') || target.parentElement;
+    var localError = cell.querySelector('.grid-field-error');
+    if (!localError) {
+      localError = document.createElement('span');
+      localError.className = 'field-error grid-field-error';
+      cell.appendChild(localError);
+    }
+    localError.textContent = message;
+    errorEl.hidden = true;
+  });
+}
+
+var submittedFormSnapshot = null;
+
+function captureSubmittedForm(e) {
+  var elt = e && e.detail && e.detail.elt;
+  var form = elt && (elt.matches && elt.matches('form') ? elt : elt.closest && elt.closest('form'));
+  if (!form) return;
+
+  submittedFormSnapshot = { values: {}, formId: form.id || '' };
+  form.querySelectorAll('input[name], select[name], textarea[name]').forEach(function (control) {
+    var type = (control.type || '').toLowerCase();
+    if (type === 'password' || type === 'file') return;
+
+    if (type === 'checkbox' || type === 'radio') {
+      if (!submittedFormSnapshot.values[control.name]) submittedFormSnapshot.values[control.name] = [];
+      submittedFormSnapshot.values[control.name].push({ value: control.value, checked: control.checked });
+      return;
+    }
+
+    submittedFormSnapshot.values[control.name] = [control.value];
+  });
+}
+
+function restoreInvalidFormValues() {
+  if (!submittedFormSnapshot) return;
+
+  var hasError = document.querySelector('.field-error:not(.js-err), .field-error.js-err:not(:empty)');
+  if (!hasError) {
+    submittedFormSnapshot = null;
+    return;
+  }
+
+  Object.keys(submittedFormSnapshot.values).forEach(function (name) {
+    var controls = Array.prototype.filter.call(
+      document.querySelectorAll('[name]'),
+      function (control) { return control.name === name; }
+    );
+    var saved = submittedFormSnapshot.values[name];
+    controls.forEach(function (control, index) {
+      var type = (control.type || '').toLowerCase();
+      if (type === 'checkbox' || type === 'radio') {
+        var match = saved[index];
+        if (match) control.checked = match.checked;
+      } else if (saved[0]) {
+        control.value = saved[0];
+      }
+    });
+  });
+
+  submittedFormSnapshot = null;
+}
+
+
+// ════════════════════════════════════════════════════════════════════
+// PAGE CONTENT INIT
+// Called on DOMContentLoaded AND after every HTMX swap (from partial).
+// ════════════════════════════════════════════════════════════════════
+
+window.initPageContent = function() {
+  initAlerts();
+  initFormValidation();
+  updateActiveNav();
+  if (typeof initSearchableDropdowns === 'function') {
+    initSearchableDropdowns(document);
+  }
+};
+
+// Initialise the transaction/master controller for the page that was just
+// rendered.  HTMX replaces #mainContent without firing DOMContentLoaded, so
+// dynamic forms must be explicitly wired again after a validation response.
+function initRenderedPage(root) {
+  var scope = root && typeof root.querySelector === 'function' ? root : document;
+  var el = (scope.matches && scope.matches('[data-page-init]'))
+    ? scope
+    : scope.querySelector('[data-page-init]');
+  if (!el && scope !== document) {
+    el = document.querySelector('#mainContent [data-page-init]')
+      || document.querySelector('[data-page-init]');
+  }
+  if (!el) return;
+  var fn = window['initPage_' + el.dataset.pageInit];
+  if (typeof fn === 'function') fn();
+}
+
+
+// ════════════════════════════════════════════════════════════════════
+// INITIAL PAGE LOAD
+// ════════════════════════════════════════════════════════════════════
+
+window.addEventListener('DOMContentLoaded', () => {
+
+  // Restore sidebar collapsed state
+  if (localStorage.getItem('sidebarCollapsed') === 'true') {
+    document.getElementById('sidebar').classList.add('collapsed');
+    document.getElementById('mainContent').classList.add('collapsed');
+  }
+
+  // Initialise alerts + active nav
+  initPageContent();
+
+  initRenderedPage(document.querySelector('#mainContent') || document);
+
+  // Delete modal: close on backdrop click or Escape
+  const modal = document.getElementById('globalDeleteModal');
+  if (modal) {
+    modal.addEventListener('click', e => { if (e.target === modal) closeDeleteModal(); });
+  }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDeleteModal(); });
+});
+
+
+// ════════════════════════════════════════════════════════════════════
+// HTMX EVENTS
+// ════════════════════════════════════════════════════════════════════
+
+document.addEventListener('htmx:afterSettle', () => {
+  updateActiveNav();
+  closeDeleteModal();
+});
+
+/**
+ * htmx:afterSwap fires immediately after the DOM swap (before settle).
+ * Re-init alerts here so they start their 4-second countdown right away.
+ */
+document.addEventListener('htmx:afterSwap', (event) => {
+  restoreInvalidFormValues();
+  initAlerts();
+  initFormValidation();
+  initRenderedPage(event && event.detail ? event.detail.target : document);
+});
+
+document.addEventListener('htmx:beforeRequest', captureSubmittedForm);

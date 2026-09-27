@@ -59,7 +59,21 @@ def _line_gst_amounts(taxable: Decimal, gst_per: Decimal, gst_type: str) -> tupl
 
 
 def _available_fg_lac(customer_id: int, product_id: int, batch_no: str) -> Decimal:
+    from inventory.models import StockHed
+
     t = (
+        StockHed.objects.filter(
+            customer_id=customer_id,
+            product_id=product_id,
+            batch_no=(batch_no or '').strip(),
+            item_id__isnull=True,
+            is_closed=False,
+        ).aggregate(s=Sum('closing_qty'))['s']
+    )
+    if t is not None:
+        return Decimal(str(t)).quantize(_QTY_QUANTIZE, rounding=ROUND_HALF_UP)
+
+    fallback = (
         InventoryStock.objects.filter(
             customer_id=customer_id,
             product_id=product_id,
@@ -68,7 +82,7 @@ def _available_fg_lac(customer_id: int, product_id: int, batch_no: str) -> Decim
             is_closed=False,
         ).aggregate(s=Sum('qty'))['s']
     )
-    return Decimal(str(t or 0)).quantize(_QTY_QUANTIZE, rounding=ROUND_HALF_UP)
+    return Decimal(str(fallback or 0)).quantize(_QTY_QUANTIZE, rounding=ROUND_HALF_UP)
 
 
 def _taxable_from_batch_lac(batch_lac: Decimal, pkg_value: int, rate: Decimal) -> Decimal:

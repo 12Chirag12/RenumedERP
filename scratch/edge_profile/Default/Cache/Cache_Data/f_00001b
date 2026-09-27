@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<!--
+  base.html — Full-page shell. Loaded ONCE on first visit.
+  HTMX then intercepts sidebar links and form submits, swapping only
+  #mainContent. Topbar and sidebar never reload.
+-->
+
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sales order — PharmaERP</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/vendors/bootstrap-icons/bootstrap-icons.css" />
+  <link rel="stylesheet" href="/static/css/base/base.css">
+
+  <!-- All page CSS preloaded once — no flash of unstyled content on HTMX swaps -->
+  <link rel="stylesheet" href="/static/css/dashboard/dashboard.css">
+  <link rel="stylesheet" href="/static/css/masters/section.css">
+  <link rel="stylesheet" href="/static/css/masters/machine.css">
+  <link rel="stylesheet" href="/static/css/masters/operator.css">
+  <link rel="stylesheet" href="/static/css/masters/uom.css">
+  <link rel="stylesheet" href="/static/css/masters/state.css">
+  <link rel="stylesheet" href="/static/css/masters/product_attr.css">
+  <link rel="stylesheet" href="/static/css/masters/logistics.css">
+  <link rel="stylesheet" href="/static/css/masters/prod_stage.css">
+  <link rel="stylesheet" href="/static/css/masters/item_type.css">
+  <link rel="stylesheet" href="/static/css/masters/pkg_style.css">
+  <link rel="stylesheet" href="/static/css/masters/expenses.css">
+  <link rel="stylesheet" href="/static/css/masters/product.css">
+  <link rel="stylesheet" href="/static/css/masters/item.css">
+  <link rel="stylesheet" href="/static/css/masters/customer.css">
+  <link rel="stylesheet" href="/static/css/masters/supplier.css">
+  <link rel="stylesheet" href="/static/css/masters/bom.css">
+  <link rel="stylesheet" href="/static/css/transactions/inward.css">
+  <link rel="stylesheet" href="/static/css/transactions/sales_order.css">
+  <link rel="stylesheet" href="/static/css/transactions/sales_invoice.css">
+  <link rel="stylesheet" href="/static/css/transactions/batch_allocation.css">
+  <link rel="stylesheet" href="/static/css/transactions/logsheet.css">
+  <link rel="stylesheet" href="/static/css/transactions/rm_dispensing.css">
+  <link rel="stylesheet" href="/static/css/transactions/dpr.css">
+  <link rel="stylesheet" href="/static/css/transactions/pkg_cont.css">
+  <link rel="stylesheet" href="/static/css/masters/forms_consistency.css">
+  <link rel="stylesheet" href="/static/css/users/user_list.css">
+  <link rel="stylesheet" href="/static/css/users/create_user.css">
+  <link rel="stylesheet" href="/static/css/users/change_password.css">
+  <link rel="stylesheet" href="/static/css/users/change_user_password.css">
+  <link rel="stylesheet" href="/static/css/users/access_control.css">
+  <link rel="stylesheet" href="/static/css/admin_utils/financial_year.css">
+  <link rel="stylesheet" href="/static/css/admin_utils/database_backup.css">
+  <link rel="stylesheet" href="/static/css/reports/master_reports.css">
+  <link rel="stylesheet" href="/static/css/reports/transaction_reports.css">
+  <link rel="stylesheet" href="/static/css/inventory/inventory_stock_view.css">
+  <link rel="stylesheet" href="/static/css/inventory/stock_adjustment.css">
+  
+  <link rel="stylesheet" href="/static/vendor/select2/select2.min.css" />
+  <link rel="stylesheet" href="/static/css/vendors/select2_pharmaerp.css">
+  <link rel="stylesheet" href="/static/css/base/form_typography.css">
+  <link rel="stylesheet" href="/static/css/base/record_table_filters.css">
+
+  <script src="/static/vendor/jquery/jquery.min.js"></script>
+  <script src="/static/vendor/select2/select2.min.js"></script>
+  <script src="/static/js/searchable_dropdown.js"></script>
+
+  <!-- HTMX -->
+  <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js"></script>
+  <script>
+    // Send Django CSRF token as X-CSRFToken header on every HTMX request.
+    // Forms with <input type="hidden" name="csrfmiddlewaretoken" value="ZQWL9m8gY7xiQhG7AczbhNUVEXcQikqIB6Iik2QkPqxbAR8aBAxrtce9s2vMCQ4c"> already include it in POST body, but this
+    // covers hx-post on non-form elements and is belt-and-suspenders safe.
+    document.addEventListener('htmx:configRequest', function (e) {
+      var token = (document.cookie.split(';')
+        .map(function (c) { return c.trim(); })
+        .filter(function (c) { return c.startsWith('csrftoken='); })[0] || '').split('=')[1];
+      if (token) e.detail.headers['X-CSRFToken'] = token;
+    });
+  </script>
+
+  <!-- Base JS -->
+  <script src="/static/js/base.js"></script>
+  <script src="/static/js/record_table_filters.js"></script>
+
+  <!-- All page JS preloaded once so HTMX swaps can call named init functions -->
+  <script src="/static/js/masters/section.js"></script>
+  <script src="/static/js/masters/machine.js"></script>
+  <script src="/static/js/masters/operator.js"></script>
+  <script src="/static/js/masters/uom.js"></script>
+  <script src="/static/js/masters/state.js"></script>
+  <script src="/static/js/masters/product_attr.js"></script>
+  <script src="/static/js/masters/logistics.js"></script>
+  <script src="/static/js/masters/prod_stage.js"></script>
+  <script src="/static/js/masters/item_type.js"></script>
+  <script src="/static/js/masters/pkg_style.js"></script>
+  <script src="/static/js/masters/expenses.js"></script>
+  <script src="/static/js/masters/product.js"></script>
+  <script src="/static/js/masters/customer.js"></script>
+  <script src="/static/js/masters/supplier.js"></script>
+  <script src="/static/js/masters/bom.js"></script>
+  <script src="/static/js/masters/item.js"></script>
+  <script src="/static/js/transactions/prefixed_serial_no_input.js"></script>
+  <script src="/static/js/transactions/inward.js"></script>
+  <script src="/static/js/transactions/sales_order.js"></script>
+  <script src="/static/js/transactions/sales_invoice.js"></script>
+  <script src="/static/js/transactions/batch_allocation.js"></script>
+  <script src="/static/js/transactions/logsheet.js"></script>
+  <script src="/static/js/transactions/rm_dispensing.js"></script>
+  <script src="/static/js/transactions/dpr.js"></script>
+  <script src="/static/js/transactions/pkg_cont.js"></script>
+  <script src="/static/js/reports/master_reports.js"></script>
+  <script src="/static/js/reports/transaction_reports.js"></script>
+  <script src="/static/js/inventory/stock_adjustment.js"></script>
+  <script src="/static/js/inventory/inventory_stock_view.js"></script>
+  <script src="/static/js/create_user.js"></script>
+
+  <!-- Slim progress bar shown while HTMX fetches -->
+  <style>
+    #page-loader {
+      display: none;
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 3px;
+      background: linear-gradient(90deg, #4f46e5 0%, #818cf8 100%);
+      z-index: 9999;
+      animation: loader-slide 1s ease infinite;
+    }
+    #page-loader.htmx-request { display: block; }
+    @keyframes loader-slide {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="page-loader"></div>
+
+  <!-- TOP NAVBAR -->
+  <nav class="topbar">
+    <div class="topbar-left">
+      <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">
+        <i class="bi bi-list"></i>
+      </button>
+      <a href="/dashboard/"
+         hx-get="/dashboard/"
+         hx-target="#mainContent"
+         hx-swap="innerHTML"
+         hx-push-url="true"
+         hx-indicator="#page-loader"
+         class="topbar-logo">
+        <div class="logo-icon">
+          <img src="/static/images/RPL_Logo.jpg" alt="RPL Logo">
+        </div>
+        <div class="brand-lockup">
+          <div class="brand-name">RENUMED Pharmaceuticals Labs.</div>
+          <div class="brand-slogan">(Better Nutrition, Better Life, in service since 1984)</div>
+        </div>
+      </a>
+    </div>
+    <div class="topbar-right">
+      <div class="user-info">
+        <div class="user-details">
+          <div class="user-name">
+            System Admin
+          </div>
+          <div class="user-role">
+            admin
+          </div>
+        </div>
+        <div class="user-avatar">A</div>
+      </div>
+      <div class="topbar-divider"></div>
+      <form method="POST" action="/logout/" style="margin:0">
+        <input type="hidden" name="csrfmiddlewaretoken" value="ZQWL9m8gY7xiQhG7AczbhNUVEXcQikqIB6Iik2QkPqxbAR8aBAxrtce9s2vMCQ4c">
+        <button type="submit" class="btn-logout">
+          <i class="bi bi-box-arrow-right"></i> Logout
+        </button>
+      </form>
+    </div>
+  </nav>
+
+  <!-- LEFT SIDEBAR
+       hx-boost  : intercepts every <a> click inside
+       hx-target : swaps into #mainContent, not the sidebar
+       hx-push-url: browser URL bar stays in sync (back/forward work)
+  -->
+  <aside class="sidebar" id="sidebar"
+         hx-boost="true"
+         hx-target="#mainContent"
+         hx-swap="innerHTML"
+         hx-push-url="true"
+         hx-indicator="#page-loader">
+
+    <a href="/dashboard/" class="menu-direct" data-label="Dashboard">
+  <i class="bi bi-speedometer2"></i><span>Dashboard</span>
+</a>
+
+<div class="sidebar-divider"></div>
+
+
+  
+  <div class="menu-parent" id="parent-masters" data-label="Masters" onclick="toggleMenu('masters')">
+    <i class="bi bi-box-seam m-icon"></i>
+    <span>Masters</span>
+    <i class="bi bi-chevron-right chevron"></i>
+  </div>
+  <div class="submenu" id="submenu-masters">
+    
+    <a href="/masters/section/" class="submenu-item">Section</a>
+    
+    <a href="/masters/machine/" class="submenu-item">Machines</a>
+    
+    <a href="/masters/operator/" class="submenu-item">Operators</a>
+    
+    <a href="/masters/product-attributes/" class="submenu-item">Product Attributes</a>
+    
+    <a href="/masters/uom/" class="submenu-item">Unit Of Measurement (UOM)</a>
+    
+    <a href="/masters/prod-stage/" class="submenu-item">Production Stage</a>
+    
+    <a href="/masters/logistics/" class="submenu-item">Logistics</a>
+    
+    <a href="/masters/item-type/" class="submenu-item">Item Types</a>
+    
+    <a href="/masters/packing-style/" class="submenu-item">Packing Style</a>
+    
+    <a href="/masters/expenses/" class="submenu-item">Expenses</a>
+    
+    <a href="/masters/item/" class="submenu-item">Items</a>
+    
+    <a href="/masters/product/" class="submenu-item">Products</a>
+    
+    <a href="/masters/customer/" class="submenu-item">Customer</a>
+    
+    <a href="/masters/supplier/" class="submenu-item">Supplier</a>
+    
+    <a href="/masters/bom/" class="submenu-item">BOM</a>
+    
+  </div>
+
+  
+  <div class="menu-parent" id="parent-transactions" data-label="Transactions" onclick="toggleMenu('transactions')">
+    <i class="bi bi-arrow-left-right m-icon"></i>
+    <span>Transactions</span>
+    <i class="bi bi-chevron-right chevron"></i>
+  </div>
+  <div class="submenu" id="submenu-transactions">
+    
+    <a href="/transactions/inward/" class="submenu-item">Inward (GRN)</a>
+    
+    <a href="/transactions/sales-order/" class="submenu-item">Sales order</a>
+    
+    <a href="/transactions/batch-allocation/" class="submenu-item">Batch allocation</a>
+    
+    <a href="/transactions/log-sheet/" class="submenu-item">Log sheet</a>
+    
+    <a href="/transactions/rm-dispensing/" class="submenu-item">Dispensing (RM)</a>
+    
+    <a href="/transactions/dpr/" class="submenu-item">Daily production report (DPR)</a>
+    
+    <a href="/transactions/daily-packing-contractors/" class="submenu-item">Daily packing (contractors)</a>
+    
+    <a href="/transactions/sales-invoice/" class="submenu-item">Sales invoice</a>
+    
+  </div>
+
+  
+  <div class="menu-parent" id="parent-reports" data-label="Reports" onclick="toggleMenu('reports')">
+    <i class="bi bi-bar-chart-line m-icon"></i>
+    <span>Reports</span>
+    <i class="bi bi-chevron-right chevron"></i>
+  </div>
+  <div class="submenu" id="submenu-reports">
+    
+    <a href="/reports/master-reports/" class="submenu-item">Master Reports</a>
+    
+    <a href="/reports/transaction-reports/" class="submenu-item">Transaction Reports</a>
+    
+  </div>
+
+  
+  <div class="menu-parent" id="parent-inventory" data-label="Inventory" onclick="toggleMenu('inventory')">
+    <i class="bi bi-boxes m-icon"></i>
+    <span>Inventory</span>
+    <i class="bi bi-chevron-right chevron"></i>
+  </div>
+  <div class="submenu" id="submenu-inventory">
+    
+    <a href="/inventory/stock/" class="submenu-item">Inventory</a>
+    
+    <a href="/inventory/stock-adjustment/" class="submenu-item">Stock adjustment</a>
+    
+  </div>
+
+  <div class="sidebar-divider"></div>
+  <div class="menu-parent" id="parent-utilities" data-label="Utilities" onclick="toggleMenu('utilities')">
+    <i class="bi bi-gear m-icon"></i>
+    <span>Utilities</span>
+    <i class="bi bi-chevron-right chevron"></i>
+  </div>
+  <div class="submenu" id="submenu-utilities">
+    
+    <a href="/users/" class="submenu-item">User Management</a>
+    
+    <a href="/change-password/" class="submenu-item">Change Password</a>
+    
+    <a href="/admin/utilities/financial-years/" class="submenu-item">Financial Years</a>
+    
+    <a href="/admin/utilities/database-backup/" class="submenu-item">Database backup</a>
+    
+    <a href="/utilities/access-control/" class="submenu-item">Access Control</a>
+    
+  </div>
+
+
+
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-footer">PharmaERP v1.0 &nbsp;|&nbsp; Internal</div>
+  </aside>
+
+
+  <!-- MAIN CONTENT
+       hx-boost  : intercepts form submits inside this area
+       Result swaps back into #mainContent (target="this" semantics via id)
+  -->
+  <main class="main-content" id="mainContent"
+        hx-boost="true"
+        hx-target="#mainContent"
+        hx-swap="innerHTML"
+        hx-push-url="true"
+        hx-indicator="#page-loader">
+
+    
+
+    
+<div class="cu-page sales-order-page" data-page-init="sales_order">
+
+  <script id="soProductsData" type="application/json">[]</script>
+  <script id="soAjaxUrls" type="application/json">{"productMeta": "/transactions/ajax/sales-order-product-meta/", "customerProducts": "/transactions/ajax/sales-order-customer-products/"}</script>
+  <script id="soPageData" type="application/json">{"startStep": 1, "isEdit": false}</script>
+  <script id="soRecoveryLinesJson" type="application/json">""</script>
+
+  <div class="cu-panel">
+    <div class="cu-card-header">
+      <div class="icon-wrap">
+        <i class="bi" id="soHeaderIcon"></i>
+      </div>
+      <div>
+        <h2 id="soHeaderTitle"></h2>
+        <p id="soHeaderSub"></p>
+      </div>
+      <div class="step-indicator">
+        <span class="step-dot" id="soDot1"></span>
+        <span class="step-line"></span>
+        <span class="step-dot" id="soDot2"></span>
+      </div>
+    </div>
+
+    <div class="cu-card-body">
+
+      
+
+
+
+
+      
+      <form method="post"
+            action="/transactions/sales-order/"
+            id="soForm"
+            hx-boost="false"
+            enctype="multipart/form-data"
+            novalidate>
+        <input type="hidden" name="csrfmiddlewaretoken" value="ZQWL9m8gY7xiQhG7AczbhNUVEXcQikqIB6Iik2QkPqxbAR8aBAxrtce9s2vMCQ4c">
+        
+        <input type="hidden" name="lines_json" id="soLinesJson">
+
+        <div id="soStep1" class="cust-step" style="display: flex; flex-direction: column;">
+          <div class="inw-step1-grid">
+          <div class="inw-step1-main-row">
+          <div class="inw-step1-left">
+          <div class="cu-section txn-section inw-section-block inw-section-inward-details">
+            <h3 class="txn-section-title">Order details</h3>
+            <div class="cu-section-fields">
+              <div class="cu-row-2-eq">
+                <div class="cu-field">
+                  <label class="cu-label">Order record date <span class="req">*</span></label>
+                  <input type="date" name="ord_rec_dt" value="2026-09-27" class="cu-input" id="soOrdRecDt" required>
+                  
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">Customer <span class="req">*</span></label>
+                  <select name="customer" class="cu-select searchable-dropdown" id="soCustomer" required>
+  <option value="" selected>— Select Customer —</option>
+
+  <option value="1">Aura Pharmaceuticals Pvt Ltd (AURA)</option>
+
+  <option value="7">Lyphochem Pharmaceutical (LYPHO)</option>
+
+  <option value="8">Renumed Pharmaceutical Labs (RPL)</option>
+
+  <option value="9">Stanmarc Enterprises (STANMARC)</option>
+
+</select>
+                  
+                </div>
+              </div>
+              <div class="cu-row-2-eq">
+                <div class="cu-field">
+                  <label class="cu-label">Customer order No. <span class="req">*</span></label>
+                  <input type="text" name="cust_ord_id" class="cu-input" id="soCustOrdId" autocomplete="off" maxlength="20" required>
+                  
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">Customer order date <span class="req">*</span></label>
+                  <input type="date" name="cust_ord_date" class="cu-input" id="soCustOrdDate" required>
+                  
+                </div>
+              </div>
+              <div class="cu-field">
+                <label class="cu-label">Delivery address</label>
+                <textarea name="delivery_add" cols="40" rows="3" class="cu-textarea" id="soDeliveryAdd" maxlength="200">
+</textarea>
+              </div>
+              <div class="cu-row-2-eq so-terms-remarks-row">
+                <div class="cu-field">
+                  <label class="cu-label">Terms and conditions</label>
+                  <textarea name="terms_cond" cols="40" rows="3" class="cu-textarea" id="soTerms" maxlength="1000">
+</textarea>
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">Remarks</label>
+                  <textarea name="remarks" cols="40" rows="3" class="cu-textarea" id="soRemarks" maxlength="500">
+</textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="cu-section txn-section inw-section-block inw-section-transport">
+            <h3 class="txn-section-title">Charges and totals</h3>
+            <div class="cu-section-fields">
+              <div class="cu-row-3-eq">
+                <div class="cu-field">
+                  <label class="cu-label">Packing / forwarding</label>
+                  <input type="number" name="pkg_fwd_amt" class="cu-input" id="soPkgFwd" step="0.01" min="0">
+                  
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">Freight</label>
+                  <input type="number" name="frieght_amt" class="cu-input" id="soFreight" step="0.01" min="0">
+                  
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">Other charges</label>
+                  <input type="number" name="oth_charges" class="cu-input" id="soOthCharges" step="0.01" min="0">
+                  
+                </div>
+              </div>
+              <div class="cu-row-4-eq">
+                <div class="cu-field">
+                  <label class="cu-label">Taxable value</label>
+                  <input type="text" class="cu-input cu-num" id="soRoTaxable" readonly tabindex="-1" value="0.00">
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">CGST</label>
+                  <input type="text" class="cu-input cu-num" id="soRoCgst" readonly tabindex="-1" value="0.00">
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">SGST</label>
+                  <input type="text" class="cu-input cu-num" id="soRoSgst" readonly tabindex="-1" value="0.00">
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">IGST</label>
+                  <input type="text" class="cu-input cu-num" id="soRoIgst" readonly tabindex="-1" value="0.00">
+                </div>
+              </div>
+              <div class="cu-row-2-eq">
+                <div class="cu-field">
+                  <label class="cu-label">Round off (-1 to +1)</label>
+                  <input type="number" name="round_off" class="cu-input" id="soRoundOff" step="0.01" min="-1" max="1">
+                  
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">Total amount</label>
+                  <input type="text" class="cu-input cu-num" id="soRoTotal" readonly tabindex="-1" value="0.00">
+                </div>
+              </div>
+            </div>
+          </div>
+          </div>
+
+          <div class="inw-step1-right">
+          <div class="cu-section txn-section inw-section-block inw-section-doc-upload">
+            <h3 class="txn-section-title">Document</h3>
+            <div class="cu-section-fields inw-doc-upload-fields">
+              <div class="inw-doc-preview-box"
+                   id="soDocPreviewShell"
+                   >
+                <div class="inw-doc-placeholder" id="soDocPlaceholder">
+                  <i class="bi bi-file-earmark-image"></i>
+                  <span>No preview</span>
+                </div>
+                <img id="soDocPreviewImg" class="inw-doc-preview-img" alt="Document preview" />
+                <iframe id="soDocPreviewPdf" class="inw-doc-preview-iframe" title="PDF preview"></iframe>
+              </div>
+              
+              <div class="inw-doc-upload-area">
+                <input type="file" name="header_document" class="inw-header-doc-input" id="soHeaderDocInput" accept=".pdf,image/*">
+                <button type="button" class="btn-upload inw-doc-upload-btn" id="soDocUploadBtn">
+                  <i class="bi bi-upload"></i> Upload document
+                </button>
+                <span class="upload-hint inw-doc-hint" id="soDocHint">PDF or image — max 15 MB</span>
+              </div>
+              
+            </div>
+          </div>
+          </div>
+          </div>
+          </div>
+
+          <div class="cu-actions inw-step1-actions">
+            <button type="button" class="btn-save btn-item-details" id="btnSoNext"><i class="bi bi-grid-3x3-gap"></i> Products</button>
+            
+            <button type="submit" class="btn-save btn-save-main" id="btnSoSave"
+              aria-disabled="true">
+              <i class="bi bi-check2-circle"></i> Save order
+            </button>
+            <button type="button" class="btn-cancel" id="btnSoClear" onclick="resetSalesOrderForm()"><i class="bi bi-x-lg"></i> Clear</button>
+            
+          </div>
+          <span class="field-error js-err" id="err-lines_json_step1"></span>
+        </div>
+
+        <div id="soStep2" class="cust-step inw-step2" style="display: none;">
+          <span class="field-error js-err" id="err-lines_json"></span>
+
+          <div class="prod-grid-wrap inw-items-panel">
+            <div class="prod-grid-toolbar inw-items-toolbar">
+              <span class="prod-grid-label"><i class="bi bi-box-seam"></i> Products</span>
+              <button type="button" class="btn-add-row" id="btnSoAddLine"><i class="bi bi-plus-lg"></i> Add line</button>
+            </div>
+            <div class="inw-lines-outer">
+              <div id="soLineList" class="inw-line-list"></div>
+              <p class="prod-grid-empty inw-line-empty" id="soLineEmpty">No products yet. Use <strong>Add line</strong> to start.</p>
+            </div>
+          </div>
+
+          <div class="cu-actions inw-step2-actions">
+            <button type="button" class="btn-cancel" id="btnSoBack"><i class="bi bi-arrow-left"></i> Back</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-card-header">
+      <i class="bi bi-list-ul"></i>
+      <h3>Recent sales orders (5)</h3>
+    </div>
+    <div class="table-scroll-body">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>ID</th>
+            <th>Record date</th>
+            <th>Customer order</th>
+            <th>Customer</th>
+            <th>Taxable</th>
+            <th>Total</th>
+            <th>Document</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+          <tr >
+            <td class="col-idx">1</td>
+            <td>7</td>
+            <td>2026-09-24</td>
+            <td><strong>12</strong></td>
+            <td>Renumed Pharmaceutical Labs</td>
+            <td>1000.00</td>
+            <td>1010.00</td>
+            <td class="col-doc">
+              <span class="inw-table-doc-empty">—</span>
+            </td>
+            <td class="col-actions">
+              <a href="/transactions/sales-order/?edit_pk=7" class="btn-action btn-edit" title="Edit"><i class="bi bi-pencil"></i></a>
+              <button type="button" class="btn-action btn-delete" title="Delete"
+                data-delete-url="/transactions/sales-order/7/delete/"
+                data-delete-name="12"
+                onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>
+          
+          <tr >
+            <td class="col-idx">2</td>
+            <td>4</td>
+            <td>2026-09-11</td>
+            <td><strong>1234</strong></td>
+            <td>Aura Pharmaceuticals Pvt Ltd</td>
+            <td>100.00</td>
+            <td>110.00</td>
+            <td class="col-doc">
+              <span class="inw-table-doc-empty">—</span>
+            </td>
+            <td class="col-actions">
+              <a href="/transactions/sales-order/?edit_pk=4" class="btn-action btn-edit" title="Edit"><i class="bi bi-pencil"></i></a>
+              <button type="button" class="btn-action btn-delete" title="Delete"
+                data-delete-url="/transactions/sales-order/4/delete/"
+                data-delete-name="1234"
+                onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>
+          
+          <tr >
+            <td class="col-idx">3</td>
+            <td>3</td>
+            <td>2026-09-09</td>
+            <td><strong>DEMO-20260909-01</strong></td>
+            <td>Aura Pharmaceuticals Pvt Ltd</td>
+            <td>100.00</td>
+            <td>110.00</td>
+            <td class="col-doc">
+              <span class="inw-table-doc-empty">—</span>
+            </td>
+            <td class="col-actions">
+              <a href="/transactions/sales-order/?edit_pk=3" class="btn-action btn-edit" title="Edit"><i class="bi bi-pencil"></i></a>
+              <button type="button" class="btn-action btn-delete" title="Delete"
+                data-delete-url="/transactions/sales-order/3/delete/"
+                data-delete-name="DEMO\u002D20260909\u002D01"
+                onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>
+          
+          <tr >
+            <td class="col-idx">4</td>
+            <td>2</td>
+            <td>2026-08-30</td>
+            <td><strong>123</strong></td>
+            <td>Lyphochem Pharmaceutical</td>
+            <td>10000.00</td>
+            <td>11210.00</td>
+            <td class="col-doc">
+              <span class="inw-table-doc-empty">—</span>
+            </td>
+            <td class="col-actions">
+              <a href="/transactions/sales-order/?edit_pk=2" class="btn-action btn-edit" title="Edit"><i class="bi bi-pencil"></i></a>
+              <button type="button" class="btn-action btn-delete" title="Delete"
+                data-delete-url="/transactions/sales-order/2/delete/"
+                data-delete-name="123"
+                onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>
+          
+          <tr >
+            <td class="col-idx">5</td>
+            <td>1</td>
+            <td>2026-08-30</td>
+            <td><strong>12</strong></td>
+            <td>Aura Pharmaceuticals Pvt Ltd</td>
+            <td>1000.00</td>
+            <td>12601.00</td>
+            <td class="col-doc">
+              <span class="inw-table-doc-empty">—</span>
+            </td>
+            <td class="col-actions">
+              <a href="/transactions/sales-order/?edit_pk=1" class="btn-action btn-edit" title="Edit"><i class="bi bi-pencil"></i></a>
+              <button type="button" class="btn-action btn-delete" title="Delete"
+                data-delete-url="/transactions/sales-order/1/delete/"
+                data-delete-name="12"
+                onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>
+          
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+
+  </main>
+
+  
+
+  <!-- GLOBAL DELETE MODAL — outside #mainContent so it persists across swaps -->
+  <div id="globalDeleteModal" class="modal-overlay" style="display:none">
+    <div class="modal-box">
+      <div class="modal-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+      <h3 class="modal-title">Confirm Delete</h3>
+      <p class="modal-msg">You are about to delete <strong id="deleteModalItemName"></strong>. This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeDeleteModal()">
+          <i class="bi bi-x"></i> Cancel
+        </button>
+        <form id="globalDeleteForm" method="POST" action=""
+              hx-post=""
+              hx-target="#mainContent"
+              hx-swap="innerHTML"
+              hx-push-url="true"
+              hx-indicator="#page-loader">
+          <input type="hidden" name="csrfmiddlewaretoken" value="ZQWL9m8gY7xiQhG7AczbhNUVEXcQikqIB6Iik2QkPqxbAR8aBAxrtce9s2vMCQ4c">
+          <button type="submit" class="btn-danger">
+            <i class="bi bi-trash"></i> Yes, Delete
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

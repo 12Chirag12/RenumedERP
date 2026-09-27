@@ -38,6 +38,16 @@ from transactions.models import (
     _logsheet_parse_mmm_yyyy,
 )
 
+from .ledger_service import (
+    post_dpr_ledger,
+    post_inward_ledger,
+    post_rm_dispensing_ledger,
+    post_sales_invoice_ledger,
+    reverse_dpr_ledger,
+    reverse_inward_ledger,
+    reverse_rm_dispensing_ledger,
+    reverse_sales_invoice_ledger,
+)
 from .services import inventory_apply_batch_delta
 
 REF_DOC_INW = 'INW'
@@ -91,7 +101,10 @@ def _batch_dtl_mfg_exp_dates(batch_line: TrnBatchDtl | None) -> tuple[date | Non
 
 
 def post_inward_to_inventory(hed: TrnInwHed) -> None:
-    """Add RM/PM stock item-wise, always to the unbatched inventory bucket."""
+    """Add RM/PM stock item-wise to StockHed/StockDtl and legacy InventoryStock."""
+    # Post to new central ledger (StockHed + StockDtl)
+    post_inward_ledger(hed)
+
     cust_id = hed.customer_id
     trn_dt = hed.inward_dt
     ref_id = hed.pk
@@ -118,7 +131,10 @@ def post_inward_to_inventory(hed: TrnInwHed) -> None:
 
 
 def reverse_inward_from_inventory(hed: TrnInwHed) -> None:
-    """Reverse an inward from its item-level unbatched inventory bucket."""
+    """Reverse an inward from StockHed/StockDtl and legacy InventoryStock."""
+    # Reverse from new central ledger (StockHed + StockDtl)
+    reverse_inward_ledger(hed)
+
     cust_id = hed.customer_id
     trn_dt = hed.inward_dt
     ref_id = hed.pk
@@ -156,6 +172,9 @@ def post_rm_dispensing_to_inventory(hed: TrnlssHed) -> None:
     Lines are created only for BOM stages selected on the form; orphaned detail rows
     are removed on save so unchecked stages are not posted.
     """
+    # Post to new central ledger (StockHed + StockDtl)
+    post_rm_dispensing_ledger(hed)
+
     cust_id = hed.customer_id
     ref_id = hed.pk
     for ln in hed.lines.select_related('item', 'item__item_category'):
@@ -180,6 +199,9 @@ def post_rm_dispensing_to_inventory(hed: TrnlssHed) -> None:
 
 
 def reverse_rm_dispensing_from_inventory(hed: TrnlssHed) -> None:
+    # Reverse from new central ledger (StockHed + StockDtl)
+    reverse_rm_dispensing_ledger(hed)
+
     for ln in hed.lines.select_related('item', 'item__item_category'):
         tot = _rm_line_issue_total(ln)
         if tot <= 0:
@@ -247,6 +269,9 @@ def _dpr_section_contributes_fg_inventory(section) -> bool:
 
 def post_dpr_production_to_inventory(row: TrnDpr) -> None:
     """Increase FG stock from a working DPR row (optionally section-filtered)."""
+    # Post to new central ledger (StockHed + StockDtl)
+    post_dpr_ledger(row)
+
     if row.machine_working != DPR_MACHINE_WORKING:
         return
     if not row.customer_id or not row.product_id:
@@ -278,6 +303,9 @@ def post_dpr_production_to_inventory(row: TrnDpr) -> None:
 
 def reverse_dpr_production_from_inventory(row: TrnDpr) -> None:
     """Undo FG posting for this DPR row (uses current row field values)."""
+    # Reverse from new central ledger (StockHed + StockDtl)
+    reverse_dpr_ledger(row)
+
     if row.machine_working != DPR_MACHINE_WORKING:
         return
     if not row.customer_id or not row.product_id:
@@ -309,6 +337,9 @@ def reverse_dpr_production_from_inventory(row: TrnDpr) -> None:
 
 def post_sales_invoice_to_inventory(hed: TrnSlsHed) -> None:
     """Reduce FG stock for each invoice batch line (log sheet → physical batch no.)."""
+    # Post to new central ledger (StockHed + StockDtl)
+    post_sales_invoice_ledger(hed)
+
     cust_id = hed.customer_id
     trn_dt = hed.invoice_dt
     ref_id = hed.pk
@@ -344,6 +375,9 @@ def post_sales_invoice_to_inventory(hed: TrnSlsHed) -> None:
 
 def reverse_sales_invoice_from_inventory(hed: TrnSlsHed) -> None:
     """Restore FG stock removed by this invoice (same buckets as post)."""
+    # Reverse from new central ledger (StockHed + StockDtl)
+    reverse_sales_invoice_ledger(hed)
+
     cust_id = hed.customer_id
     trn_dt = hed.invoice_dt
     ref_id = hed.pk

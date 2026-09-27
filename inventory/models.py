@@ -248,6 +248,409 @@ class InventoryStock(models.Model):
             )
 
 
+class StockHed(models.Model):
+    """
+    Central current stock balance table.
+
+    RM/PM key: financial_year + customer + item (unbatched, item-wise).
+    FG key: financial_year + customer + product + batch_no (batch-wise).
+
+    Business rule: closing_qty = opn_qty + rcpt_qty - issue_qty.
+    """
+
+    stock_lnkno = models.AutoField(
+        primary_key=True,
+        db_column='stock_lnkno',
+        verbose_name=_('Stock link no.'),
+    )
+
+    op_date = models.DateField(
+        db_column='op_date',
+        verbose_name=_('Opening/cutover date'),
+        help_text=_('Date when this stock row was opened or cut over.'),
+    )
+
+    financial_year = models.ForeignKey(
+        'masters.FinancialYear',
+        on_delete=models.PROTECT,
+        db_column='financial_year_id',
+        related_name='stock_hed_rows',
+        verbose_name=_('Financial year'),
+    )
+
+    customer = models.ForeignKey(
+        'masters.MstCust',
+        on_delete=models.PROTECT,
+        db_column='cust_id',
+        related_name='stock_hed_rows',
+        verbose_name=_('Customer'),
+    )
+
+    item = models.ForeignKey(
+        'masters.MstItem',
+        on_delete=models.PROTECT,
+        db_column='item_id',
+        null=True,
+        blank=True,
+        related_name='stock_hed_rows',
+        verbose_name=_('Item (RM/PM)'),
+    )
+
+    product = models.ForeignKey(
+        'masters.MstProd',
+        on_delete=models.PROTECT,
+        db_column='prod_id',
+        null=True,
+        blank=True,
+        related_name='stock_hed_rows',
+        verbose_name=_('Product (FG)'),
+    )
+
+    item_category = models.ForeignKey(
+        'masters.MstProdCat',
+        on_delete=models.PROTECT,
+        db_column='item_type_id',
+        null=True,
+        blank=True,
+        related_name='stock_hed_rows',
+        verbose_name=_('Item category'),
+    )
+
+    batch_no = models.CharField(
+        max_length=100,
+        default='',
+        blank=True,
+        db_column='batch_no',
+        verbose_name=_('Batch no.'),
+        help_text=_('Blank for RM/PM; required for FG.'),
+    )
+
+    mfg_date = models.DateField(
+        null=True,
+        blank=True,
+        db_column='mfg_date',
+        verbose_name=_('Mfg date'),
+        help_text=_('FG only.'),
+    )
+
+    exp_date = models.DateField(
+        null=True,
+        blank=True,
+        db_column='exp_date',
+        verbose_name=_('Exp date'),
+        help_text=_('FG only.'),
+    )
+
+    opn_qty = models.DecimalField(
+        max_digits=12,
+        decimal_places=QTY_DECIMAL_PLACES,
+        default=Decimal('0'),
+        db_column='opn_qty',
+        verbose_name=_('Opening quantity'),
+    )
+
+    rcpt_qty = models.DecimalField(
+        max_digits=12,
+        decimal_places=QTY_DECIMAL_PLACES,
+        default=Decimal('0'),
+        db_column='rcpt_qty',
+        verbose_name=_('Total receipts'),
+    )
+
+    issue_qty = models.DecimalField(
+        max_digits=12,
+        decimal_places=QTY_DECIMAL_PLACES,
+        default=Decimal('0'),
+        db_column='issue_qty',
+        verbose_name=_('Total issues'),
+    )
+
+    closing_qty = models.DecimalField(
+        max_digits=12,
+        decimal_places=QTY_DECIMAL_PLACES,
+        default=Decimal('0'),
+        db_column='closing_qty',
+        verbose_name=_('Closing balance'),
+        help_text=_('Stored running balance = opn_qty + rcpt_qty - issue_qty.'),
+    )
+
+    reserved_qty = models.DecimalField(
+        max_digits=12,
+        decimal_places=QTY_DECIMAL_PLACES,
+        default=Decimal('0'),
+        db_column='reserved_qty',
+        verbose_name=_('Reserved quantity'),
+    )
+
+    is_closed = models.BooleanField(
+        default=False,
+        db_index=True,
+        db_column='is_closed',
+        verbose_name=_('Is closed'),
+        help_text=_('True when closing balance is zero and no reserved quantity exists.'),
+    )
+
+    last_trn_date = models.DateField(
+        null=True,
+        blank=True,
+        db_column='last_trn_date',
+        verbose_name=_('Last transaction date'),
+    )
+
+    last_trn_type = models.CharField(
+        max_length=30,
+        blank=True,
+        default='',
+        db_column='last_trn_type',
+        verbose_name=_('Last transaction type'),
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        db_column='created_at',
+        verbose_name=_('Created at'),
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        db_column='updated_at',
+        verbose_name=_('Updated at'),
+    )
+
+    class Meta:
+        db_table = 'StockHed'
+        verbose_name = _('Stock balance header')
+        verbose_name_plural = _('Stock balance headers')
+        ordering = ['customer', 'product', 'item', 'batch_no']
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(product__isnull=False, item__isnull=True)
+                    | models.Q(product__isnull=True, item__isnull=False)
+                ),
+                name='stock_hed_product_xor_item',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(closing_qty__gte=0),
+                name='stock_hed_closing_gte_0',
+            ),
+            # MySQL-compatible unique constraints (full columns, no conditional WHERE clause):
+            # For RM/PM: item is filled, product is NULL. Multiple NULLs in product do not conflict in MySQL.
+            models.UniqueConstraint(
+                fields=['financial_year', 'customer', 'item'],
+                name='unique_stock_hed_fy_cust_item',
+            ),
+            # For FG: product is filled, item is NULL. Multiple NULLs in item do not conflict in MySQL.
+            models.UniqueConstraint(
+                fields=['financial_year', 'customer', 'product', 'batch_no'],
+                name='unique_stock_hed_fy_cust_prod_batch',
+            ),
+        ]
+
+    def __str__(self):
+        sku = f'prod={self.product_id}' if self.product_id else f'item={self.item_id}'
+        return f'StockHed#{self.stock_lnkno} {sku} batch={self.batch_no!r} closing={self.closing_qty}'
+
+    def calculate_closing_qty(self) -> Decimal:
+        step = Decimal('1').scaleb(-QTY_DECIMAL_PLACES)
+        o = Decimal(str(self.opn_qty or 0))
+        r = Decimal(str(self.rcpt_qty or 0))
+        i = Decimal(str(self.issue_qty or 0))
+        return (o + r - i).quantize(step, rounding=ROUND_HALF_UP)
+
+    def clean(self):
+        super().clean()
+        if bool(self.product_id) == bool(self.item_id):
+            raise ValidationError(_('Exactly one of item or product must be set.'))
+
+        if self.item_id:
+            if (self.batch_no or '').strip():
+                raise ValidationError({'batch_no': _('RM/PM inventory is item-wise only; batch number must be blank.')})
+            if self.mfg_date or self.exp_date:
+                raise ValidationError(_('RM/PM inventory cannot have manufacturing or expiry dates.'))
+            self.batch_no = ''
+            self.mfg_date = None
+            self.exp_date = None
+        else:
+            if not (self.batch_no or '').strip():
+                raise ValidationError({'batch_no': _('Finished goods inventory is batch-wise; batch number is required.')})
+            if self.mfg_date and self.exp_date and self.exp_date < self.mfg_date:
+                raise ValidationError(_('Expiry date cannot be before manufacturing date.'))
+
+        expected = self.calculate_closing_qty()
+        if self.closing_qty != expected:
+            raise ValidationError(
+                _('Closing quantity ({actual}) must equal opening ({op}) + receipt ({rc}) - issue ({iss}) = {exp}.').format(
+                    actual=self.closing_qty,
+                    op=self.opn_qty,
+                    rc=self.rcpt_qty,
+                    iss=self.issue_qty,
+                    exp=expected,
+                )
+            )
+        if self.closing_qty < 0:
+            raise ValidationError(_('Closing quantity cannot be negative.'))
+
+    def save(self, *args, **kwargs):
+        if self.item_id:
+            self.batch_no = ''
+            self.mfg_date = None
+            self.exp_date = None
+            if not self.item_category_id and self.item_id:
+                self.item_category_id = self.item.item_category_id
+        elif self.product_id:
+            self.batch_no = (self.batch_no or '').strip()
+            if not self.item_category_id and self.product_id:
+                self.item_category_id = self.product.prod_category_id
+
+        self.closing_qty = self.calculate_closing_qty()
+        if self.closing_qty < 0:
+            raise ValidationError(_('Closing quantity cannot be negative.'))
+        self.is_closed = (self.closing_qty == 0 and Decimal(str(self.reserved_qty or 0)) == 0)
+        super().save(*args, **kwargs)
+
+
+class StockDtl(models.Model):
+    """
+    Immutable stock movement-history table.
+
+    Records every individual stock movement (Opening, Inward, Dispensing, DPR, Sales, Stock Adj).
+    Reversals are recorded as compensating movement rows with is_reversal=True and reversal_of link.
+    """
+
+    TRAN_OPN = 'OPN'
+    TRAN_INW = 'INW'
+    TRAN_DIS = 'DIS'
+    TRAN_DPR = 'DPR'
+    TRAN_SLS = 'SLS'
+    TRAN_STK = 'STK'
+
+    TRAN_ID_CHOICES = (
+        (TRAN_OPN, _('Opening balance')),
+        (TRAN_INW, _('Inward RM/PM')),
+        (TRAN_DIS, _('RM Dispensing')),
+        (TRAN_DPR, _('DPR Finished Goods')),
+        (TRAN_SLS, _('Sales Invoice Dispatch')),
+        (TRAN_STK, _('Stock Adjustment')),
+    )
+
+    TYPE_OPENING = 'O'
+    TYPE_RECEIPT = 'R'
+    TYPE_ISSUE = 'I'
+
+    TRN_TYPE_CHOICES = (
+        (TYPE_OPENING, _('Opening')),
+        (TYPE_RECEIPT, _('Receipt')),
+        (TYPE_ISSUE, _('Issue')),
+    )
+
+    stock_dtl_id = models.AutoField(
+        primary_key=True,
+        db_column='stock_dtl_id',
+        verbose_name=_('Stock detail ID'),
+    )
+
+    stock = models.ForeignKey(
+        StockHed,
+        on_delete=models.PROTECT,
+        db_column='stock_lnkno',
+        related_name='movements',
+        verbose_name=_('Stock header'),
+    )
+
+    tran_id = models.CharField(
+        max_length=10,
+        choices=TRAN_ID_CHOICES,
+        db_column='tran_id',
+        verbose_name=_('Source module code'),
+    )
+
+    trn_type = models.CharField(
+        max_length=1,
+        choices=TRN_TYPE_CHOICES,
+        db_column='trn_type',
+        verbose_name=_('Movement type'),
+        help_text=_('O = Opening, R = Receipt, I = Issue.'),
+    )
+
+    trn_no = models.CharField(
+        max_length=50,
+        db_column='trn_no',
+        verbose_name=_('Originating document number/id'),
+    )
+
+    trn_date = models.DateField(
+        db_column='trn_date',
+        verbose_name=_('Transaction date'),
+    )
+
+    quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=QTY_DECIMAL_PLACES,
+        db_column='quantity',
+        verbose_name=_('Movement quantity'),
+    )
+
+    source_line_id = models.CharField(
+        max_length=100,
+        db_column='source_line_id',
+        db_index=True,
+        verbose_name=_('Source line / idempotency key'),
+        help_text=_('Idempotency key ensuring a document line cannot post twice.'),
+    )
+
+    is_reversal = models.BooleanField(
+        default=False,
+        db_column='is_reversal',
+        verbose_name=_('Is reversal'),
+        help_text=_('True if this movement reverses a previous movement.'),
+    )
+
+    reversal_of = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        db_column='reversal_of_id',
+        related_name='reversals',
+        verbose_name=_('Reversal of movement'),
+    )
+
+    remarks = models.CharField(
+        max_length=255,
+        blank=True,
+        default='',
+        db_column='remarks',
+        verbose_name=_('Remarks'),
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        db_column='created_at',
+        verbose_name=_('Created at'),
+    )
+
+    class Meta:
+        db_table = 'StockDtl'
+        verbose_name = _('Stock movement detail')
+        verbose_name_plural = _('Stock movement details')
+        ordering = ['trn_date', 'stock_dtl_id']
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(quantity__gt=0),
+                name='stock_dtl_quantity_gt_0',
+            ),
+            models.UniqueConstraint(
+                fields=['source_line_id'],
+                name='unique_stock_dtl_source_line_id',
+            ),
+        ]
+
+    def __str__(self):
+        rev = ' [REV]' if self.is_reversal else ''
+        return f'StockDtl#{self.stock_dtl_id} {self.tran_id}/{self.trn_type} qty={self.quantity}{rev} ({self.source_line_id})'
+
+
 class TrnStkAdjHed(models.Model):
     """Stock adjustment / opening balance document header."""
 
