@@ -275,6 +275,8 @@ class FinancialYearModelConstraintTests(TestCase):
         with self.assertRaises(ValidationError):
             dup.save()
 
-from django.test import TestCase
+class InwardProductsDisplayTests(TestCase):
+    def test_products_display_property(self):
+        hed = TrnInwHed()
+        self.assertEqual(hed.products_display, '')
 
-# Create your tests here.

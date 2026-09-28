@@ -121,12 +121,19 @@ def get_inward_edit_instance(pk):
 
 
 def _inward_recent_queryset():
+    lines_qs = TrnInwDtl1.objects.select_related('item').order_by('dtl1_id')
+    batches_qs = TrnInwDtl2.objects.select_related('product', 'item').order_by('dtl2_id')
     return (
         TrnInwHed.objects.select_related(
             'customer', 'supplier', 'grn_category', 'transporter',
         )
+        .prefetch_related(
+            Prefetch('lines', queryset=lines_qs),
+            Prefetch('batch_lines', queryset=batches_qs),
+        )
         .order_by('-inward_id')[:40]
     )
+
 
 
 def _inward_master_payload():

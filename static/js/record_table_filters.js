@@ -205,10 +205,16 @@
       var seen = Object.create(null);
       Array.prototype.filter.call(tbody.rows, isDataRow).forEach(function (row) {
         var label = row.cells[column] ? row.cells[column].textContent.replace(/\s+/g, ' ').trim() : '';
-        var key = normalized(label);
-        if (!key || seen[key]) return;
-        seen[key] = true;
-        values.push({ key: key, label: label });
+        if (!label || label === '—' || label === '-') return;
+
+        var parts = label.split(/,\s*/);
+        parts.forEach(function (part) {
+          var trimmed = part.replace(/\s+/g, ' ').trim();
+          var key = normalized(trimmed);
+          if (!key || seen[key]) return;
+          seen[key] = true;
+          values.push({ key: key, label: trimmed });
+        });
       });
       values.sort(function (a, b) { return a.label.localeCompare(b.label, undefined, { numeric: true }); });
       values.forEach(function (item) {
@@ -235,7 +241,7 @@
           return cell.matches('.col-actions') ? '' : cell.textContent;
         }).join(' '));
         var matchesSearch = !query || haystack.indexOf(query) !== -1;
-        var matchesValue = !selectedValue || fieldText === selectedValue;
+        var matchesValue = !selectedValue || fieldText === selectedValue || fieldText.indexOf(selectedValue) !== -1;
         var rowDateKey = useDateRange && (fromKey !== null || toKey !== null) ? parseDateKey(fieldText) : null;
         var matchesFrom = fromKey === null || (rowDateKey !== null && rowDateKey >= fromKey);
         var matchesTo = toKey === null || (rowDateKey !== null && rowDateKey <= toKey);
