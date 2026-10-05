@@ -1937,19 +1937,23 @@ class CustomerForm(forms.Form):
             inst.cust_products.select_related('product').values(
                 'cust_prod_id', 'product__prod_id', 'product__prod_name',
                 'adv_license', 'license_details', 'batch_abbr',
-            )
+            ).order_by('cust_prod_id')
         )
-        products_json = _json.dumps([
-            {
-                'cust_prod_id':    r['cust_prod_id'],
-                'prod_id':         r['product__prod_id'],
-                'prod_name':       r['product__prod_name'],
-                'adv_license':     r['adv_license'],
-                'license_details': r['license_details'] or '',
-                'batch_abbr':      r['batch_abbr'],
-            }
-            for r in prod_rows
-        ])
+        seen_prod_ids = set()
+        deduped_rows = []
+        for r in prod_rows:
+            pid = r['product__prod_id']
+            if pid not in seen_prod_ids:
+                seen_prod_ids.add(pid)
+                deduped_rows.append({
+                    'cust_prod_id':    r['cust_prod_id'],
+                    'prod_id':         r['product__prod_id'],
+                    'prod_name':       r['product__prod_name'],
+                    'adv_license':     r['adv_license'],
+                    'license_details': r['license_details'] or '',
+                    'batch_abbr':      r['batch_abbr'],
+                })
+        products_json = _json.dumps(deduped_rows)
         return {
             'cust_name':     inst.cust_name,
             'short_name':    inst.short_name,
