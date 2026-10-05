@@ -178,10 +178,10 @@ class InwardForm(forms.Form):
         widget=forms.DateInput(attrs={'class': 'cu-input', 'type': 'date', 'id': 'inwInvDt'}),
     )
     transporter = forms.ModelChoiceField(
+        required=False,
         queryset=MstTransport.objects.none(),
         label='Transporter',
         empty_label='— Select Transporter —',
-        error_messages={'required': 'Transporter is required.'},
         widget=forms.Select(attrs={'class': 'cu-select searchable-dropdown', 'id': 'inwTransport'}),
     )
     vehicle_no = forms.CharField(

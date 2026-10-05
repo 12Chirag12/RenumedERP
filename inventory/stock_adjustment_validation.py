@@ -14,7 +14,7 @@ from django.utils.dateparse import parse_date
 from masters.models import MstCustProd, MstItem, MstItemType, MstProd
 from transactions.constants import QTY_DECIMAL_PLACES
 
-from .models import InventoryStock, TrnStkAdjHed
+from .models import InventoryStock, StockHed, TrnStkAdjHed
 
 _QUANT = Decimal('1').scaleb(-QTY_DECIMAL_PLACES)
 
@@ -120,9 +120,23 @@ def validate_stock_adjustment_payload(
             errors.append(f'{prefix} remarks must be at most 20 characters.')
 
         batches_in = row.get('batches')
-        if not isinstance(batches_in, list) or len(batches_in) == 0:
-            errors.append(f'{prefix} add at least one batch line.')
-            continue
+        l_qty_raw = row.get('quantity') if row.get('quantity') is not None else row.get('qty')
+
+        # Finished goods (P) strictly require batch details; RM/PM items (I) have optional batch details
+        if kind == 'P':
+            if not isinstance(batches_in, list) or len(batches_in) == 0:
+                errors.append(f'{prefix} add at least one batch line for finished goods.')
+                continue
+        else:
+            has_valid_batch_qty = isinstance(batches_in, list) and any(
+                isinstance(b, dict) and b.get('batch_qty') not in (None, '')
+                for b in batches_in
+            )
+            if not has_valid_batch_qty:
+                if l_qty_raw is None or str(l_qty_raw).strip() == '':
+                    errors.append(f'{prefix} enter a quantity for this item.')
+                    continue
+                batches_in = [{'batch_no': '', 'mfg_date': None, 'exp_date': None, 'batch_qty': l_qty_raw}]
 
         prod_obj: MstProd | None = None
         item_obj: MstItem | None = None
@@ -157,11 +171,12 @@ def validate_stock_adjustment_payload(
                 batches_out = None
                 break
             bno = (b.get('batch_no') or '').strip()
-            if bno in seen_batch_no:
-                errors.append(f'{bp} duplicate batch number in this line.')
-                batches_out = None
-                break
-            seen_batch_no.add(bno)
+            if bno:
+                if bno in seen_batch_no:
+                    errors.append(f'{bp} duplicate batch number in this line.')
+                    batches_out = None
+                    break
+                seen_batch_no.add(bno)
             mfg_raw = b.get('mfg_date')
             exp_raw = b.get('exp_date')
             mfg = parse_date(str(mfg_raw).strip()) if mfg_raw else None
@@ -191,14 +206,11 @@ def validate_stock_adjustment_payload(
                 break
 
             if kind == 'P' and not bno:
-                errors.append(f'{bp} batch number is required for products.')
+                errors.append(f'{bp} batch number is required for finished goods products.')
                 batches_out = None
                 break
 
-            if kind == 'I' and item_obj and item_obj.maintain_batch == 'Y' and not bno:
-                errors.append(f'{bp} batch number is required for this item.')
-                batches_out = None
-                break
+            # Note: For kind == 'I' (RM/PM items), batch number is completely optional.
 
             if mfg and exp and exp < mfg:
                 errors.append(f'{bp} expiry date cannot be before manufacturing date.')
@@ -245,25 +257,41 @@ def validate_stock_adjustment_payload(
                 agg[key] += _q(b['batch_qty'])
 
         for (kind, mid, bno), delta in agg.items():
-            flt: dict[str, Any] = {'customer_id': customer_id, 'batch_no': bno}
+            flt_hed: dict[str, Any] = {'customer_id': customer_id}
             if kind == 'P':
-                flt['product_id'] = mid
-                flt['item_id'] = None
+                flt_hed['product_id'] = mid
+                flt_hed['batch_no'] = bno
+                flt_hed['item_id__isnull'] = True
             else:
-                flt['item_id'] = mid
-                flt['product_id'] = None
-            inv = InventoryStock.objects.filter(**flt, is_closed=False).first()
+                flt_hed['item_id'] = mid
+                flt_hed['batch_no'] = ''
+                flt_hed['product_id__isnull'] = True
+            hed_row = StockHed.objects.filter(**flt_hed, is_closed=False).first()
             label = f'product id {mid}' if kind == 'P' else f'item id {mid}'
-            if not inv:
-                errors.append(
-                    f'Stock adjustment: no existing inventory for {label}, batch {bno!r}. '
-                    'Use opening balance or an inward GRN to create this batch first.'
-                )
-                continue
-            if _q(inv.qty + delta) < 0:
+
+            if hed_row is not None:
+                curr_qty = hed_row.closing_qty
+            else:
+                flt_inv: dict[str, Any] = {'customer_id': customer_id, 'batch_no': bno}
+                if kind == 'P':
+                    flt_inv['product_id'] = mid
+                    flt_inv['item_id'] = None
+                else:
+                    flt_inv['item_id'] = mid
+                    flt_inv['product_id'] = None
+                inv = InventoryStock.objects.filter(**flt_inv, is_closed=False).first()
+                if not inv:
+                    errors.append(
+                        f'Stock adjustment: no existing inventory for {label}, batch {bno!r}. '
+                        'Use opening balance or an inward GRN to create this batch first.'
+                    )
+                    continue
+                curr_qty = inv.qty
+
+            if _q(curr_qty + delta) < 0:
                 errors.append(
                     f'Stock adjustment: result would be negative for {label}, batch {bno!r} '
-                    f'(current {_q(inv.qty)}, change {_q(delta)}).'
+                    f'(current {_q(curr_qty)}, change {_q(delta)}).'
                 )
 
     if errors:

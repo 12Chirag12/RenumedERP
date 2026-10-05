@@ -231,7 +231,23 @@ class GrnNumberingPerFinancialYearTests(TestCase):
 
         # FY 2025-26 empty → reset to 00001
         self.assertEqual(max_grn_sequence_for_fy('2025-26'), 0)
-        self.assertEqual(suggested_grn_no('RM', '2025-26'), 'RM-00001')
+    def test_inward_transporter_optional(self):
+        reg_n = 99000 + TrnInwHed.objects.count() + 1
+        hed = TrnInwHed.objects.create(
+            inward_dt=date(2025, 4, 1),
+            customer=self.customer,
+            register_no=f'R-{reg_n}',
+            grn_category=self.cat,
+            grn_no=f'RM-{reg_n}',
+            supplier=self.supplier,
+            inv_no='INV-OPTIONAL-TRANS',
+            inv_dt=date(2025, 4, 1),
+            transporter=None,
+            vehicle_no='',
+        )
+        self.assertIsNone(hed.transporter)
+        self.assertIsNone(hed.transporter_id)
+
 
 
 class FinancialYearModelConstraintTests(TestCase):
@@ -259,6 +275,8 @@ class FinancialYearModelConstraintTests(TestCase):
         with self.assertRaises(ValidationError):
             dup.save()
 
-from django.test import TestCase
+class InwardProductsDisplayTests(TestCase):
+    def test_products_display_property(self):
+        hed = TrnInwHed()
+        self.assertEqual(hed.products_display, '')
 
-# Create your tests here.

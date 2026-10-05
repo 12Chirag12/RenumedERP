@@ -1,0 +1,1021 @@
+/* Transaction Reports — scoped under .tr-page */
+
+.tr-page {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.tr-page .tr-heading h1 {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0 0 2px;
+  color: var(--text-dark);
+}
+.tr-page .tr-heading p {
+  font-size: 12px;
+  color: var(--text-mid);
+  margin: 0;
+}
+
+.tr-toolbar {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.tr-toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.tr-meta-row {
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+  padding-top: 6px;
+}
+.tr-meta {
+  font-size: 11px;
+  color: var(--text-mid);
+}
+
+.tr-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.tr-select {
+  min-width: 220px;
+  max-width: 100%;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #fff;
+}
+
+.tr-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #fff;
+  color: var(--text-dark);
+  cursor: pointer;
+}
+/* Do not style .tr-btn-primary here — it must stay navy on hover (see .tr-btn-primary:hover). */
+.tr-btn:hover:not(.tr-btn-primary) {
+  background: #f8fafc;
+}
+.tr-btn-primary {
+  background: var(--navy, #1e3a5f);
+  color: #fff;
+  border-color: transparent;
+}
+.tr-btn-primary:hover {
+  background: var(--navy, #1e3a5f);
+  filter: brightness(1.08);
+}
+
+/* Full-width stack: filters on top, preview below */
+.tr-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.tr-stack > .tr-filters {
+  flex-shrink: 0;
+}
+
+.tr-filters,
+.tr-preview {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 0;
+}
+
+/* Global .cu-panel uses overflow:hidden — allow inner preview to scroll horizontally */
+.tr-preview.cu-panel {
+  overflow: hidden;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.tr-filters-header {
+  background: var(--navy, #1e3a5f);
+  color: #fff;
+  padding: 10px 14px;
+}
+.tr-filters-header h2 {
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.tr-filters-header p {
+  margin: 0;
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.7);
+}
+.tr-filters-body {
+  padding: 10px 14px 12px;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+/* One row: [ Type | Customer | Group ] (3/4) + [ Columns ] (1/4) — scroll if needed */
+.tr-filters-host {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+}
+
+#trFiltersDynamic {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  flex: 3 1 0;
+  min-width: 0;
+  gap: 6px;
+  align-items: stretch;
+  box-sizing: border-box;
+}
+
+#trFiltersDynamic .tr-filter-block {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: none;
+  margin-bottom: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 8px;
+  background: #fafafa;
+  box-sizing: border-box;
+}
+
+.tr-filters-host > .tr-columns-block {
+  flex: 1 1 0;
+  min-width: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 8px;
+  background: #fafafa;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tr-filters-host > .tr-columns-block .tr-check-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+#trFiltersDynamic .tr-filter-block .tr-select,
+.tr-filters-host > .tr-columns-block .tr-select {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+#trFiltersDynamic .tr-filter-title {
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#trFiltersDynamic .tr-radio-row,
+.tr-filters-host > .tr-columns-block .tr-radio-row {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+#trFiltersDynamic .tr-list-label,
+.tr-filters-host > .tr-columns-block .tr-list-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tr-filters-host > .tr-columns-block .tr-subhead {
+  margin-top: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tr-columns-block {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.tr-subhead {
+  font-size: 12px;
+  font-weight: 700;
+  margin: 0 0 8px;
+  color: var(--text-dark);
+}
+
+.tr-filter-block {
+  margin-bottom: 14px;
+}
+
+.tr-filter-title {
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--text-dark);
+}
+.tr-radio-row {
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+/* Stacked radio options (e.g. BOM View / BOM type) */
+.tr-radio-row.tr-radio-col {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  white-space: normal;
+}
+
+#trFiltersDynamic .tr-radio-row.tr-radio-col {
+  flex-wrap: nowrap;
+  white-space: normal;
+}
+.tr-list-label {
+  font-size: 10.5px;
+  color: var(--text-mid);
+  margin-bottom: 4px;
+}
+
+/* Inner option lists stay vertical (checkboxes / values) */
+.tr-check-scroll {
+  display: block;
+  max-height: 180px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: #fff;
+}
+.tr-check-scroll label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  padding: 3px 0;
+  cursor: pointer;
+}
+
+.tr-preview-header {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+.tr-preview-header h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.tr-print-header {
+  display: none;
+  text-align: center;
+  padding: 12px 14px 0;
+}
+.tr-print-company {
+  font-weight: 800;
+  font-size: 14px;
+}
+.tr-print-title {
+  font-weight: 700;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.tr-print-subtitle {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-mid);
+  margin-top: 2px;
+}
+
+.tr-preview-wrap {
+  /* Extra BR padding so table outer borders are not clipped by overflow:auto */
+  padding: 10px 16px 16px;
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  max-height: calc(100vh - 380px);
+  width: 100%;
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  z-index: 0;
+}
+
+/*
+ * Preview tables: size to content so many columns stay readable; the wrap
+ * scrolls horizontally. Avoid table-layout:fixed + width:100% with a single
+ * <col span="N"> — that forces equal narrow columns and jumbled headers.
+ */
+.tr-table {
+  width: max-content;
+  min-width: 100%;
+  max-width: none;
+  border-collapse: collapse;
+  font-size: 11px;
+  table-layout: auto;
+  /* Explicit outer frame (cell borders can look incomplete at the edge when clipped) */
+  border: 1px solid #111;
+  box-sizing: border-box;
+}
+
+.tr-table:has(col.tr-col-sr) col.tr-col-sr {
+  width: auto;
+  min-width: 3rem;
+}
+.tr-table:has(col.tr-col-sr) col.tr-col-val,
+.tr-table:has(col.tr-col-sr) col.tr-col-rest {
+  width: auto;
+}
+.tr-table:has(col.tr-col-sr) thead tr:last-child th:first-child,
+.tr-table:has(col.tr-col-sr) tbody td:first-child {
+  min-width: 3rem;
+  max-width: none;
+  width: auto;
+  text-align: center;
+  white-space: nowrap;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.tr-table th,
+.tr-table td {
+  border: 1px solid #111;
+  padding: 5px 8px;
+  vertical-align: top;
+}
+.tr-table thead th {
+  white-space: nowrap;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+.tr-table tbody td {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.tr-table th {
+  font-weight: 700;
+  background: #f1f5f9;
+}
+.tr-table tr:nth-child(even) td {
+  background: #fafafa;
+}
+
+.tr-group-header {
+  font-weight: 700;
+  background: #e2e8f0 !important;
+}
+
+/* Daily production report: section+machine banner; block total row */
+.tr-dpr-group-banner .tr-dpr-banner-cell,
+.tr-dpr-group-banner td {
+  font-weight: 700;
+  background: #e2e8f0 !important;
+  vertical-align: middle;
+}
+.tr-dpr-total-row td {
+  font-weight: 700;
+  border-top: 2px solid #111;
+  border-bottom: 2px solid #111;
+}
+
+/* Product attributes: grid of cards — min(260px,100%) avoids track overflow / overlap */
+.tr-multi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+  align-items: start;
+}
+
+.tr-mini-table-wrap {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 8px;
+  padding: 10px 12px 12px;
+  background: #fff;
+  /* Isolate stacking; clip horizontal bleed inside narrow grid cells */
+  isolation: isolate;
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+/* Stacked tables (e.g. grouped capsule sizes): block wrapper beats odd table-in-flex bugs */
+.tr-grouped-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Match main preview tables: content-sized columns + horizontal scroll in .tr-table-slot */
+.tr-grouped-stack .tr-table-slot .tr-table {
+  width: max-content;
+  min-width: 100%;
+  max-width: none;
+  table-layout: auto;
+}
+
+.tr-table-slot {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 0 2px 2px 0;
+  box-sizing: border-box;
+}
+
+.tr-mini-table-wrap h4 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tr-mini-table-wrap .tr-table {
+  width: 100%;
+  font-size: 11px;
+}
+
+.tr-mini-table-wrap .tr-multi-grid {
+  display: block;
+}
+
+.tr-error {
+  margin: 10px 14px 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 12px;
+}
+.tr-loading {
+  padding: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-mid);
+}
+
+.tr-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 8px 14px 12px;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+  font-size: 12px;
+}
+
+.prod-name-cell .p1 {
+  font-weight: 600;
+}
+.prod-name-cell .p2 {
+  font-size: 10.5px;
+  color: var(--text-mid);
+}
+
+@media print {
+  @page {
+    size: landscape;
+    margin: 10mm;
+  }
+
+  .sidebar,
+  .topbar,
+  .tr-toolbar,
+  .tr-heading,
+  .tr-filters,
+  .tr-preview-header,
+  .tr-pagination,
+  .tr-error,
+  .tr-loading,
+  #page-loader {
+    display: none !important;
+  }
+
+  .tr-filters.cu-panel,
+  .tr-preview.cu-panel {
+    overflow: visible !important;
+  }
+
+  html,
+  body {
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Uniform 11pt for all printable report output (tables, print header, GRN, nested cells). */
+  .tr-preview.cu-panel,
+  .tr-preview.cu-panel * {
+    font-size: 11pt !important;
+  }
+
+  .main-content {
+    margin: 0 !important;
+    margin-left: 0 !important;
+    padding: 8px !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+    overflow: visible !important;
+  }
+
+  .tr-page {
+    width: 100% !important;
+    max-width: none !important;
+    overflow: visible !important;
+  }
+
+  .tr-stack {
+    display: block !important;
+  }
+
+  .tr-preview {
+    box-shadow: none !important;
+    border: none !important;
+    overflow: visible !important;
+  }
+
+  .tr-print-header {
+    display: block !important;
+  }
+
+  .tr-print-subtitle {
+    display: block !important;
+    color: #000 !important;
+  }
+
+  .tr-preview-wrap {
+    max-height: none !important;
+    overflow: visible !important;
+    width: 100% !important;
+    padding: 2px !important;
+  }
+
+  .tr-table {
+    width: 100% !important;
+    max-width: none !important;
+    table-layout: auto !important;
+    page-break-inside: auto;
+    border: 1px solid #000 !important;
+    box-sizing: border-box !important;
+  }
+
+  .tr-table:has(col.tr-col-sr) {
+    table-layout: auto !important;
+  }
+  .tr-table:has(col.tr-col-sr) col.tr-col-sr {
+    width: auto !important;
+    min-width: 3rem !important;
+  }
+  .tr-table:has(col.tr-col-sr) col.tr-col-val,
+  .tr-table:has(col.tr-col-sr) col.tr-col-rest {
+    width: auto !important;
+  }
+  .tr-table:has(col.tr-col-sr) thead tr:last-child th:first-child,
+  .tr-table:has(col.tr-col-sr) tbody td:first-child {
+    width: auto !important;
+    max-width: none !important;
+    min-width: 3rem !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+  }
+
+  .tr-table thead th {
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+  }
+  .tr-table tbody td {
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .tr-table:has(col.tr-col-sr) thead tr:last-child th:first-child,
+  .tr-table:has(col.tr-col-sr) tbody td:first-child {
+    white-space: nowrap !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+  }
+
+  .tr-multi-grid {
+    display: block !important;
+  }
+
+  /*
+   * Product attribute master (.tr-multi-grid): first attribute stays on the
+   * same page as the print header; each following attribute starts a new page.
+   */
+  .tr-multi-grid > .tr-mini-table-wrap {
+    page-break-inside: auto;
+    break-inside: auto;
+    margin-bottom: 0;
+    border: 1px solid #000 !important;
+  }
+
+  .tr-multi-grid > .tr-mini-table-wrap:not(:first-child) {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  .tr-mini-table-wrap h4 {
+    page-break-after: avoid;
+    break-after: avoid-page;
+  }
+
+  .tr-mini-table-wrap .tr-table {
+    page-break-inside: auto;
+  }
+}
+/* GRN receipt: hide duplicate hub header (company + print title + subtitle) */
+.tr-page--grn-receipt #trPrintHeader {
+  display: none !important;
+}
+
+/* ─── Goods Receipt Note (single GRN) ─── */
+.tr-grn-placeholder {
+  padding: 24px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-mid);
+  border: 1px dashed rgba(15, 23, 42, 0.15);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.grn-receipt-doc {
+  font-size: 11px;
+  color: #111;
+  max-width: 100%;
+  box-sizing: border-box;
+  background: transparent;
+}
+
+/* Title block: same position as print form — above the main bordered box */
+.grn-receipt-head-outer {
+  text-align: center;
+  padding: 4px 8px 14px;
+  box-sizing: border-box;
+}
+
+.grn-co-name {
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  margin-bottom: 6px;
+  color: #0f172a;
+}
+
+.grn-co-addr {
+  font-size: 10px;
+  line-height: 1.45;
+  color: #1e293b;
+  max-width: 52rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.grn-co-addr + .grn-co-addr {
+  margin-top: 4px;
+}
+
+.grn-doc-title {
+  font-weight: 800;
+  font-size: 14px;
+  margin-top: 12px;
+  margin-bottom: 0;
+  color: #0f172a;
+}
+
+.grn-head-rule {
+  height: 0;
+  margin: 12px 0 0;
+  border: none;
+  border-bottom: 3px solid #111;
+}
+
+/* One outer box: supplier + table + totals (no signatures inside) */
+.grn-receipt-main {
+  border: 2px solid #111;
+  padding: 12px 14px 14px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.grn-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 28px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #111;
+}
+
+.grn-meta-col {
+  min-width: 0;
+}
+
+.grn-meta-row {
+  margin-bottom: 6px;
+  line-height: 1.35;
+}
+
+.grn-meta-single {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.35rem;
+}
+
+.grn-meta-row.grn-block .grn-v {
+  margin-top: 2px;
+  white-space: pre-wrap;
+}
+
+/* No. / value / Date : / date — dates align in one column */
+.grn-meta-pair-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto 5.5rem;
+  column-gap: 0.3rem;
+  row-gap: 2px;
+  align-items: baseline;
+  margin-bottom: 6px;
+  line-height: 1.35;
+}
+
+.grn-meta-pair-row .grn-k {
+  margin-right: 0;
+  white-space: nowrap;
+}
+
+.grn-meta-pair-row .grn-meta-fill {
+  min-width: 0;
+  word-break: break-word;
+}
+
+.grn-meta-pair-row .grn-date-k {
+  justify-self: end;
+  margin-left: 0.08rem;
+}
+
+.grn-meta-pair-row .grn-date-v {
+  justify-self: start;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+
+.grn-k {
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+.grn-v {
+  font-weight: 400;
+}
+
+.grn-receipt-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+  font-size: 10px;
+  margin-bottom: 0;
+  border-bottom: 2px solid #111;
+}
+
+.grn-receipt-table th,
+.grn-receipt-table td {
+  border: 1px solid #111;
+  padding: 4px 5px;
+  vertical-align: top;
+}
+
+.grn-receipt-table thead th {
+  font-weight: 700;
+  background: #f1f5f9;
+  text-align: center;
+  border-bottom: 2px solid #111;
+}
+
+.grn-th-stacked {
+  display: block;
+  line-height: 1.25;
+}
+
+.grn-td-stack {
+  line-height: 1.25;
+}
+
+.grn-td-batch {
+  line-height: 1.35;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.grn-muted {
+  color: #64748b;
+}
+
+/* Totals row: still inside main box, separated from table */
+.grn-totals-strip {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #111;
+  font-size: 11px;
+}
+
+.grn-totals-left {
+  flex: 1 1 auto;
+  min-width: 12rem;
+}
+
+.grn-exemption {
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.grn-totals-right {
+  flex: 0 0 auto;
+  text-align: right;
+  font-size: 12px;
+  line-height: 1.75;
+}
+
+.grn-totals-right > div {
+  margin-bottom: 4px;
+}
+
+.grn-totals-right > div:last-child {
+  margin-bottom: 0;
+}
+
+.grn-totals-right .grn-k {
+  display: inline-block;
+  min-width: 11rem;
+  text-align: left;
+  font-weight: 600;
+}
+
+/* Signature block: separate bordered area below main box */
+.grn-receipt-signatures {
+  margin-top: 14px;
+  border: 2px solid #111;
+  padding: 12px 16px 20px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.grn-sign-top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding-bottom: 14px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #111;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.grn-prepared-by {
+  flex: 0 0 auto;
+}
+
+.grn-complies {
+  flex: 1 1 auto;
+  text-align: center;
+}
+
+.grn-sign-bottom {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 28px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.grn-sign-bottom span {
+  flex: 1;
+  text-align: center;
+}
+
+.grn-sign-bottom span:first-child {
+  text-align: left;
+}
+
+.grn-sign-bottom span:last-child {
+  text-align: right;
+}
+
+.tr-preview-wrap .grn-receipt-doc {
+  width: max-content;
+  min-width: 100%;
+}
+
+@media print {
+  .tr-page--grn-receipt #trPrintHeader {
+    display: none !important;
+  }
+
+  .tr-page--grn-receipt .tr-preview-wrap {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .grn-receipt-main,
+  .grn-receipt-signatures {
+    border: 2px solid #000 !important;
+    break-inside: avoid;
+  }
+
+  .grn-head-rule {
+    border-bottom-width: 3px !important;
+  }
+}
+
+
+/* Date range + text filters (transaction_reports.js) */
+.tr-date-range-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.tr-date-sep {
+  font-size: 11px;
+  color: var(--text-mid);
+}
+.tr-date-input,
+.tr-text-filter-input {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #fff;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.tr-text-filter-input {
+  width: 100%;
+  max-width: 220px;
+}

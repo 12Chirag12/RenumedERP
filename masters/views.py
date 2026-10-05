@@ -678,7 +678,7 @@ def customer_view(request):
         if not has_step1_errors and product_errors:
             start_step = 2          # jump straight to step 2
 
-        # ── FIX 5: sanitise raw POST JSON before template injection ──
+        # ── FIX 5: sanitise and deduplicate raw POST JSON before template injection ──
         raw = request.POST.get('products_json', '[]')
         try:
             parsed = _json.loads(raw)
@@ -686,7 +686,18 @@ def customer_view(request):
                 parsed = []
         except (ValueError, TypeError):
             parsed = []
-        existing_prods_json = _json.dumps(parsed)
+
+        seen_pids = set()
+        deduped_parsed = []
+        for r in parsed:
+            if isinstance(r, dict):
+                pid = r.get('prod_id')
+                if pid and pid not in seen_pids:
+                    seen_pids.add(pid)
+                    deduped_parsed.append(r)
+                elif not pid:
+                    deduped_parsed.append(r)
+        existing_prods_json = _json.dumps(deduped_parsed)
 
     else:
         form = CustomerForm(instance=instance)

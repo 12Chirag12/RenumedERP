@@ -46,6 +46,11 @@ function initPage_customer() {
 
   if (!form) return;
 
+  // Single-shot initialization guard: prevents double-invocation from
+  // base_partial.html inline script + base.js htmx:afterSwap on every swap.
+  if (form.dataset.customerInitialized === 'true') return;
+  form.dataset.customerInitialized = 'true';
+
   /* ── Load page data injected by Django ───────────────────── */
   var allProducts  = [];
   var existingRows = [];
@@ -93,7 +98,7 @@ function initPage_customer() {
      STEP NAVIGATION
   ════════════════════════════════════════════════════════ */
 
-  /* Same idea as BOM: Save stays disabled until the grid has something to persist.
+  /* Save stays disabled until the grid has something to persist.
      Stricter than row count alone: at least one row must have a product selected. */
   function hasAtLeastOneProductSelected() {
     if (!prodGridBody) return false;
@@ -251,8 +256,9 @@ function initPage_customer() {
   function buildProductOptions(selectedId) {
     var html = '<option value="">— Select Product —</option>';
     allProducts.forEach(function (p) {
+      var isSel = Number(p.prod_id) === Number(selectedId);
       html += '<option value="' + p.prod_id + '"'
-            + (p.prod_id === selectedId ? ' selected' : '')
+            + (isSel ? ' selected' : '')
             + '>' + escHtml(p.prod_name) + '</option>';
     });
     return html;
@@ -262,6 +268,57 @@ function initPage_customer() {
     return String(s)
       .replace(/&/g,'&amp;').replace(/</g,'&lt;')
       .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* Immediate sync between the rendered grid and hidden input */
+  function syncHiddenFromDom() {
+    if (!prodJsonHidden || !prodGridBody) return;
+    var rows = prodGridBody.querySelectorAll('tr.prod-grid-row');
+    var list = [];
+    var seen = {};
+    for (var i = 0; i < rows.length; i++) {
+      var prodSel = rows[i].querySelector('.prod-select');
+      var licBtn  = rows[i].querySelector('.lic-toggle');
+      var licDet  = rows[i].querySelector('.lic-details');
+      var batchEl = rows[i].querySelector('.batch-abbr');
+
+      var prodId  = prodSel ? parseInt(prodSel.value, 10) : 0;
+      if (!prodId || seen[prodId]) continue;
+      seen[prodId] = true;
+
+      list.push({
+        prod_id:         prodId,
+        adv_license:     licBtn ? (licBtn.dataset.val || 'N') : 'N',
+        license_details: licDet ? licDet.value.trim() : '',
+        batch_abbr:      batchEl ? batchEl.value.trim().toUpperCase() : '',
+      });
+    }
+    prodJsonHidden.value = JSON.stringify(list);
+  }
+
+  function checkDuplicateProducts() {
+    clearGridError();
+    document.querySelectorAll('.cell-err-msg').forEach(function (e) { e.remove(); });
+    document.querySelectorAll('.cell-error').forEach(function (e) { e.classList.remove('cell-error'); });
+
+    if (!prodGridBody) return true;
+    var rows = prodGridBody.querySelectorAll('tr.prod-grid-row');
+    var seen = {};
+    var hasDuplicate = false;
+
+    for (var i = 0; i < rows.length; i++) {
+      var sel = rows[i].querySelector('.prod-select');
+      var pid = sel ? parseInt(sel.value, 10) : 0;
+      if (!pid) continue;
+      if (seen[pid]) {
+        var name = (sel.selectedIndex >= 0 && sel.options[sel.selectedIndex]) ? sel.options[sel.selectedIndex].text : 'Product';
+        showGridError('Row ' + (i + 1) + ': "' + name + '" is already added.');
+        addCellErr(sel, 'Duplicate');
+        hasDuplicate = true;
+      }
+      seen[pid] = true;
+    }
+    return !hasDuplicate;
   }
 
   window.addProductRow = function (rowData) {
@@ -299,11 +356,33 @@ function initPage_customer() {
     prodGridBody.appendChild(tr);
     if (typeof initSearchableDropdowns === 'function') initSearchableDropdowns(tr);
     updateGridEmpty();
+
     var prodSel = tr.querySelector('.prod-select');
     if (prodSel) {
-      prodSel.addEventListener('change', updateSaveState);
+      prodSel.addEventListener('change', function () {
+        updateSaveState();
+        checkDuplicateProducts();
+        syncHiddenFromDom();
+      });
     }
+
+    var batchInput = tr.querySelector('.batch-abbr');
+    if (batchInput) {
+      batchInput.addEventListener('input', function () {
+        var pos = this.selectionStart;
+        this.value = this.value.toUpperCase();
+        if (pos !== null) this.setSelectionRange(pos, pos);
+        syncHiddenFromDom();
+      });
+    }
+
+    var licDetailsInput = tr.querySelector('.lic-details');
+    if (licDetailsInput) {
+      licDetailsInput.addEventListener('input', syncHiddenFromDom);
+    }
+
     updateSaveState();
+    syncHiddenFromDom();
   };
 
   window.toggleAdvLic = function (btn) {
@@ -316,6 +395,7 @@ function initPage_customer() {
       if (next === 'Y') { licDet.removeAttribute('disabled'); licDet.focus(); }
       else              { licDet.setAttribute('disabled', 'disabled'); licDet.value = ''; }
     }
+    syncHiddenFromDom();
   };
 
   window.removeProductRow = function (btn) {
@@ -327,6 +407,8 @@ function initPage_customer() {
     }
     updateGridEmpty();
     updateSaveState();
+    checkDuplicateProducts();
+    syncHiddenFromDom();
   };
 
   function updateGridEmpty() {
@@ -374,7 +456,7 @@ function initPage_customer() {
       if (!prodId) {
         addCellErr(prodSel, 'Select a product'); valid = false;
       } else if (seenIds[prodId]) {
-        var name = prodSel.options[prodSel.selectedIndex].text;
+        var name = (prodSel.selectedIndex >= 0 && prodSel.options[prodSel.selectedIndex]) ? prodSel.options[prodSel.selectedIndex].text : 'Product';
         showGridError('Row ' + n + ': "' + name + '" is already added.');
         addCellErr(prodSel, 'Duplicate'); valid = false;
       }
@@ -388,7 +470,6 @@ function initPage_customer() {
         addCellErr(batchEl, 'Exactly 3 characters required'); valid = false;
       }
 
-      // Always collect rows; return null at end if any error found.
       result.push({
         prod_id: prodId, adv_license: advLic,
         license_details: licText, batch_abbr: batch,
@@ -444,29 +525,14 @@ function initPage_customer() {
     }
   });
 
-  function isThisFormHtmxRequest(e) {
-    // htmx events reliably expose the issuing element as e.detail.elt
-    var elt = e && e.detail && e.detail.elt;
-    if (!elt) return false;
-    if (elt === form) return true;
-    // Often the issuing element is the submit button, not the form.
-    if (typeof elt.closest === 'function') {
-      return elt.closest('form') === form;
-    }
-    return false;
-  }
-
-  // HTMX boosted submit: ensure hidden field updated BEFORE HTMX serializes the form.
-  document.body.addEventListener('htmx:configRequest', function (e) {
-    if (!isThisFormHtmxRequest(e)) return;
+  // HTMX boosted submit: attach to form so listeners are scoped to this form lifecycle
+  form.addEventListener('htmx:configRequest', function (e) {
     if (!prepareProductsJsonForSubmit()) {
       e.preventDefault(); // cancel HTMX request
     }
   });
 
-  // Extra safety: some HTMX flows may bypass configRequest ordering.
-  document.body.addEventListener('htmx:beforeRequest', function (e) {
-    if (!isThisFormHtmxRequest(e)) return;
+  form.addEventListener('htmx:beforeRequest', function (e) {
     if (!prepareProductsJsonForSubmit()) {
       e.preventDefault(); // cancel HTMX request
     }
@@ -497,30 +563,29 @@ function initPage_customer() {
      INIT — populate grid on edit, set initial step
   ════════════════════════════════════════════════════════ */
 
-  if (existingRows && existingRows.length > 0) {
-    existingRows.forEach(function (r) { addProductRow(r); });
+  // Clear any existing rows to prevent duplicate rendering
+  if (prodGridBody) {
+    if (typeof destroySearchableDropdownsIn === 'function') destroySearchableDropdownsIn(prodGridBody);
+    prodGridBody.innerHTML = '';
   }
-  if (prodGridBody && typeof initSearchableDropdowns === 'function') {
-    initSearchableDropdowns(prodGridBody);
+
+  // Populate grid deduplicating by prod_id
+  if (existingRows && existingRows.length > 0) {
+    var loadedProdIds = {};
+    existingRows.forEach(function (r) {
+      var pid = r && r.prod_id ? String(r.prod_id) : '';
+      if (pid && loadedProdIds[pid]) {
+        return; // Guard against populating duplicate rows
+      }
+      if (pid) loadedProdIds[pid] = true;
+      addProductRow(r);
+    });
   }
   updateGridEmpty();
   updateSaveState();
+  syncHiddenFromDom();
 
-  // Keep hidden field in sync on initial render too.
-  // This avoids submitting a broken/old value when the user doesn't touch the grid.
-  if (prodJsonHidden) {
-    try {
-      prodJsonHidden.value = JSON.stringify(existingRows || []);
-    } catch (e) {
-      prodJsonHidden.value = '[]';
-    }
-  }
-
-  /* ── FIX 3: Auto-advance to step 2 when only product errors exist ──
-     The server computes start_step = 2 when form.errors has product-grid
-     errors but no step-1 field errors.  We jump directly (bypassing
-     goToProducts → validateStep1) because the server already verified
-     that step 1 is clean. */
+  /* ── FIX 3: Auto-advance to step 2 when only product errors exist ── */
   var startStep = Number(pageData.startStep) || 1;
   if (startStep === 2) {
     step1.style.display = 'none';
@@ -533,20 +598,12 @@ function initPage_customer() {
   updateSaveState();
 }
 
-// Do NOT call initPage_customer() here.
-// base.js DOMContentLoaded calls it on full page loads;
-// base_partial.html inline script calls it on every HTMX swap.
-// Calling it here as well causes double-init → duplicate grid rows
-// → second submit listener sees duplicates → blocks Update.
 window.initPage_customer = initPage_customer;
 
 /**
  * Global safety net:
- * Some flows can submit the customer form before initPage_customer() runs
- * (or if it errors mid-way). This hook ensures products_json is always
- * derived from the current grid DOM right before request submission.
- *
- * It is intentionally lightweight and independent of the page init state.
+ * Ensures products_json is always derived from the current grid DOM right before
+ * request submission without duplicate entries.
  */
 (function registerCustomerProductsSubmitHook() {
   if (window.__custProductsSubmitHookRegistered) return;
@@ -557,6 +614,7 @@ window.initPage_customer = initPage_customer;
     if (!body) return null;
     var rows = body.querySelectorAll('tr.prod-grid-row');
     var result = [];
+    var seen = {};
 
     for (var i = 0; i < rows.length; i++) {
       var prodSel = rows[i].querySelector('.prod-select');
@@ -569,10 +627,8 @@ window.initPage_customer = initPage_customer;
       var licText = licDet ? licDet.value.trim() : '';
       var batch   = batchEl ? batchEl.value.trim().toUpperCase() : '';
 
-      // Only include rows that have at least a selected product;
-      // validation is handled by the main page init, but this prevents
-      // submitting a completely empty payload when rows exist.
-      if (!prodId) continue;
+      if (!prodId || seen[prodId]) continue;
+      seen[prodId] = true;
 
       result.push({
         prod_id: prodId,
@@ -600,7 +656,6 @@ window.initPage_customer = initPage_customer;
   }, true);
 
   // HTMX: update before request building. Works when elt is button or form.
-  // Use document (not document.body) because this file is loaded in <head>.
   document.addEventListener('htmx:configRequest', function (e) {
     var elt = e && e.detail && e.detail.elt;
     if (!elt || typeof elt.closest !== 'function') return;

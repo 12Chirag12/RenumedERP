@@ -230,6 +230,7 @@
             <th>Type</th>
             <th>Customer</th>
             <th>Supplier</th>
+            <th>Product</th>
             <th>Invoice</th>
             <th>Document</th>
             <th class="col-actions">Actions</th>
@@ -245,6 +246,7 @@
             <td><span class="type-badge">{{ r.grn_category.prod_cat_id }}</span></td>
             <td>{{ r.customer.cust_name }}</td>
             <td>{{ r.supplier.supl_name }}</td>
+            <td>{{ r.products_display|default:"—" }}</td>
             <td>{{ r.inv_no }}</td>
             <td class="col-doc">
               {% if r.documents %}
@@ -261,7 +263,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="10" class="empty-row">No inward entries yet.</td>
+            <td colspan="11" class="empty-row">No inward entries yet.</td>
           </tr>
           {% endfor %}
         </tbody>

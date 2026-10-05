@@ -112,6 +112,8 @@ class TrnInwHed(models.Model):
         db_column='transport_id',
         related_name='inwards',
         verbose_name='Transporter',
+        blank=True,
+        null=True,
     )
 
     vehicle_no = models.CharField(
@@ -187,6 +189,42 @@ class TrnInwHed(models.Model):
             self.working_year = fy.fy_display
         self.full_clean()
         super().save(*args, **kwargs)
+
+    @property
+    def products_display(self):
+        """
+        Returns a comma-separated list of items and products associated with this inward.
+        Combines item lines (TrnInwDtl1) item names and batch lines (TrnInwDtl2) product/item names.
+        """
+        if not self.pk:
+            return ""
+
+        names = []
+        seen = set()
+
+        if hasattr(self, 'lines'):
+            for line in self.lines.all():
+                if line.item and line.item.item_name:
+                    name = line.item.item_name.strip()
+                    if name and name not in seen:
+                        seen.add(name)
+                        names.append(name)
+
+        if hasattr(self, 'batch_lines'):
+            for b in self.batch_lines.all():
+                if b.product and b.product.prod_name:
+                    name = b.product.prod_name.strip()
+                    if name and name not in seen:
+                        seen.add(name)
+                        names.append(name)
+                elif b.item and b.item.item_name:
+                    name = b.item.item_name.strip()
+                    if name and name not in seen:
+                        seen.add(name)
+                        names.append(name)
+
+        return ", ".join(names)
+
 
 
 class TrnInwDtl1(models.Model):

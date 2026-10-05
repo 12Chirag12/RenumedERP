@@ -121,12 +121,19 @@ def get_inward_edit_instance(pk):
 
 
 def _inward_recent_queryset():
+    lines_qs = TrnInwDtl1.objects.select_related('item').order_by('dtl1_id')
+    batches_qs = TrnInwDtl2.objects.select_related('product', 'item').order_by('dtl2_id')
     return (
         TrnInwHed.objects.select_related(
             'customer', 'supplier', 'grn_category', 'transporter',
         )
+        .prefetch_related(
+            Prefetch('lines', queryset=lines_qs),
+            Prefetch('batch_lines', queryset=batches_qs),
+        )
         .order_by('-inward_id')[:40]
     )
+
 
 
 def _inward_master_payload():
@@ -371,6 +378,10 @@ def sales_order_view(request):
     edit_pk = request.GET.get('edit_pk') or request.POST.get('edit_pk')
     instance = get_sales_order_edit_instance(edit_pk) if edit_pk else None
     start_step = 1
+    # Keep the original JSON available when a line-level validation error is
+    # returned.  A bound field normally retains it, but this explicit copy is
+    # a safe recovery source for the client-side product wizard.
+    recovery_lines_json = request.POST.get('lines_json', '') if request.method == 'POST' else ''
 
     if request.method == 'POST':
         form = SalesOrderForm(request.POST, request.FILES, instance=instance)
@@ -421,6 +432,7 @@ def sales_order_view(request):
         'start_step': start_step,
         'sales_order_ajax_urls': _sales_order_ajax_urls(),
         'sales_order_page_data': sales_order_page_data,
+        'sales_order_recovery_lines_json': recovery_lines_json,
         'products': _sales_order_products_payload(),
     }
     return render(request, 'transactions/sales_order_form.html', ctx)
