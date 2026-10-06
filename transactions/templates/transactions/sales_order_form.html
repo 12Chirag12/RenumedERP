@@ -244,7 +244,7 @@
             <td>{{ r.order_id }}</td>
             <td>{{ r.ord_rec_dt|date:"Y-m-d" }}</td>
             <td><strong>{{ r.cust_ord_id }}</strong></td>
-            <td>{{ r.customer.cust_name }}</td>
+            <td title="{{ r.customer.cust_name }}">{{ r.customer.short_name|default:r.customer.cust_name }}</td>
             <td>{{ r.taxable_val }}</td>
             <td>{{ r.total_amt }}</td>
             <td class="col-doc">

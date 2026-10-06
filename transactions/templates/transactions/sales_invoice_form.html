@@ -1,4 +1,4 @@
-﻿{% extends base_template %}
+{% extends base_template %}
 {% block title %}Sales invoice — PharmaERP{% endblock %}
 
 {% block content %}
@@ -209,7 +209,7 @@
             <td>{{ r.invoice_id }}</td>
             <td>{{ r.invoice_dt|date:"Y-m-d" }}</td>
             <td><strong>{{ r.invoice_no }}</strong></td>
-            <td>{{ r.customer.cust_name }}</td>
+            <td title="{{ r.customer.cust_name }}">{{ r.customer.short_name|default:r.customer.cust_name }}</td>
             <td>{{ r.taxable_val }}</td>
             <td>{{ r.total_amt }}</td>
             <td class="col-actions">

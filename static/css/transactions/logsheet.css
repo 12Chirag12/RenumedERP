@@ -322,10 +322,135 @@
   background: #eef2ff;
 }
 
-/* Grid: equal columns (count must match thead in log_sheet_form.html) */
+/* Grid: responsive layout with internal scroll */
+.log-sheet-page .ls-grid-section,
+.log-sheet-page .ls-grid-panel,
+.log-sheet-page .ls-grid-fields {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* ─── Log Sheet search/filter toolbar: compact, space-efficient, no overflow ─── */
+.log-sheet-page .ls-grid-section .record-filter-inline-host {
+  padding: 8px 12px 6px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.log-sheet-page .ls-grid-section .record-filter-toolbar--standalone {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+}
+
+.log-sheet-page .ls-grid-section .record-filter-toolbar--standalone .record-filter-search {
+  width: 220px;
+  min-width: 160px;
+  max-width: 240px;
+  flex: 0 1 220px;
+}
+
+.log-sheet-page .ls-grid-section .record-filter-toolbar--standalone .record-filter-input {
+  width: 100%;
+  height: 30px;
+  font-size: 11.5px;
+}
+
+.log-sheet-page .ls-grid-section .record-filter-toolbar--standalone .record-filter-column {
+  width: 110px;
+  min-width: 94px;
+  height: 30px;
+  font-size: 11px;
+  flex: 0 0 auto;
+}
+
+.log-sheet-page .ls-grid-section .record-filter-toolbar--standalone .record-filter-value {
+  width: 120px;
+  min-width: 104px;
+  height: 30px;
+  font-size: 11px;
+  flex: 0 0 auto;
+}
+
+.log-sheet-page .ls-grid-section .record-filter-toolbar--standalone .record-filter-date-range:not([hidden]) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.log-sheet-page .ls-grid-section .record-filter-toolbar--standalone .record-filter-date {
+  width: 120px;
+  height: 30px;
+  font-size: 11px;
+}
+
+.log-sheet-page .ls-grid-section .record-filter-toolbar--standalone .record-filter-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-mid);
+  white-space: nowrap;
+  flex: 0 0 auto;
+  padding: 0 4px;
+  min-width: auto;
+}
+
+.log-sheet-page .ls-pending-section .record-filter-inline-host {
+  padding: 6px 8px 4px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.log-sheet-page .ls-table-wrap--grid {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.log-sheet-page .ls-table--grid {
+  table-layout: auto;
+  width: 100%;
+  min-width: 900px;
+}
+
 .log-sheet-page .ls-table--grid th,
 .log-sheet-page .ls-table--grid td {
-  width: calc(100% / 7);
+  white-space: nowrap;
+}
+
+.log-sheet-page .ls-table--grid th:nth-child(3),
+.log-sheet-page .ls-table--grid td:nth-child(3) {
+  white-space: normal;
+  min-width: 150px;
+}
+
+.log-sheet-page .ls-table--grid th:nth-child(4),
+.log-sheet-page .ls-table--grid td:nth-child(4) {
+  min-width: 130px;
+}
+
+.log-sheet-page .ls-table--grid th.col-actions,
+.log-sheet-page .ls-table--grid td.col-actions {
+  width: 84px;
+  min-width: 84px;
+  max-width: 84px;
+  text-align: center;
+  padding: 4px 6px;
+  white-space: nowrap;
+}
+
+.log-sheet-page .ls-table--grid td.col-actions .btn-action {
+  margin: 0 2px;
 }
 
 .log-sheet-page .ls-muted {

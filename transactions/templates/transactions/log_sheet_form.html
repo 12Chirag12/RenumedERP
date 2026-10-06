@@ -6,6 +6,7 @@
 
   {{ logsheet_ajax_urls|json_script:"lsAjaxUrls" }}
   {{ grid_defaults|json_script:"lsGridDefaults" }}
+  {{ edit_payload|json_script:"lsEditPayload" }}
 
   <div class="cu-panel">
     <div class="cu-card-header">
@@ -21,8 +22,9 @@
     <div class="cu-card-body">
       {% include "includes/form_errors_alert.html" with form=form %}
 
-      <form method="post" action="{% url 'transactions:log_sheet' %}" id="lsForm" novalidate>
+      <form method="post" action="{% url 'transactions:log_sheet' %}{% if edit_instance %}?edit_pk={{ edit_instance.pk }}{% endif %}" id="lsForm" novalidate>
         {% csrf_token %}
+        {% if edit_instance %}<input type="hidden" name="edit_pk" value="{{ edit_instance.pk }}">{% endif %}
 
         <div class="ls-top-row">
           <div class="ls-fields-col">
@@ -119,9 +121,11 @@
             <div class="cu-actions ls-actions ls-actions--after-fields">
               <div aria-hidden="true"></div>
               <button type="submit" class="btn-save btn-save-main" id="lsSaveBtn">
-                <i class="bi bi-check2-circle"></i> Save log sheet
+                <i class="bi bi-check2-circle"></i> {% if edit_instance %}Update log sheet{% else %}Save log sheet{% endif %}
               </button>
-              <a href="{% url 'transactions:log_sheet' %}" class="btn-cancel" id="lsClear"><i class="bi bi-x-lg"></i> Clear</a>
+              <a href="{% url 'transactions:log_sheet' %}" class="btn-cancel" id="lsClear">
+                <i class="bi bi-x-lg"></i> {% if edit_instance %}Cancel{% else %}Clear{% endif %}
+              </a>
             </div>
           </div>
 
@@ -187,10 +191,11 @@
                         <th>MFG → EXP</th>
                         <th>Blending date</th>
                         <th>Customer</th>
+                        <th class="col-actions">Actions</th>
                       </tr>
                     </thead>
                     <tbody id="lsGridBody">
-                      <tr><td colspan="8" class="ls-muted">Set a date range and choose Show data.</td></tr>
+                      <tr><td colspan="9" class="ls-muted">Set a date range and choose Show data.</td></tr>
                     </tbody>
                   </table>
                 </div>

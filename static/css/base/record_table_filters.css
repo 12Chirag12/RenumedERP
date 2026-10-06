@@ -17,6 +17,7 @@
   grid-template-columns: minmax(118px, 1fr) minmax(94px, 116px) minmax(104px, 132px) minmax(52px, max-content);
   align-items: center;
   width: 100%;
+  box-sizing: border-box;
   margin: 0 0 8px;
   gap: 6px;
 }
@@ -24,6 +25,7 @@
 .record-filter-inline-host {
   width: 100%;
   min-width: 0;
+  box-sizing: border-box;
   container-type: inline-size;
 }
 

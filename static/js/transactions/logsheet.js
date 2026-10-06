@@ -27,6 +27,10 @@
 
     var urls = readJsonScript('lsAjaxUrls');
     var gridDef = readJsonScript('lsGridDefaults') || {};
+    var editPayload = readJsonScript('lsEditPayload');
+    var isEdit = !!(editPayload && editPayload.logsheet_id);
+    var editBootstrapDone = false;
+
     var customer = document.getElementById('lsCustomer');
     var product = document.getElementById('lsProduct');
     var pendingBody = document.getElementById('lsPendingBody');
@@ -166,7 +170,9 @@
         o.textContent = r.prod_name;
         product.appendChild(o);
       });
-      if (cur && [].some.call(product.options, function (op) { return op.value === cur; })) {
+      if (isEdit && editPayload.product_id && !editBootstrapDone) {
+        product.value = String(editPayload.product_id);
+      } else if (cur && [].some.call(product.options, function (op) { return op.value === cur; })) {
         product.value = cur;
       }
       if (window.jQuery && product.classList.contains('searchable-dropdown')) {
@@ -179,7 +185,7 @@
 
     function loadCustomerProducts() {
       lastProductMeta = null;
-      clearBatchPick();
+      if (!isEdit || editBootstrapDone) clearBatchPick();
       tabletLayer = '';
       if (layerDisp) layerDisp.value = '';
       if (!customer || !customer.value) {
@@ -188,12 +194,21 @@
         return;
       }
       var u = urls.customerProducts + '?cust_id=' + encodeURIComponent(customer.value);
+      if (isEdit && editPayload.product_id) {
+        u += '&include_prod_id=' + encodeURIComponent(editPayload.product_id);
+      }
       fetch(u, { credentials: 'same-origin' })
         .then(function (r) { return r.json(); })
         .then(function (data) {
           var prods = data.products || [];
           setProductOptions(prods);
-          if (pendingBody) {
+          if (isEdit && editPayload.product_id && !editBootstrapDone) {
+            product.value = String(editPayload.product_id);
+            if (window.jQuery && product.classList.contains('searchable-dropdown')) {
+              try { window.jQuery(product).val(String(editPayload.product_id)).trigger('change.select2'); } catch (e) {}
+            }
+            loadProductMetaAndPending();
+          } else if (pendingBody) {
             pendingBody.innerHTML = prods.length
               ? '<tr><td colspan="3" class="ls-muted">Select a product…</td></tr>'
               : '<tr><td colspan="3" class="ls-muted">No products with pending batches for this customer.</td></tr>';
@@ -206,7 +221,7 @@
 
     function loadProductMetaAndPending() {
       lastProductMeta = null;
-      clearBatchPick();
+      if (!isEdit || editBootstrapDone) clearBatchPick();
       tabletLayer = '';
       if (layerDisp) layerDisp.value = '';
       if (!product || !product.value) {
@@ -238,6 +253,9 @@
       }
       var u2 = urls.pendingBatches + '?cust_id=' + encodeURIComponent(customer.value)
         + '&prod_id=' + encodeURIComponent(product.value);
+      if (isEdit && editPayload.batch_dtl_id) {
+        u2 += '&include_dtl_id=' + encodeURIComponent(editPayload.batch_dtl_id);
+      }
       fetch(u2, { credentials: 'same-origin' })
         .then(function (r) { return r.json(); })
         .then(function (data) {
@@ -252,11 +270,24 @@
           data.batches.forEach(function (b) {
             var tr = document.createElement('tr');
             tr.className = 'ls-pending-row';
+            if (isEdit && String(b.dtl_id) === String(editPayload.batch_dtl_id)) {
+              tr.classList.add('ls-pending-row--active');
+            }
             tr.innerHTML = '<td>' + esc(b.batch_no) + '</td><td>' + esc(b.mfg_dt) + '</td><td>' + esc(b.exp_dt) + '</td>';
             tr.addEventListener('click', function () {
               selectPendingRow(b, tr);
             });
             pendingBody.appendChild(tr);
+
+            if (isEdit && String(b.dtl_id) === String(editPayload.batch_dtl_id) && !editBootstrapDone) {
+              selectPendingRow(b, tr);
+              if (editPayload.layer_slot && layerSlotInput) {
+                layerSlotInput.value = editPayload.layer_slot;
+                if (colourSelect) colourSelect.value = editPayload.layer_slot;
+                updateDoubleBatchSizeDisplay();
+              }
+              editBootstrapDone = true;
+            }
           });
         })
         .catch(function () {
@@ -287,18 +318,22 @@
         var o1 = document.createElement('option');
         o1.value = '1';
         o1.textContent = c1;
-        if (logged.indexOf('1') >= 0) o1.disabled = true;
+        if (logged.indexOf('1') >= 0 && (!isEdit || editPayload.layer_slot !== '1')) o1.disabled = true;
         colourSelect.appendChild(o1);
         var o2 = document.createElement('option');
         o2.value = '2';
         o2.textContent = c2;
-        if (logged.indexOf('2') >= 0) o2.disabled = true;
+        if (logged.indexOf('2') >= 0 && (!isEdit || editPayload.layer_slot !== '2')) o2.disabled = true;
         colourSelect.appendChild(o2);
         colourSelect.disabled = false;
-        var p1d = logged.indexOf('1') >= 0;
-        var p2d = logged.indexOf('2') >= 0;
+
+        var p1d = logged.indexOf('1') >= 0 && (!isEdit || editPayload.layer_slot !== '1');
+        var p2d = logged.indexOf('2') >= 0 && (!isEdit || editPayload.layer_slot !== '2');
         if (layerSlotInput) {
-          if (!p1d && p2d) {
+          if (isEdit && editPayload.layer_slot) {
+            colourSelect.value = editPayload.layer_slot;
+            layerSlotInput.value = editPayload.layer_slot;
+          } else if (!p1d && p2d) {
             colourSelect.value = '1';
             layerSlotInput.value = '1';
           } else if (p1d && !p2d) {
@@ -345,6 +380,7 @@
         gridErr.textContent = 'Choose start and end dates.';
         return;
       }
+      var editBase = (window.location.pathname || '').split('?')[0];
       var u = urls.listRows + '?start=' + encodeURIComponent(s) + '&end=' + encodeURIComponent(e);
       fetch(u, { credentials: 'same-origin' })
         .then(function (r) {
@@ -354,23 +390,31 @@
         .then(function (data) {
           gridBody.innerHTML = '';
           if (!data.rows || !data.rows.length) {
-            gridBody.innerHTML = '<tr><td colspan="8" class="ls-muted">No log sheets in this range.</td></tr>';
+            gridBody.innerHTML = '<tr><td colspan="9" class="ls-muted">No log sheets in this range.</td></tr>';
             return;
           }
           data.rows.forEach(function (row) {
             var tr = document.createElement('tr');
+            if (isEdit && String(row.logsheet_id) === String(editPayload.logsheet_id)) {
+              tr.classList.add('row-editing');
+            }
+            var editHref = editBase + '?edit_pk=' + encodeURIComponent(row.logsheet_id);
             tr.innerHTML = '<td>' + esc(row.section) + '</td><td>' + esc(row.gran_shift) + '</td><td>'
               + esc(row.product) + '</td><td>'
               + esc(row.batch_summary) + '</td><td>'
               + esc(row.layer_slot) + '</td><td>'
               + esc(row.mfg_exp) + '</td><td>'
               + esc(row.blend_dt) + '</td><td>'
-              + esc(row.customer) + '</td>';
+              + esc(row.customer) + '</td>'
+              + '<td class="col-actions">'
+              + '<a href="' + esc(editHref) + '" class="btn-action btn-edit" title="Edit"><i class="bi bi-pencil"></i></a>'
+              + '<button type="button" class="btn-action btn-delete" data-delete-url="' + esc(row.delete_url) + '" data-delete-name="Log sheet #' + esc(row.logsheet_id) + '" onclick="openDeleteModal(this.dataset.deleteUrl, this.dataset.deleteName)"><i class="bi bi-trash"></i></button>'
+              + '</td>';
             gridBody.appendChild(tr);
           });
         })
         .catch(function (err) {
-          gridBody.innerHTML = '<tr><td colspan="8" class="ls-muted">—</td></tr>';
+          gridBody.innerHTML = '<tr><td colspan="9" class="ls-muted">—</td></tr>';
           gridErr.textContent = err.message || 'Could not load data.';
         });
     }
@@ -401,8 +445,60 @@
     var showGrid = document.getElementById('lsShowGrid');
     if (showGrid) showGrid.addEventListener('click', loadGrid);
 
-    if (customer && customer.value) loadCustomerProducts();
-    if (product && product.value && customer && customer.value) loadProductMetaAndPending();
+    // Initial hydration for edit mode
+    if (isEdit) {
+      if (batchDtl) batchDtl.value = String(editPayload.batch_dtl_id || '');
+      if (batchNoDisp) batchNoDisp.value = editPayload.batch_no || '';
+      loadDateValues(editPayload.mfg_dt || '', editPayload.exp_dt || '');
+      if (ordDisp) ordDisp.value = editPayload.ord_display || '';
+      if (layerDisp) layerDisp.value = editPayload.tablet_layer || '';
+      if (layerSlotInput) layerSlotInput.value = editPayload.layer_slot || 'S';
+
+      if (editPayload.tablet_layer === 'Double') {
+        if (colourSelect) {
+          colourSelect.innerHTML = '';
+          var o0 = document.createElement('option');
+          o0.value = '';
+          o0.textContent = '— Select colour —';
+          colourSelect.appendChild(o0);
+          var c1 = editPayload.first_color || 'First colour';
+          var c2 = editPayload.second_color || 'Second colour';
+          var o1 = document.createElement('option');
+          o1.value = '1';
+          o1.textContent = c1;
+          colourSelect.appendChild(o1);
+          var o2 = document.createElement('option');
+          o2.value = '2';
+          o2.textContent = c2;
+          colourSelect.appendChild(o2);
+          colourSelect.disabled = false;
+          colourSelect.value = editPayload.layer_slot || '1';
+        }
+        if (sizeLDisp) {
+          var slot = editPayload.layer_slot;
+          if (slot === '1') sizeLDisp.value = formatBatchSizeLDecimal(editPayload.split_qty_l_first);
+          else if (slot === '2') sizeLDisp.value = formatBatchSizeLDecimal(editPayload.split_qty_l_second);
+        }
+      } else {
+        if (colourSelect) {
+          colourSelect.innerHTML = '';
+          var os = document.createElement('option');
+          os.value = 'S';
+          os.textContent = editPayload.first_color || '—';
+          colourSelect.appendChild(os);
+          colourSelect.value = 'S';
+          colourSelect.disabled = true;
+        }
+        if (sizeLDisp) sizeLDisp.value = formatBatchSizeLDecimal(editPayload.batch_qty_l);
+      }
+
+      // Load products and grid immediately
+      loadCustomerProducts();
+      loadGrid();
+    } else {
+      if (customer && customer.value) loadCustomerProducts();
+      if (product && product.value && customer && customer.value) loadProductMetaAndPending();
+    }
   }
 
   window.initPage_log_sheet = initPage_log_sheet;

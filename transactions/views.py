@@ -669,8 +669,27 @@ def _logsheet_ajax_urls():
 
 @login_required
 def log_sheet_view(request):
+    edit_pk = request.GET.get('edit_pk') or request.POST.get('edit_pk')
+    instance = (
+        get_object_or_404(
+            TrnLogSheet.objects.select_related(
+                'section',
+                'customer',
+                'product',
+                'product__first_color',
+                'product__second_color',
+                'batch_line',
+                'batch_line__batch',
+                'batch_line__batch__order',
+            ),
+            pk=edit_pk,
+        )
+        if edit_pk
+        else None
+    )
+
     if request.method == 'POST':
-        form = LogSheetForm(request.POST)
+        form = LogSheetForm(request.POST, instance=instance)
         if form.is_valid():
             try:
                 form.save()
@@ -683,29 +702,113 @@ def log_sheet_view(request):
             else:
                 request.session[LOGSHEET_SESSION_SECTION] = form.cleaned_data['section'].pk
                 request.session[LOGSHEET_SESSION_SHIFT] = form.cleaned_data['shift']
-                messages.success(request, 'Log sheet saved successfully.')
+                messages.success(
+                    request,
+                    f'Log sheet {"updated" if instance else "saved"} successfully.',
+                )
                 return redirect('transactions:log_sheet')
     else:
-        initial = {'gran_dt': timezone.localdate()}
-        sid = request.session.get(LOGSHEET_SESSION_SECTION)
-        sh = request.session.get(LOGSHEET_SESSION_SHIFT)
-        if sid:
-            initial['section'] = sid
-        if sh in (LOGSHEET_SHIFT_DAY, LOGSHEET_SHIFT_NIGHT):
-            initial['shift'] = sh
-        form = LogSheetForm(initial=initial)
+        if instance:
+            form = LogSheetForm(instance=instance)
+            form.initial = {**form.get_initial(), **(form.initial or {})}
+        else:
+            initial = {'gran_dt': timezone.localdate()}
+            sid = request.session.get(LOGSHEET_SESSION_SECTION)
+            sh = request.session.get(LOGSHEET_SESSION_SHIFT)
+            if sid:
+                initial['section'] = sid
+            if sh in (LOGSHEET_SHIFT_DAY, LOGSHEET_SHIFT_NIGHT):
+                initial['shift'] = sh
+            form = LogSheetForm(initial=initial)
+
+    edit_payload = None
+    if instance:
+        b = instance.batch_line
+        o = b.batch.order if b and b.batch else None
+        p = instance.product
+        layer = p.tablet_layer or MstProd.LAYER_SINGLE
+        c1 = p.first_color.color_name if p.first_color else ''
+        c2 = p.second_color.color_name if p.second_color else ''
+        n1, n2, l1, l2 = logsheet_split_batch_qty(b.batch_qty_n, b.batch_qty_l) if b else (0, 0, 0, 0)
+        ord_str = f'{o.cust_ord_id} / {o.ord_rec_dt.isoformat()}' if o and o.cust_ord_id and o.ord_rec_dt else (o.cust_ord_id if o else '')
+        edit_payload = {
+            'logsheet_id': instance.logsheet_id,
+            'customer_id': instance.customer_id,
+            'product_id': instance.product_id,
+            'batch_dtl_id': instance.batch_line_id,
+            'batch_no': b.batch_no if b else '',
+            'mfg_dt': b.mfg_dt if b else '',
+            'exp_dt': b.exp_dt if b else '',
+            'batch_qty_l': str(b.batch_qty_l) if b else '',
+            'batch_qty_n': str(b.batch_qty_n) if b else '',
+            'tablet_layer': layer,
+            'layer_slot': instance.layer_slot,
+            'first_color': c1,
+            'second_color': c2,
+            'split_qty_l_first': str(l1),
+            'split_qty_l_second': str(l2),
+            'ord_display': ord_str,
+        }
 
     end_d = timezone.localdate()
-    start_d = end_d - timedelta(days=30)
+    if instance and instance.gran_dt:
+        gd = instance.gran_dt
+        if gd > end_d:
+            start_d = gd - timedelta(days=30)
+            end_d = gd
+        else:
+            start_d = min(end_d - timedelta(days=30), gd - timedelta(days=7))
+    else:
+        start_d = end_d - timedelta(days=30)
+
     return render(
         request,
         'transactions/log_sheet_form.html',
         {
             'form': form,
+            'edit_instance': instance,
+            'edit_payload': edit_payload,
             'logsheet_ajax_urls': _logsheet_ajax_urls(),
             'grid_defaults': {'start': start_d.isoformat(), 'end': end_d.isoformat()},
         },
     )
+
+
+@login_required
+def log_sheet_delete_view(request, pk):
+    if request.method != 'POST':
+        return redirect('transactions:log_sheet')
+    ls = get_object_or_404(
+        TrnLogSheet.objects.select_related(
+            'batch_line', 'batch_line__batch', 'batch_line__batch__product'
+        ),
+        pk=pk,
+    )
+    name = f'Log sheet #{ls.logsheet_id} ({ls.batch_line.batch_no})'
+    try:
+        with transaction.atomic():
+            bl = ls.batch_line
+            ls.delete()
+            pl = bl.batch.product.tablet_layer if (bl.batch and bl.batch.product) else None
+            if pl == MstProd.LAYER_DOUBLE:
+                has_first = TrnLogSheet.objects.filter(
+                    batch_line=bl, layer_slot=LOGSHEET_LAYER_SLOT_FIRST
+                ).exists()
+                has_second = TrnLogSheet.objects.filter(
+                    batch_line=bl, layer_slot=LOGSHEET_LAYER_SLOT_SECOND
+                ).exists()
+                bl.log_sheet_flg = 'Y' if (has_first and has_second) else 'N'
+            else:
+                bl.log_sheet_flg = 'Y' if TrnLogSheet.objects.filter(batch_line=bl).exists() else 'N'
+            bl.save(update_fields=['log_sheet_flg'])
+        messages.success(request, f'"{name}" deleted successfully.')
+    except ProtectedError as e:
+        blocking = ', '.join(sorted({rel.__class__.__name__ for rel in e.protected_objects}))
+        messages.error(
+            request,
+            f'Cannot delete "{name}" — it is referenced by: {blocking}.',
+        )
+    return redirect('transactions:log_sheet')
 
 
 @login_required
@@ -721,8 +824,17 @@ def logsheet_customer_products_ajax(request):
     except ValueError:
         return JsonResponse({'error': 'Invalid cust_id'}, status=400)
 
+    include_prod_id = request.GET.get('include_prod_id')
+    q = models.Q(log_sheet_flg='N')
+    if include_prod_id:
+        try:
+            q |= models.Q(batch__product_id=int(include_prod_id))
+        except ValueError:
+            pass
+
     prod_ids = (
-        TrnBatchDtl.objects.filter(batch__customer_id=cust_id, log_sheet_flg='N')
+        TrnBatchDtl.objects.filter(batch__customer_id=cust_id)
+        .filter(q)
         .values_list('batch__product_id', flat=True)
         .distinct()
     )
@@ -743,13 +855,21 @@ def logsheet_pending_batches_ajax(request):
     except ValueError:
         return JsonResponse({'error': 'Invalid customer or product'}, status=400)
 
+    include_dtl_id = request.GET.get('include_dtl_id')
+    q = models.Q(log_sheet_flg='N')
+    if include_dtl_id:
+        try:
+            q |= models.Q(dtl_id=int(include_dtl_id))
+        except ValueError:
+            pass
+
     out = []
     for ln in (
         TrnBatchDtl.objects.filter(
             batch__customer_id=cust_id,
             batch__product_id=prod_id,
-            log_sheet_flg='N',
         )
+        .filter(q)
         .select_related(
             'batch',
             'batch__order',
@@ -856,6 +976,8 @@ def logsheet_list_ajax(request):
                 batch_summary = f'{b.batch_no} (L {l2} / Nos {n2})'
         else:
             batch_summary = f'{b.batch_no} ({b.batch_qty_n})'
+        delete_url = reverse('transactions:log_sheet_delete', args=[ls.logsheet_id])
+        cust_display = (ls.customer.short_name or ls.customer.cust_name) if ls.customer else '—'
         rows.append({
             'logsheet_id': ls.logsheet_id,
             'section': ls.section.section_name,
@@ -865,7 +987,8 @@ def logsheet_list_ajax(request):
             'layer_slot': slot_lbl,
             'mfg_exp': f'{b.mfg_dt} → {b.exp_dt}',
             'blend_dt': ls.blend_dt.strftime('%d-%m-%Y') if ls.blend_dt else '—',
-            'customer': ls.customer.cust_name,
+            'customer': cust_display,
+            'delete_url': delete_url,
         })
     return JsonResponse({'rows': rows})
 
@@ -1206,10 +1329,12 @@ def rm_dispensing_list_ajax(request):
         slot = hed.batch_line.layer_slot if hed.batch_line else ''
         # Match label logic from rm_dispensing_batches_ajax.
         slot_lbl = 'Single' if slot == LOGSHEET_LAYER_SLOT_SINGLE else (slot or '—')
+        cust_display = (hed.customer.short_name or hed.customer.cust_name) if hed.customer else ''
         rows.append({
             'dispensing_id': hed.dispensing_id,
             'dispensing_dt': hed.dispensing_dt.isoformat() if hed.dispensing_dt else '',
-            'customer': hed.customer.cust_name if hed.customer else '',
+            'customer': cust_display,
+            'customer_name': hed.customer.cust_name if hed.customer else '',
             'product': hed.product.prod_name if hed.product else '',
             'batch_no': batch_no,
             'slot_label': slot_lbl,

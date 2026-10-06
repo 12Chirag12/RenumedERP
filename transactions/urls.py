@@ -77,6 +77,7 @@ urlpatterns = [
         name='batch_allocation_previous_batches_ajax',
     ),
     path('transactions/log-sheet/', views.log_sheet_view, name='log_sheet'),
+    path('transactions/log-sheet/<int:pk>/delete/', views.log_sheet_delete_view, name='log_sheet_delete'),
     path(
         'transactions/ajax/logsheet/customer-products/',
         views.logsheet_customer_products_ajax,

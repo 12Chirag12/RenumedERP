@@ -481,7 +481,7 @@
         tr.innerHTML =
           '<td class="rm-ro">' + esc(r.dispensing_id) + '</td>' +
           '<td>' + esc(r.dispensing_dt || '') + '</td>' +
-          '<td>' + esc(r.customer || '') + '</td>' +
+          '<td title="' + esc(r.customer_name || r.customer || '') + '">' + esc(r.customer || '') + '</td>' +
           '<td>' + esc(r.product || '') + '</td>' +
           '<td>' + esc((r.batch_no || '') + (r.slot_label ? (' [' + r.slot_label + ']') : '')) + '</td>' +
           '<td>' + esc(r.spec || '') + '</td>' +

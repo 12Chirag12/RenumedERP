@@ -244,7 +244,7 @@
             <td>{{ r.inward_dt|date:"Y-m-d" }}</td>
             <td><strong>{{ r.grn_no }}</strong></td>
             <td><span class="type-badge">{{ r.grn_category.prod_cat_id }}</span></td>
-            <td>{{ r.customer.cust_name }}</td>
+            <td title="{{ r.customer.cust_name }}">{{ r.customer.short_name|default:r.customer.cust_name }}</td>
             <td>{{ r.supplier.supl_name }}</td>
             <td>{{ r.products_display|default:"—" }}</td>
             <td>{{ r.inv_no }}</td>

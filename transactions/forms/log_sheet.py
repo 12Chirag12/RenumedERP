@@ -140,6 +140,7 @@ class LogSheetForm(forms.Form):
     )
 
     def __init__(self, *args, **kwargs):
+        self.instance = kwargs.pop('instance', None)
         super().__init__(*args, **kwargs)
         self.fields['customer'].queryset = MstCust.objects.all().order_by('cust_name')
         self.fields['product'].queryset = MstProd.objects.all().order_by('prod_name')
@@ -151,6 +152,26 @@ class LogSheetForm(forms.Form):
         self.fields['section'].queryset = MstSection.objects.filter(section_id__in=gran_ids).order_by(
             'section_name',
         )
+        if self.instance and not self.is_bound:
+            self.initial.update(self.get_initial())
+
+    def get_initial(self):
+        if not self.instance:
+            return {}
+        ls = self.instance
+        b = ls.batch_line
+        return {
+            'gran_dt': ls.gran_dt,
+            'section': ls.section_id,
+            'shift': ls.shift_id,
+            'customer': ls.customer_id,
+            'product': ls.product_id,
+            'batch_dtl_id': ls.batch_line_id,
+            'mfg_dt': b.mfg_dt if b else '',
+            'exp_dt': b.exp_dt if b else '',
+            'layer_slot': ls.layer_slot,
+            'blend_dt': ls.blend_dt,
+        }
 
     def clean_section(self):
         sec = self.cleaned_data.get('section')
@@ -205,7 +226,8 @@ class LogSheetForm(forms.Form):
             self.add_error('batch_dtl_id', 'Batch does not belong to the selected product.')
 
         if line.log_sheet_flg == 'Y':
-            self.add_error('batch_dtl_id', 'This batch is already fully logged.')
+            if not self.instance or self.instance.batch_line_id != line.pk:
+                self.add_error('batch_dtl_id', 'This batch is already fully logged.')
 
         line_prod = line.batch.product
         pl = line_prod.tablet_layer
@@ -213,13 +235,21 @@ class LogSheetForm(forms.Form):
         if pl == MstProd.LAYER_SINGLE:
             if slot != LOGSHEET_LAYER_SLOT_SINGLE:
                 self.add_error('layer_slot', 'Single-layer batches use one log sheet only.')
-            elif TrnLogSheet.objects.filter(batch_line=line, layer_slot=LOGSHEET_LAYER_SLOT_SINGLE).exists():
-                self.add_error('batch_dtl_id', 'This batch is already used on a log sheet.')
+            else:
+                qs_single = TrnLogSheet.objects.filter(batch_line=line, layer_slot=LOGSHEET_LAYER_SLOT_SINGLE)
+                if self.instance:
+                    qs_single = qs_single.exclude(pk=self.instance.pk)
+                if qs_single.exists():
+                    self.add_error('batch_dtl_id', 'This batch is already used on a log sheet.')
         elif pl == MstProd.LAYER_DOUBLE:
             if slot not in (LOGSHEET_LAYER_SLOT_FIRST, LOGSHEET_LAYER_SLOT_SECOND):
                 self.add_error('layer_slot', 'Choose first or second colour for this double-layer batch.')
-            elif TrnLogSheet.objects.filter(batch_line=line, layer_slot=slot).exists():
-                self.add_error('batch_dtl_id', 'This colour is already logged for this batch.')
+            else:
+                qs_double = TrnLogSheet.objects.filter(batch_line=line, layer_slot=slot)
+                if self.instance:
+                    qs_double = qs_double.exclude(pk=self.instance.pk)
+                if qs_double.exists():
+                    self.add_error('batch_dtl_id', 'This colour is already logged for this batch.')
         else:
             self.add_error('batch_dtl_id', 'Unsupported tablet layer on product.')
 
@@ -245,14 +275,23 @@ class LogSheetForm(forms.Form):
                     .select_related('batch__product')
                     .get(pk=line.pk)
                 )
-                if locked.log_sheet_flg != 'N':
-                    raise forms.ValidationError({'batch_dtl_id': 'This batch was just completed by another user.'})
+                if not self.instance or self.instance.batch_line_id != locked.pk:
+                    if locked.log_sheet_flg != 'N':
+                        raise forms.ValidationError({'batch_dtl_id': 'This batch was just completed by another user.'})
+
                 pl = locked.batch.product.tablet_layer
                 if pl == MstProd.LAYER_SINGLE:
-                    if TrnLogSheet.objects.filter(batch_line_id=locked.pk, layer_slot=LOGSHEET_LAYER_SLOT_SINGLE).exists():
+                    qs_chk = TrnLogSheet.objects.filter(batch_line_id=locked.pk, layer_slot=LOGSHEET_LAYER_SLOT_SINGLE)
+                    if self.instance:
+                        qs_chk = qs_chk.exclude(pk=self.instance.pk)
+                    if qs_chk.exists():
                         raise forms.ValidationError({'batch_dtl_id': 'This batch is already used on a log sheet.'})
-                elif TrnLogSheet.objects.filter(batch_line_id=locked.pk, layer_slot=slot).exists():
-                    raise forms.ValidationError({'batch_dtl_id': 'This colour is already logged for this batch.'})
+                else:
+                    qs_chk = TrnLogSheet.objects.filter(batch_line_id=locked.pk, layer_slot=slot)
+                    if self.instance:
+                        qs_chk = qs_chk.exclude(pk=self.instance.pk)
+                    if qs_chk.exists():
+                        raise forms.ValidationError({'batch_dtl_id': 'This colour is already logged for this batch.'})
 
                 mfg = cd['mfg_dt']
                 exp = cd['exp_dt']
@@ -263,18 +302,43 @@ class LogSheetForm(forms.Form):
                 locked.mfg_dt = mfg
                 locked.exp_dt = exp
 
-                row = TrnLogSheet(
-                    section=cd['section'],
-                    gran_dt=cd['gran_dt'],
-                    customer=cd['customer'],
-                    shift_id=cd['shift'],
-                    product=cd['product'],
-                    batch_line=locked,
-                    blend_dt=cd.get('blend_dt'),
-                    dpr_flg='N',
-                    layer_slot=slot,
-                )
-                row.save()
+                if self.instance:
+                    row = self.instance
+                    old_bl_id = row.batch_line_id
+                    row.section = cd['section']
+                    row.gran_dt = cd['gran_dt']
+                    row.customer = cd['customer']
+                    row.shift_id = cd['shift']
+                    row.product = cd['product']
+                    row.batch_line = locked
+                    row.blend_dt = cd.get('blend_dt')
+                    row.layer_slot = slot
+                    row.save()
+                    if old_bl_id and old_bl_id != locked.pk:
+                        old_bl = TrnBatchDtl.objects.filter(pk=old_bl_id).first()
+                        if old_bl:
+                            old_pl = old_bl.batch.product.tablet_layer if old_bl.batch and old_bl.batch.product else None
+                            if old_pl == MstProd.LAYER_DOUBLE:
+                                h1 = TrnLogSheet.objects.filter(batch_line_id=old_bl.pk, layer_slot=LOGSHEET_LAYER_SLOT_FIRST).exists()
+                                h2 = TrnLogSheet.objects.filter(batch_line_id=old_bl.pk, layer_slot=LOGSHEET_LAYER_SLOT_SECOND).exists()
+                                old_bl.log_sheet_flg = 'Y' if (h1 and h2) else 'N'
+                            else:
+                                old_bl.log_sheet_flg = 'Y' if TrnLogSheet.objects.filter(batch_line_id=old_bl.pk).exists() else 'N'
+                            old_bl.save(update_fields=['log_sheet_flg'])
+                else:
+                    row = TrnLogSheet(
+                        section=cd['section'],
+                        gran_dt=cd['gran_dt'],
+                        customer=cd['customer'],
+                        shift_id=cd['shift'],
+                        product=cd['product'],
+                        batch_line=locked,
+                        blend_dt=cd.get('blend_dt'),
+                        dpr_flg='N',
+                        layer_slot=slot,
+                    )
+                    row.save()
+
                 if pl == MstProd.LAYER_SINGLE:
                     locked.log_sheet_flg = 'Y'
                 else:
