@@ -28,6 +28,8 @@ urlpatterns = [
          views.operator_view, name='operator'),
     path('masters/operator/<int:pk>/delete/',
          views.operator_delete_view, name='operator_delete'),
+    path('masters/ajax/operator-sections/',
+         views.operator_sections_ajax, name='operator_sections_ajax'),
 
     path('masters/ajax/section-dept/', 
          views.get_section_department, name='section_dept_ajax'),

@@ -52,7 +52,8 @@
               </div>
               <div class="cu-field">
                 <span class="cu-label" id="operatorSectionDdLabelStatic">Sections <span class="req">*</span></span>
-                <div class="operator-section-dd" id="operatorSectionDd">
+                <div class="operator-section-dd" id="operatorSectionDd"
+                  data-sections-url="{% url 'operator_sections_ajax' %}">
                   <button type="button" class="operator-section-dd__toggle" id="operatorSectionDdToggle"
                     aria-expanded="false" aria-haspopup="listbox" aria-labelledby="operatorSectionDdLabelStatic operatorSectionDdLabel">
                     <span class="operator-section-dd__label" id="operatorSectionDdLabel">— Select sections —</span>
@@ -60,18 +61,22 @@
                   </button>
                   <div class="operator-section-dd__panel" id="operatorSectionDdPanel" hidden role="listbox"
                     aria-multiselectable="true">
-                    <div class="operator-section-dd__scroll">
+                    <div class="operator-section-dd__scroll" id="operatorSectionDdOptions">
                       {% regroup form.operator_section_list by department.dept_name as dept_list %}
-                      {% for dept in dept_list %}
-                        <div class="operator-section-dd__group">{{ dept.grouper }}</div>
-                        {% for s in dept.list %}
-                        <label class="operator-section-dd__row">
-                          <input type="checkbox" name="sections" value="{{ s.section_id }}"
-                            {% if s.section_id in form.selected_section_id_set %}checked{% endif %}>
-                          <span>{{ s.section_name }}</span>
-                        </label>
+                      {% if dept_list %}
+                        {% for dept in dept_list %}
+                          <div class="operator-section-dd__group">{{ dept.grouper }}</div>
+                          {% for s in dept.list %}
+                          <label class="operator-section-dd__row">
+                            <input type="checkbox" name="sections" value="{{ s.section_id }}"
+                              {% if s.section_id in form.selected_section_id_set %}checked{% endif %}>
+                            <span>{{ s.section_name }}</span>
+                          </label>
+                          {% endfor %}
                         {% endfor %}
-                      {% endfor %}
+                      {% else %}
+                        <div class="operator-section-dd__group">No sections available</div>
+                      {% endif %}
                     </div>
                   </div>
                 </div>

@@ -11,8 +11,10 @@ function initPage_operator() {
   var dd = document.getElementById('operatorSectionDd');
   var toggle = document.getElementById('operatorSectionDdToggle');
   var panel = document.getElementById('operatorSectionDdPanel');
+  var options = document.getElementById('operatorSectionDdOptions');
   var labelEl = document.getElementById('operatorSectionDdLabel');
   var pageRoot = document.querySelector('.cu-page.operator-page');
+  var sectionsLoading = false;
 
   function getSectionCheckboxes() {
     if (!dd) return [];
@@ -54,6 +56,57 @@ function initPage_operator() {
     }
   }
 
+  function refreshSections() {
+    var selectedIds = getSectionCheckboxes().filter(function (cb) {
+      return cb.checked;
+    }).map(function (cb) {
+      return cb.value;
+    });
+
+    return fetch(dd.dataset.sectionsUrl, { credentials: 'same-origin' })
+      .then(function (response) {
+        if (!response.ok) throw new Error('Unable to load sections.');
+        return response.json();
+      })
+      .then(function (data) {
+        if (!options || !Array.isArray(data.sections)) {
+          throw new Error('Invalid sections response.');
+        }
+        options.replaceChildren();
+        if (!data.sections.length) {
+          var empty = document.createElement('div');
+          empty.className = 'operator-section-dd__group';
+          empty.textContent = 'No sections available';
+          options.appendChild(empty);
+          return;
+        }
+
+        var currentDepartment = null;
+        data.sections.forEach(function (section) {
+          if (section.department !== currentDepartment) {
+            currentDepartment = section.department;
+            var heading = document.createElement('div');
+            heading.className = 'operator-section-dd__group';
+            heading.textContent = currentDepartment;
+            options.appendChild(heading);
+          }
+          var row = document.createElement('label');
+          row.className = 'operator-section-dd__row';
+          var checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.name = 'sections';
+          checkbox.value = section.id;
+          checkbox.checked = selectedIds.indexOf(String(section.id)) !== -1;
+          checkbox.addEventListener('change', syncSectionDdLabel);
+          var name = document.createElement('span');
+          name.textContent = section.name;
+          row.appendChild(checkbox);
+          row.appendChild(name);
+          options.appendChild(row);
+        });
+      });
+  }
+
   function onDocMouseDown(ev) {
     if (!dd || !panel || panel.hidden) return;
     if (!dd.contains(ev.target)) setPanelOpen(false);
@@ -62,10 +115,31 @@ function initPage_operator() {
   if (toggle && panel) {
     toggle.addEventListener('click', function (e) {
       e.preventDefault();
-      setPanelOpen(panel.hidden);
-    });
-    getSectionCheckboxes().forEach(function (cb) {
-      cb.addEventListener('change', syncSectionDdLabel);
+      if (!panel.hidden) {
+        setPanelOpen(false);
+        return;
+      }
+      if (sectionsLoading) return;
+      sectionsLoading = true;
+      refreshSections()
+        .then(function () {
+          syncSectionDdLabel();
+          setPanelOpen(true);
+        })
+        .catch(function (error) {
+          if (options) {
+            options.textContent = '';
+            var message = document.createElement('div');
+            message.className = 'operator-section-dd__group';
+            message.textContent = 'Unable to load sections. Please try again.';
+            options.appendChild(message);
+          }
+          console.error(error);
+          setPanelOpen(true);
+        })
+        .then(function () {
+          sectionsLoading = false;
+        });
     });
     if (window.__operatorSectionDdMdown) {
       document.removeEventListener('mousedown', window.__operatorSectionDdMdown);

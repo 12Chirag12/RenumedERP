@@ -212,6 +212,26 @@ def operator_delete_view(request, pk):
     return delete_object(request, MstOperator, pk, 'operator', 'opt_name')
 
 
+@login_required
+@require_GET
+def operator_sections_ajax(request):
+    sections = (
+        MstSection.objects.exclude(section_name__iexact='Admin')
+        .values('section_id', 'section_name', 'department__dept_name')
+        .order_by('department__dept_name', 'section_name')
+    )
+    return JsonResponse({
+        'sections': [
+            {
+                'id': section['section_id'],
+                'name': section['section_name'],
+                'department': section['department__dept_name'],
+            }
+            for section in sections
+        ]
+    })
+
+
 # ── AJAX: resolve department label for a section ──────────────────────────────
 
 @login_required

@@ -343,9 +343,9 @@ class OperatorForm(forms.Form):
         self.instance = kwargs.pop('instance', None)
         super().__init__(*args, **kwargs)
         self.operator_section_list = list(
-            MstSection.objects.select_related('department').order_by(
-                'department__dept_name', 'section_name'
-            )
+            MstSection.objects.exclude(section_name__iexact='Admin')
+            .select_related('department')
+            .order_by('department__dept_name', 'section_name')
         )
 
     def clean_opt_name(self):
