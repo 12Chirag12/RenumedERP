@@ -599,8 +599,12 @@ def batch_allocation_products_ajax(request):
         .select_related('product', 'packing_style')
         .order_by('dtl1_id')
     )
+    seen_lines = set()
     out = []
     for ln in lines:
+        if ln.dtl1_id in seen_lines:
+            continue
+        seen_lines.add(ln.dtl1_id)
         remaining_qty_l, remaining_qty_n = batch_allocation_remaining_qty(ln)
         if remaining_qty_l <= 0:
             continue

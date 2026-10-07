@@ -108,6 +108,8 @@
   function initPage_batch_allocation() {
     var root = document.querySelector('.batch-allocation-page');
     if (!root) return;
+    if (root.dataset.baInitialized === 'true') return;
+    root.dataset.baInitialized = 'true';
 
     var urls = readJsonScript('baAjaxUrls');
     var customer = document.getElementById('baCustomer');
@@ -124,6 +126,7 @@
     var partialCb = document.getElementById('baPartialYn');
     var partialL = document.getElementById('baPartialL');
     var partialN = document.getElementById('baPartialN');
+    var batchStartNo = document.getElementById('baBatchStartNo');
     var batchSizeL = document.getElementById('baBatchSizeL');
     var batchSizeN = document.getElementById('baBatchSizeN');
     var mfg = document.getElementById('baMfgDt');
@@ -191,6 +194,7 @@
       partialCb.checked = false;
       partialL.value = '';
       partialN.value = '';
+      if (batchStartNo) batchStartNo.value = '';
       batchSizeL.value = '';
       batchSizeN.value = '';
       mfg.value = '';
@@ -233,7 +237,8 @@
       var sizeN = Math.round(bsl * 100000);
       if (!(targetN > 0) || !(sizeN > 0) || sizeN > targetN) return;
       var count = Math.ceil(targetN / sizeN);
-      var startSeq = state.nextBatchSeq || 1;
+      var customStart = (batchStartNo && batchStartNo.value) ? parseInt(batchStartNo.value, 10) : null;
+      var startSeq = (customStart && customStart > 0) ? customStart : (state.nextBatchSeq || 1);
 
       for (var i = 0; i < count; i++) {
         var qtyN = i === count - 1 ? targetN - sizeN * (count - 1) : sizeN;
@@ -285,7 +290,27 @@
       var sizeN = Math.round(bsl * 100000);
       if (!(targetN > 0) || !(sizeN > 0) || sizeN > targetN) ok = false;
 
+      if (batchStartNo && batchStartNo.value) {
+        var bsnVal = Number(batchStartNo.value);
+        if (!(bsnVal > 0) || !Number.isInteger(bsnVal)) ok = false;
+      }
+
       createBtn.setAttribute('aria-disabled', ok ? 'false' : 'true');
+    }
+
+    var currentOrdersReqId = 0;
+    var currentProductsReqId = 0;
+    var loadOrdersTimer = null;
+    var loadProductsTimer = null;
+
+    function triggerLoadOrders() {
+      clearTimeout(loadOrdersTimer);
+      loadOrdersTimer = setTimeout(loadOrders, 50);
+    }
+
+    function triggerLoadOrderDetailAndProducts() {
+      clearTimeout(loadProductsTimer);
+      loadProductsTimer = setTimeout(loadOrderDetailAndProducts, 50);
     }
 
     function loadOrders() {
@@ -302,12 +327,20 @@
       if (orderSelect) orderSelect.disabled = false;
       setSectionDisabled(secProduct, true);
       setSectionDisabled(secBatch, true);
+      var reqId = ++currentOrdersReqId;
       fetch(urls.orders + '?cust_id=' + encodeURIComponent(cid), { credentials: 'same-origin' })
         .then(function (r) {
           return r.json();
         })
         .then(function (data) {
+          if (reqId !== currentOrdersReqId) return;
+          if (typeof destroySearchableDropdownsIn === 'function') destroySearchableDropdownsIn(orderSelect);
+          orderSelect.innerHTML = '<option value="">— Select order —</option>';
+          var seenOrderIds = new Set();
           (data.orders || []).forEach(function (o) {
+            var oId = String(o.order_id);
+            if (seenOrderIds.has(oId)) return;
+            seenOrderIds.add(oId);
             var opt = document.createElement('option');
             opt.value = o.order_id;
             opt.textContent = o.cust_ord_id + ' · ' + (o.ord_rec_dt || '');
@@ -334,6 +367,7 @@
         rebindSearchableSelect(productSelect);
         return;
       }
+      var reqId = ++currentProductsReqId;
       fetch(
         urls.orderDetail + '?cust_id=' + encodeURIComponent(cid) + '&order_id=' + encodeURIComponent(oid),
         { credentials: 'same-origin' },
@@ -342,7 +376,7 @@
           return r.json();
         })
         .then(function (d) {
-          if (d.error) return;
+          if (reqId !== currentProductsReqId || d.error) return;
           ordDate.value = d.ord_rec_dt || '';
           ordRemarks.value = d.remarks || '';
         })
@@ -356,11 +390,20 @@
           return r.json();
         })
         .then(function (data) {
+          if (reqId !== currentProductsReqId) return;
+          if (typeof destroySearchableDropdownsIn === 'function') destroySearchableDropdownsIn(productSelect);
+          productSelect.innerHTML = '<option value="">— Select product —</option>';
+          var seenLines = new Set();
           (data.lines || []).forEach(function (ln) {
+            var lineKey = String(ln.dtl1_id);
+            if (seenLines.has(lineKey)) return;
+            seenLines.add(lineKey);
+
             var opt = document.createElement('option');
-            opt.value = ln.prod_id;
+            opt.value = String(ln.dtl1_id);
             opt.textContent = ln.prod_name + (ln.packing_style ? (' · ' + ln.packing_style) : '') + (ln.rate ? (' · Rate ' + ln.rate) : '');
-            opt.dataset.lineId = ln.dtl1_id;
+            opt.dataset.lineId = String(ln.dtl1_id);
+            opt.dataset.prodId = String(ln.prod_id);
             opt.dataset.tablets = ln.no_of_tablets || '0';
             opt.dataset.qtyL = ln.remaining_qty_l;
             opt.dataset.qtyN = ln.remaining_qty_n;
@@ -373,6 +416,7 @@
           rebindSearchableSelect(productSelect);
         })
         .catch(function () {
+          if (reqId !== currentProductsReqId) return;
           rebindSearchableSelect(productSelect);
         });
       setSectionDisabled(secBatch, true);
@@ -382,8 +426,9 @@
       resetFromProduct();
       var opt = productSelect.selectedOptions[0];
       var pid = productSelect.value;
-      if (orderLineHidden) orderLineHidden.value = (opt && opt.dataset ? (opt.dataset.lineId || '') : '');
-      if (!opt || !pid) {
+      var lineId = opt && opt.dataset && opt.dataset.lineId ? opt.dataset.lineId : pid;
+      if (orderLineHidden) orderLineHidden.value = lineId || '';
+      if (!opt || !pid || !lineId) {
         setSectionDisabled(secBatch, true);
         updateCreateBtn();
         return;
@@ -402,7 +447,6 @@
       // keep Nos in sync even while typing
 
       var oid = orderHidden.value;
-      var lineId = orderLineHidden ? orderLineHidden.value : '';
       fetch(
         urls.previousBatches + '?order_id=' + encodeURIComponent(oid) + '&line_id=' + encodeURIComponent(lineId),
         { credentials: 'same-origin' },
@@ -458,10 +502,8 @@
       updateCreateBtn();
     }
 
-    // Some searchable-dropdown wrappers trigger input events; handle both.
-    customer.addEventListener('change', loadOrders);
-    customer.addEventListener('input', loadOrders);
-    orderSelect.addEventListener('change', loadOrderDetailAndProducts);
+    customer.addEventListener('change', triggerLoadOrders);
+    orderSelect.addEventListener('change', triggerLoadOrderDetailAndProducts);
     productSelect.addEventListener('change', onProductChange);
     partialCb.addEventListener('change', function () {
       updatePartialRow();
@@ -469,7 +511,7 @@
       updateCreateBtn();
     });
 
-    [partialL, partialN, batchSizeL, batchSizeN, mfg, exp].forEach(function (el) {
+    [partialL, partialN, batchStartNo, batchSizeL, batchSizeN, mfg, exp].forEach(function (el) {
       if (el) el.addEventListener('input', updateDebounced);
       if (el) el.addEventListener('change', updateDebounced);
     });

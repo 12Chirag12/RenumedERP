@@ -473,6 +473,19 @@
   background: #fafcff;
 }
 
+@keyframes prodRowHighlight {
+  0% {
+    background-color: rgba(0, 180, 216, 0.2);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.prod-grid-table tbody tr.newly-added-row {
+  animation: prodRowHighlight 1.5s ease-out;
+}
+
 /* Grid inputs, lic toggle, delete row: forms_consistency.css (.cu-page[data-page-init] …) */
 
 /* ── Bottom display table ────────────────────────────────────── */

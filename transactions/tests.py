@@ -826,5 +826,177 @@ class DispensingAndSalesInvoiceCustomerShortNameTests(TestCase):
         self.assertEqual(match['customer_name'], 'Aura Pharmaceuticals Pvt Ltd')
 
 
+class BatchAllocationBatchStartNoTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        from decimal import Decimal
+        from django.contrib.auth import get_user_model
+        from masters.models import (
+            FinancialYear,
+            MstCust,
+            MstCustProd,
+            MstItemType,
+            MstPkgStyle,
+            MstProd,
+            MstProdCat,
+            MstState,
+            MstUom,
+        )
+        from transactions.constants import GST_TYPE_EXEMPTED
+        from transactions.models import TrnSlsOrdDtl1, TrnSlsOrdHed
+
+        cls.user = get_user_model().objects.create_superuser('ba_admin', 'ba@example.com', 'pass123')
+        cls.fy = FinancialYear.objects.create(
+            fy_start_year=2025,
+            fy_end_year=2026,
+            fy_display='2025-26',
+            start_date=date(2025, 4, 1),
+            end_date=date(2026, 3, 31),
+            is_current=True,
+            is_open=True,
+            is_closed=False,
+        )
+        cls.state = MstState.objects.create(state_name='Maharashtra State BA', gst_code='27')
+        cls.customer = MstCust.objects.create(
+            cust_name='Aura Labs BA',
+            short_name='AB',
+            address='Addr',
+            state=cls.state,
+            pin_code='400001',
+        )
+        cls.cat = MstProdCat.objects.create(prod_cat_id='TB', prod_cat_name='Tablet BA')
+        cls.item_type = MstItemType.objects.create(item_type_name='Finished Good BA', item_category=cls.cat)
+        cls.uom = MstUom.objects.create(uom_name='Tablet BA', short_name='TAB')
+        cls.product = MstProd.objects.create(
+            prod_name='Paracetamol BA',
+            generic_name='Paracetamol',
+            prod_type=cls.item_type,
+            prod_category=cls.cat,
+            uom=cls.uom,
+            tablet_layer=MstProd.LAYER_SINGLE,
+        )
+        cls.pkg_style = MstPkgStyle.objects.create(
+            pkg_style_name='10x10 Blister BA',
+            pkg_style_value=100,
+            pkg_type=cls.item_type,
+        )
+        MstCustProd.objects.create(
+            customer=cls.customer,
+            product=cls.product,
+            adv_license='N',
+            batch_abbr='ABR',
+        )
+        cls.order = TrnSlsOrdHed.objects.create(
+            ord_rec_dt=date(2025, 5, 10),
+            customer=cls.customer,
+            cust_ord_id='ORD-BA-01',
+            cust_ord_date=date(2025, 5, 10),
+        )
+        cls.order_line = TrnSlsOrdDtl1.objects.create(
+            order=cls.order,
+            product=cls.product,
+            hsn_no='300490',
+            packing_style=cls.pkg_style,
+            order_qty=Decimal('1.00'),
+            remaining_qty=Decimal('1.00'),
+            ord_qty_nos=Decimal('1000'),
+            rate=Decimal('2.00'),
+            taxable_amt=Decimal('2000.00'),
+            gst_type=GST_TYPE_EXEMPTED,
+            gst_per=Decimal('0.00'),
+            prod_amt=Decimal('2000.00'),
+            export_type='DOMESTIC',
+        )
+
+    def setUp(self):
+        self.client.force_login(self.user)
+
+    def test_batch_allocation_page_renders_batch_start_no_field(self):
+        from django.urls import reverse
+        resp = self.client.get(reverse('transactions:batch_allocation'))
+        self.assertEqual(resp.status_code, 200)
+        content = resp.content.decode('utf-8')
+        self.assertIn('Batch No. Starts', content)
+        self.assertIn('id="baBatchStartNo"', content)
+
+    def test_batch_allocation_form_with_custom_start_no(self):
+        from transactions.forms import BatchAllocationForm
+        from transactions.models import TrnBatchHed, TrnBatchDtl
+        form_data = {
+            'customer': self.customer.pk,
+            'order_id': self.order.pk,
+            'order_line_id': self.order_line.pk,
+            'batch_start_no': 55,
+            'batch_size_l': '1.00',
+            'mfg_dt': '2025-05',
+            'exp_dt': '2028-04',
+        }
+        form = BatchAllocationForm(data=form_data)
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        hed = TrnBatchHed.objects.filter(customer=self.customer, order=self.order).first()
+        self.assertIsNotNone(hed)
+        self.assertEqual(hed.batch_from, 55)
+        dtl = TrnBatchDtl.objects.filter(batch=hed).first()
+        self.assertIsNotNone(dtl)
+        self.assertEqual(dtl.batch_no, 'ABR55')
+
+    def test_batch_allocation_form_without_start_no_uses_auto_sequence(self):
+        from decimal import Decimal
+        from transactions.constants import GST_TYPE_EXEMPTED
+        from transactions.forms import BatchAllocationForm
+        from transactions.models import TrnBatchHed, TrnSlsOrdDtl1, TrnSlsOrdHed
+        order2 = TrnSlsOrdHed.objects.create(
+            ord_rec_dt=date(2025, 5, 11),
+            customer=self.customer,
+            cust_ord_id='ORD-BA-02',
+            cust_ord_date=date(2025, 5, 11),
+        )
+        order_line2 = TrnSlsOrdDtl1.objects.create(
+            order=order2,
+            product=self.product,
+            hsn_no='300490',
+            packing_style=self.pkg_style,
+            order_qty=Decimal('1.00'),
+            remaining_qty=Decimal('1.00'),
+            ord_qty_nos=Decimal('1000'),
+            rate=Decimal('2.00'),
+            taxable_amt=Decimal('2000.00'),
+            gst_type=GST_TYPE_EXEMPTED,
+            gst_per=Decimal('0.00'),
+            prod_amt=Decimal('2000.00'),
+            export_type='DOMESTIC',
+        )
+        form_data = {
+            'customer': self.customer.pk,
+            'order_id': order2.pk,
+            'order_line_id': order_line2.pk,
+            'batch_start_no': '',
+            'batch_size_l': '1.00',
+            'mfg_dt': '2025-05',
+            'exp_dt': '2028-04',
+        }
+        form = BatchAllocationForm(data=form_data)
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        hed2 = TrnBatchHed.objects.filter(customer=self.customer, order=order2).first()
+        self.assertIsNotNone(hed2)
+        self.assertTrue(hed2.batch_from >= 1)
+
+    def test_batch_allocation_products_ajax_unique_lines(self):
+        from django.urls import reverse
+        resp = self.client.get(
+            reverse('transactions:batch_allocation_products_ajax'),
+            {'cust_id': self.customer.pk, 'order_id': self.order.pk},
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn('lines', data)
+        line_ids = [ln['dtl1_id'] for ln in data['lines']]
+        self.assertEqual(len(line_ids), len(set(line_ids)))
+        self.assertIn(self.order_line.pk, line_ids)
+
+
+
 
 

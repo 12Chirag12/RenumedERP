@@ -150,6 +150,18 @@ class BatchAllocationForm(forms.Form):
             'tabindex': '-1',
         }),
     )
+    batch_start_no = forms.IntegerField(
+        required=False,
+        min_value=1,
+        label='Batch No. Starts',
+        widget=forms.NumberInput(attrs={
+            'class': 'cu-input ba-input-narrow',
+            'id': 'baBatchStartNo',
+            'min': '1',
+            'step': '1',
+            'placeholder': '—',
+        }),
+    )
     batch_size_l = forms.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -336,15 +348,19 @@ class BatchAllocationForm(forms.Form):
             self.add_error('batch_size_n', 'Generated batch quantities do not fit the selected batch size.')
             return cd
 
-        existing_numbers = TrnBatchDtl.objects.filter(
-            batch__batch_abbr=abbr,
-        ).values_list('batch_no', flat=True)
-        max_seq = 0
-        for batch_no in existing_numbers:
-            match = re.fullmatch(rf'{re.escape(abbr)}(\d+)', batch_no or '')
-            if match:
-                max_seq = max(max_seq, int(match.group(1)))
-        batch_from = max_seq + 1
+        start_no_custom = cd.get('batch_start_no')
+        if start_no_custom:
+            batch_from = int(start_no_custom)
+        else:
+            existing_numbers = TrnBatchDtl.objects.filter(
+                batch__batch_abbr=abbr,
+            ).values_list('batch_no', flat=True)
+            max_seq = 0
+            for batch_no in existing_numbers:
+                match = re.fullmatch(rf'{re.escape(abbr)}(\d+)', batch_no or '')
+                if match:
+                    max_seq = max(max_seq, int(match.group(1)))
+            batch_from = max_seq + 1
         batch_to = batch_from + count - 1
 
         lines = []
