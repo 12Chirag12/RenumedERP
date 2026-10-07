@@ -396,8 +396,8 @@ class SalesOrderForm(forms.Form):
             ord_qty_nos = (order_qty * Decimal('100000')).quantize(_BATCH_N_QUANTIZE, rounding=ROUND_HALF_UP)
             taxable = ((ord_qty_nos / Decimal(pkg_val)) * rate).quantize(_MONEY_QUANTIZE, rounding=ROUND_HALF_UP)
 
-            cgst, sgst, igst = _line_gst_amounts(taxable, gst_per, gst_type)
             prod_amt = (rate * ord_qty_nos).quantize(_MONEY_QUANTIZE, rounding=ROUND_HALF_UP)
+            cgst, sgst, igst = _line_gst_amounts(prod_amt, gst_per, gst_type)
 
             if not isinstance(dispatches_raw, list) or not dispatches_raw:
                 raise forms.ValidationError(f'Line {idx}: add at least one dispatch row.')
@@ -489,6 +489,7 @@ class SalesOrderForm(forms.Form):
         header_file = cd.get('header_document')
         prev_doc = self.instance.document_path if self.instance else None
 
+        prod_sum = sum((ln['prod_amt'] for ln in lines), Decimal('0'))
         taxable_sum = sum((ln['taxable_amt'] for ln in lines), Decimal('0'))
         cgst_sum = sum((ln['cgst_amt'] for ln in lines), Decimal('0'))
         sgst_sum = sum((ln['sgst_amt'] for ln in lines), Decimal('0'))
@@ -499,7 +500,7 @@ class SalesOrderForm(forms.Form):
         oth = cd['oth_charges']
         rnd = cd['round_off']
         total = (
-            taxable_sum + pkg + frt + oth + cgst_sum + sgst_sum + igst_sum + rnd
+            prod_sum + taxable_sum + pkg + frt + oth + cgst_sum + sgst_sum + igst_sum + rnd
         ).quantize(_MONEY_QUANTIZE, rounding=ROUND_HALF_UP)
 
         try:

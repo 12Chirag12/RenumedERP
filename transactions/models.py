@@ -509,6 +509,10 @@ class TrnSlsOrdHed(models.Model):
     def __str__(self):
         return f'SO {self.order_id} — {self.cust_ord_id}'
 
+    @property
+    def prod_amt(self):
+        return sum((line.prod_amt for line in self.lines.all()), Decimal('0'))
+
     def clean(self):
         super().clean()
         if self.cust_ord_date and self.ord_rec_dt and self.cust_ord_date > self.ord_rec_dt:

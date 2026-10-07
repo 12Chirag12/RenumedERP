@@ -108,11 +108,17 @@
                   {% if form.oth_charges.errors %}<span class="field-error">{{ form.oth_charges.errors.0 }}</span>{% endif %}
                 </div>
               </div>
-              <div class="cu-row-4-eq">
+              <div class="cu-row-2-eq">
+                <div class="cu-field">
+                  <label class="cu-label">Product amount</label>
+                  <input type="text" class="cu-input cu-num" id="soRoProdAmt" readonly tabindex="-1" value="0.00">
+                </div>
                 <div class="cu-field">
                   <label class="cu-label">Taxable value</label>
                   <input type="text" class="cu-input cu-num" id="soRoTaxable" readonly tabindex="-1" value="0.00">
                 </div>
+              </div>
+              <div class="cu-row-3-eq">
                 <div class="cu-field">
                   <label class="cu-label">CGST</label>
                   <input type="text" class="cu-input cu-num" id="soRoCgst" readonly tabindex="-1" value="0.00">
@@ -231,6 +237,7 @@
             <th>Record date</th>
             <th>Customer order</th>
             <th>Customer</th>
+            <th>Product amount</th>
             <th>Taxable</th>
             <th>Total</th>
             <th>Document</th>
@@ -245,6 +252,7 @@
             <td>{{ r.ord_rec_dt|date:"Y-m-d" }}</td>
             <td><strong>{{ r.cust_ord_id }}</strong></td>
             <td title="{{ r.customer.cust_name }}">{{ r.customer.short_name|default:r.customer.cust_name }}</td>
+            <td>{{ r.prod_amt }}</td>
             <td>{{ r.taxable_val }}</td>
             <td>{{ r.total_amt }}</td>
             <td class="col-doc">
@@ -262,7 +270,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="9" class="empty-row">No sales orders yet.</td>
+            <td colspan="10" class="empty-row">No sales orders yet.</td>
           </tr>
           {% endfor %}
         </tbody>

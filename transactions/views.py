@@ -357,6 +357,7 @@ def get_sales_order_edit_instance(pk):
 def _sales_order_recent_queryset():
     return (
         TrnSlsOrdHed.objects.select_related('customer')
+        .prefetch_related('lines')
         .order_by('-order_id')[:40]
     )
 

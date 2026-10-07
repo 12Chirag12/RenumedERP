@@ -33,6 +33,7 @@ function initPage_sales_order() {
   var previewShell = document.getElementById('soDocPreviewShell');
   var docPreviewImg = document.getElementById('soDocPreviewImg');
   var docPreviewPdf = document.getElementById('soDocPreviewPdf');
+  var roProdAmt = document.getElementById('soRoProdAmt');
   var roTaxable = document.getElementById('soRoTaxable');
   var roCgst = document.getElementById('soRoCgst');
   var roSgst = document.getElementById('soRoSgst');
@@ -109,12 +110,12 @@ function initPage_sales_order() {
     // Amount = ((qty_nos / packing_value) * rate)
     var packs = pv > 0 ? (Number(line.ord_qty_nos) / pv) : 0;
     line.taxable_amt = roundMoney(packs * rate);
+    line.prod_amt = roundMoney(rate * line.ord_qty_nos);
     var gp = line.gst_type === GST_EXEMPTED ? 0 : (parseFloat(line.gst_per) || 0);
-    var parts = lineGstParts(line.taxable_amt, gp, line.gst_type);
+    var parts = lineGstParts(line.prod_amt, gp, line.gst_type);
     line.cgst_amt = parts.cg;
     line.sgst_amt = parts.sg;
     line.igst_amt = parts.ig;
-    line.prod_amt = Math.round(rate * 100) * line.ord_qty_nos / 100;
   }
 
   function moneyStr(v) {
@@ -138,6 +139,7 @@ function initPage_sales_order() {
   }
 
   function refreshHeaderTotals() {
+    var sumProd = 0;
     var sumTax = 0;
     var sumC = 0;
     var sumS = 0;
@@ -145,6 +147,7 @@ function initPage_sales_order() {
     state.lines.forEach(function (ln) {
       if (!ln.prod_id) return;
       recalcLine(ln);
+      sumProd += ln.prod_amt;
       sumTax += ln.taxable_amt;
       sumC += ln.cgst_amt;
       sumS += ln.sgst_amt;
@@ -154,7 +157,8 @@ function initPage_sales_order() {
     var frt = parseFloat(document.getElementById('soFreight') && document.getElementById('soFreight').value) || 0;
     var oth = parseFloat(document.getElementById('soOthCharges') && document.getElementById('soOthCharges').value) || 0;
     var rnd = parseFloat(document.getElementById('soRoundOff') && document.getElementById('soRoundOff').value) || 0;
-    var total = roundMoney(sumTax + pkg + frt + oth + sumC + sumS + sumI + rnd);
+    var total = roundMoney(sumProd + sumTax + pkg + frt + oth + sumC + sumS + sumI + rnd);
+    if (roProdAmt) roProdAmt.value = moneyStr(sumProd);
     if (roTaxable) roTaxable.value = moneyStr(sumTax);
     if (roCgst) roCgst.value = moneyStr(sumC);
     if (roSgst) roSgst.value = moneyStr(sumS);
