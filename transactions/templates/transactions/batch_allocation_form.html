@@ -105,6 +105,14 @@
 
                       <div class="cu-row-2-eq">
                         <div class="cu-field">
+                          <label class="cu-label" for="baBatchStartNo">Batch No. Starts</label>
+                          {{ form.batch_start_no }}
+                          {% if form.batch_start_no.errors %}<span class="field-error">{{ form.batch_start_no.errors.0 }}</span>{% endif %}
+                        </div>
+                      </div>
+
+                      <div class="cu-row-2-eq">
+                        <div class="cu-field">
                           <label class="cu-label" for="baBatchSizeL">Per batch size (Lacs) <span class="req">*</span></label>
                           {{ form.batch_size_l }}
                           {% if form.batch_size_l.errors %}<span class="field-error">{{ form.batch_size_l.errors.0 }}</span>{% endif %}
