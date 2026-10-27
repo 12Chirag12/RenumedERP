@@ -401,9 +401,11 @@ class InwardForm(forms.Form):
         batch_map = defaultdict(list)
         # Use .all() so prefetched batch_lines from the view (ordered by dtl2_id) are used in one shot.
         for d2 in h.batch_lines.all():
-            batch_map[d2.item_id].append({
+            key = d2.inward_dtl1_id if d2.inward_dtl1_id else d2.item_id
+            batch_map[key].append({
                 'batch_no': d2.batch_no,
                 'arn_no': d2.arn_no or '',
+                'brand_name': getattr(d2, 'brand_name', '') or '',
                 'pack_style': d2.pack_style,
                 'mfg_dt': str(d2.mfg_dt) if d2.mfg_dt else '',
                 'exp_dt': str(d2.exp_dt) if d2.exp_dt else '',
@@ -413,10 +415,15 @@ class InwardForm(forms.Form):
 
         lines = []
         for d1 in h.lines.all():
+            batches = batch_map.get(d1.pk)
+            if batches is None:
+                batches = batch_map.get(d1.item_id, [])
             lines.append({
                 'item_id': d1.item_id,
+                'pkg_style': d1.pkg_style,
                 'qty': str(d1.quantity),
-                'batches': batch_map.get(d1.item_id, []),
+                'rate': str(d1.rate),
+                'batches': batches,
             })
 
         return {
@@ -552,10 +559,6 @@ class InwardForm(forms.Form):
                 raise forms.ValidationError(
                     f'Line {idx}: item "{item.item_name}" has no UOM. Set it on the Item master first.'
                 )
-
-            if item_id in seen_items:
-                raise forms.ValidationError(f'Line {idx}: duplicate item — each item can appear only once.')
-            seen_items.add(item_id)
 
             try:
                 qty = Decimal(str(qty_raw))
@@ -758,9 +761,11 @@ class InwardForm(forms.Form):
                     for b in line['batches']:
                         d2 = TrnInwDtl2(
                             inward=hed,
+                            inward_dtl1=d1,
                             item=line['item'],
                             batch_no=b['batch_no'],
                             arn_no=b.get('arn_no') or '',
+                            brand_name=b.get('brand_name') or '',
                             pack_style=b['pack_style'],
                             mfg_dt=b['mfg_dt'],
                             exp_dt=b['exp_dt'],

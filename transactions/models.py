@@ -273,10 +273,6 @@ class TrnInwDtl1(models.Model):
         verbose_name = 'Inward Item Line'
         verbose_name_plural = 'Inward Item Lines'
         constraints = [
-            models.UniqueConstraint(
-                fields=['inward', 'item'],
-                name='unique_trn_inw_item_dtl1',
-            ),
             models.CheckConstraint(
                 condition=models.Q(quantity__gt=0),
                 name='trn_inw_dtl1_quantity_positive',
@@ -317,6 +313,15 @@ class TrnInwDtl2(models.Model):
         db_column='inward_id',
         related_name='batch_lines',
     )
+    inward_dtl1 = models.ForeignKey(
+        TrnInwDtl1,
+        on_delete=models.CASCADE,
+        db_column='inward_dtl1_id',
+        related_name='batch_lines',
+        blank=True,
+        null=True,
+        verbose_name='Inward Item Line',
+    )
     item = models.ForeignKey(
         'masters.MstItem',
         on_delete=models.PROTECT,
@@ -329,6 +334,12 @@ class TrnInwDtl2(models.Model):
         blank=True,
         default='',
         verbose_name='ARN no.',
+    )
+    brand_name = models.CharField(
+        max_length=150,
+        blank=True,
+        default='',
+        verbose_name='Brand Name',
     )
 
     pack_style = models.CharField(
@@ -370,8 +381,8 @@ class TrnInwDtl2(models.Model):
         verbose_name_plural = 'Inward Batch Lines'
         constraints = [
             models.UniqueConstraint(
-                fields=['inward', 'item', 'batch_no'],
-                name='unique_trn_inw_item_batch',
+                fields=['inward_dtl1', 'batch_no'],
+                name='unique_trn_inw_line_batch',
             ),
             models.CheckConstraint(
                 condition=(
@@ -397,11 +408,21 @@ class TrnInwDtl2(models.Model):
         if self.mfg_dt is None and self.exp_dt is not None:
             raise ValidationError({'mfg_dt': _('Manufacturing date is required when expiry date is set.')})
 
-        if self.inward_id and self.item_id:
+        if self.inward_dtl1_id and self.inward_id:
+            if self.inward_dtl1.inward_id != self.inward_id:
+                raise ValidationError(_('Batch line inward does not match its item line.'))
+            if self.item_id and self.inward_dtl1.item_id != self.item_id:
+                raise ValidationError(_('Batch line item does not match its item line.'))
+        elif self.inward_id and self.item_id:
             if not TrnInwDtl1.objects.filter(inward_id=self.inward_id, item_id=self.item_id).exists():
                 raise ValidationError(
                     _('Each batch line must belong to an item line on the same inward.')
                 )
+
+        if self.brand_name:
+            self.brand_name = str(self.brand_name).strip()
+            if len(self.brand_name) > 150:
+                raise ValidationError({'brand_name': _('Brand name must be 150 characters or fewer.')})
 
         if self.batch_qty is not None and self.batch_qty <= 0:
             raise ValidationError({'batch_qty': _('Batch quantity must be greater than zero.')})

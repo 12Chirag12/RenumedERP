@@ -253,9 +253,11 @@ class InwardForm(forms.Form):
         batch_map = defaultdict(list)
         # Use .all() so prefetched batch_lines from the view (ordered by dtl2_id) are used in one shot.
         for d2 in h.batch_lines.all():
-            batch_map[d2.item_id].append({
+            key = d2.inward_dtl1_id if d2.inward_dtl1_id else d2.item_id
+            batch_map[key].append({
                 'batch_no': d2.batch_no,
                 'arn_no': d2.arn_no or '',
+                'brand_name': getattr(d2, 'brand_name', '') or '',
                 'pack_style': d2.pack_style,
                 'mfg_dt': str(d2.mfg_dt) if d2.mfg_dt else '',
                 'exp_dt': str(d2.exp_dt) if d2.exp_dt else '',
@@ -264,12 +266,15 @@ class InwardForm(forms.Form):
             })
         lines = []
         for d1 in h.lines.all():
+            batches = batch_map.get(d1.pk)
+            if batches is None:
+                batches = batch_map.get(d1.item_id, [])
             lines.append({
                 'item_id': d1.item_id,
                 'pkg_style': d1.pkg_style,
                 'qty': str(d1.quantity),
                 'rate': str(d1.rate),
-                'batches': batch_map.get(d1.item_id, []),
+                'batches': batches,
             })
 
         return {
@@ -377,7 +382,6 @@ class InwardForm(forms.Form):
         if not cat_pk:
             raise forms.ValidationError('Select GRN type (RM or PM) before adding items.')
 
-        seen_items = set()
         validated = []
 
         for idx, row in enumerate(rows, start=1):
@@ -421,10 +425,6 @@ class InwardForm(forms.Form):
                 raise forms.ValidationError(
                     f'Line {idx}: item "{item.item_name}" has no UOM. Set it on the Item master first.'
                 )
-
-            if item_id in seen_items:
-                raise forms.ValidationError(f'Line {idx}: duplicate item — each item can appear only once.')
-            seen_items.add(item_id)
 
             try:
                 qty = Decimal(str(qty_raw))
@@ -488,6 +488,12 @@ class InwardForm(forms.Form):
                         f'Line {idx} batch {bidx}: ARN no. must be at most 20 characters.'
                     )
 
+                brand_name = (b.get('brand_name') or '').strip()
+                if len(brand_name) > 150:
+                    raise forms.ValidationError(
+                        f'Line {idx} batch {bidx}: brand name must be at most 150 characters.'
+                    )
+
                 pack_style = (b.get('pack_style') or '').strip()
                 if not pack_style:
                     raise forms.ValidationError(f'Line {idx} batch {bidx}: packing style is required.')
@@ -541,6 +547,7 @@ class InwardForm(forms.Form):
                 parsed_batches.append({
                     'batch_no': bn,
                     'arn_no': arn_no,
+                    'brand_name': brand_name,
                     'pack_style': pack_style,
                     'mfg_dt': mfg_d,
                     'exp_dt': exp_d,
@@ -641,9 +648,11 @@ class InwardForm(forms.Form):
                     for b in line['batches']:
                         d2 = TrnInwDtl2(
                             inward=hed,
+                            inward_dtl1=d1,
                             item=line['item'],
                             batch_no=b['batch_no'],
                             arn_no=b.get('arn_no') or '',
+                            brand_name=b.get('brand_name') or '',
                             pack_style=b['pack_style'],
                             mfg_dt=b['mfg_dt'],
                             exp_dt=b['exp_dt'],

@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.test import TestCase
@@ -995,6 +996,180 @@ class BatchAllocationBatchStartNoTests(TestCase):
         line_ids = [ln['dtl1_id'] for ln in data['lines']]
         self.assertEqual(len(line_ids), len(set(line_ids)))
         self.assertIn(self.order_line.pk, line_ids)
+
+
+class InwardSameItemAndBrandNameTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        import json
+        from decimal import Decimal
+        from masters.models import FinancialYear, MstCust, MstItem, MstItemType, MstProdCat, MstState, MstSupplier, MstTransport, MstUom
+
+        cls.fy = FinancialYear.objects.create(
+            fy_start_year=2025,
+            fy_end_year=2026,
+            fy_display='2025-26',
+            start_date=date(2025, 4, 1),
+            end_date=date(2026, 3, 31),
+            is_current=True,
+            is_open=True,
+            is_closed=False,
+        )
+        cls.state = MstState.objects.create(state_name='Maharashtra', gst_code='27')
+        cls.cust = MstCust.objects.create(
+            cust_name='Test Pharma Corp',
+            short_name='TPC',
+            state=cls.state,
+            gst_no='27AAAAA0000A1Z5',
+        )
+        cls.supplier = MstSupplier.objects.create(
+            supl_name='Test Supplier',
+            state=cls.state,
+            gst_no='27BBBBB0000B1Z6',
+        )
+        cls.cat = MstProdCat.objects.create(prod_cat_id='RM', prod_cat_name='Raw Material')
+        cls.uom = MstUom.objects.create(uom_name='Kilogram', short_name='KG')
+        cls.item_type = MstItemType.objects.create(item_category=cls.cat, item_type_name='Raw Material Type')
+        cls.item = MstItem.objects.create(
+            item_name='Paracetamol Powder',
+            item_category=cls.cat,
+            item_type=cls.item_type,
+            uom=cls.uom,
+            maintain_batch='Y',
+            mfg_date='N',
+            exp_date='N',
+        )
+
+    def test_allow_same_item_multiple_times_unbatched(self):
+        import json
+        from transactions.forms.inward import InwardForm
+        from transactions.models import TrnInwHed, TrnInwDtl1
+
+        form_data = {
+            'inward_dt': '2025-05-10',
+            'register_no': 'R-88001',
+            'grn_category': self.cat.pk,
+            'grn_no': 'RM-88001',
+            'customer': self.cust.pk,
+            'supplier': self.supplier.pk,
+            'inv_no': 'INV-SAME-01',
+            'inv_dt': '2025-05-10',
+            'lines_json': json.dumps([
+                {
+                    'item_id': self.item.pk,
+                    'pkg_style': 'Drum 25kg',
+                    'qty': '50.000',
+                    'rate': '350.00',
+                    'use_batches': False,
+                    'batches': [],
+                },
+                {
+                    'item_id': self.item.pk,
+                    'pkg_style': 'Bag 50kg',
+                    'qty': '100.000',
+                    'rate': '340.00',
+                    'use_batches': False,
+                    'batches': [],
+                },
+            ]),
+        }
+        form = InwardForm(data=form_data)
+        self.assertTrue(form.is_valid(), form.errors)
+        hed = form.save()
+        self.assertIsNotNone(hed)
+        lines = list(TrnInwDtl1.objects.filter(inward=hed).order_by('dtl1_id'))
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(lines[0].item_id, self.item.pk)
+        self.assertEqual(lines[1].item_id, self.item.pk)
+        self.assertEqual(lines[0].quantity, Decimal('50.000'))
+        self.assertEqual(lines[1].quantity, Decimal('100.000'))
+
+    def test_allow_same_item_with_batches_and_optional_brand_name(self):
+        import json
+        from transactions.forms.inward import InwardForm
+        from transactions.models import TrnInwHed, TrnInwDtl1, TrnInwDtl2
+
+        form_data = {
+            'inward_dt': '2025-05-12',
+            'register_no': 'R-88002',
+            'grn_category': self.cat.pk,
+            'grn_no': 'RM-88002',
+            'customer': self.cust.pk,
+            'supplier': self.supplier.pk,
+            'inv_no': 'INV-SAME-02',
+            'inv_dt': '2025-05-12',
+            'lines_json': json.dumps([
+                {
+                    'item_id': self.item.pk,
+                    'pkg_style': 'Drum',
+                    'qty': '50.000',
+                    'rate': '350.00',
+                    'use_batches': True,
+                    'batches': [
+                        {
+                            'batch_no': 'BATCH-A1',
+                            'arn_no': 'ARN-01',
+                            'brand_name': 'Brand Alpha',
+                            'pack_style': '25kg Drum',
+                            'batch_qty': '50.000',
+                        }
+                    ],
+                },
+                {
+                    'item_id': self.item.pk,
+                    'pkg_style': 'Bag',
+                    'qty': '40.000',
+                    'rate': '345.00',
+                    'use_batches': True,
+                    'batches': [
+                        {
+                            'batch_no': 'BATCH-B1',
+                            'arn_no': '',
+                            'brand_name': '',  # Optional — empty should succeed without error
+                            'pack_style': '40kg Bag',
+                            'batch_qty': '40.000',
+                        }
+                    ],
+                },
+            ]),
+        }
+        form = InwardForm(data=form_data)
+        self.assertTrue(form.is_valid(), form.errors)
+        hed = form.save()
+        self.assertIsNotNone(hed)
+
+        # Check detail lines
+        lines = list(TrnInwDtl1.objects.filter(inward=hed).order_by('dtl1_id'))
+        self.assertEqual(len(lines), 2)
+
+        batches = list(TrnInwDtl2.objects.filter(inward=hed).order_by('dtl2_id'))
+        self.assertEqual(len(batches), 2)
+
+        # Check line 1 batch
+        self.assertEqual(batches[0].inward_dtl1_id, lines[0].pk)
+        self.assertEqual(batches[0].batch_no, 'BATCH-A1')
+        self.assertEqual(batches[0].brand_name, 'Brand Alpha')
+        self.assertEqual(batches[0].batch_qty, Decimal('50.000'))
+
+        # Check line 2 batch
+        self.assertEqual(batches[1].inward_dtl1_id, lines[1].pk)
+        self.assertEqual(batches[1].batch_no, 'BATCH-B1')
+        self.assertEqual(batches[1].brand_name, '')
+        self.assertEqual(batches[1].batch_qty, Decimal('40.000'))
+
+        # Test editing: get_initial separates batches per line cleanly
+        edit_form = InwardForm(instance=hed)
+        initial = edit_form.get_initial()
+        parsed_lines = json.loads(initial['lines_json'])
+        self.assertEqual(len(parsed_lines), 2)
+        self.assertEqual(len(parsed_lines[0]['batches']), 1)
+        self.assertEqual(parsed_lines[0]['batches'][0]['batch_no'], 'BATCH-A1')
+        self.assertEqual(parsed_lines[0]['batches'][0]['brand_name'], 'Brand Alpha')
+
+        self.assertEqual(len(parsed_lines[1]['batches']), 1)
+        self.assertEqual(parsed_lines[1]['batches'][0]['batch_no'], 'BATCH-B1')
+        self.assertEqual(parsed_lines[1]['batches'][0]['brand_name'], '')
+
 
 
 

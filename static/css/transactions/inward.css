@@ -800,14 +800,15 @@
 
 .inward-page .inw-batch-row {
   display: grid;
-  /* batch_no+ARN | mfg | exp | pack_style | qty | product | delete */
+  /* batch_no+ARN | mfg | exp | pack_style | qty | brand | product | delete */
   grid-template-columns:
-    minmax(160px, 1.6fr)
+    minmax(160px, 1.4fr)
     minmax(96px, 0.8fr)
     minmax(96px, 0.8fr)
-    minmax(120px, 1.4fr)
+    minmax(110px, 1.1fr)
     minmax(64px, 0.6fr)
-    minmax(140px, 1.6fr)
+    minmax(110px, 1.1fr)
+    minmax(130px, 1.3fr)
     36px;
   gap: 8px 10px;
   align-items: end;

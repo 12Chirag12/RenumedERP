@@ -306,6 +306,7 @@ function initPage_inward() {
           row.batches.push({
             batch_no: b.batch_no,
             arn_no: b.arn_no,
+            brand_name: b.brand_name,
             pack_style: b.pack_style,
             mfg_dt: b.mfg_dt,
             exp_dt: b.exp_dt,
@@ -354,6 +355,10 @@ function initPage_inward() {
         '<input type="number" class="cu-input inw-b-qty" min="0.001" step="0.001" value="' +
         escHtml(b.batch_qty) + '">' +
       '</div>' +
+      '<div class="inw-br-field inw-br-brand">' +
+        '<label>Brand name</label>' +
+        '<input type="text" maxlength="150" class="cu-input inw-b-brand" value="' + escHtml(b.brand_name) + '" placeholder="Optional">' +
+      '</div>' +
       '<div class="inw-br-field inw-br-prod">' +
         '<label>Product</label>' +
         '<select class="cu-select searchable-dropdown inw-b-prod">' + productOptions(b.prod_id) + '</select>' +
@@ -364,13 +369,14 @@ function initPage_inward() {
 
     var batchno = wrap.querySelector('.inw-b-batchno');
     var arn = wrap.querySelector('.inw-b-arn');
+    var brand = wrap.querySelector('.inw-b-brand');
     var mfg = wrap.querySelector('.inw-b-mfg');
     var exp = wrap.querySelector('.inw-b-exp');
     var packstyle = wrap.querySelector('.inw-b-packstyle');
     var qty = wrap.querySelector('.inw-b-qty');
     var prod = wrap.querySelector('.inw-b-prod');
 
-    [batchno, arn, mfg, exp, packstyle, qty].forEach(function (inp) {
+    [batchno, arn, brand, mfg, exp, packstyle, qty].forEach(function (inp) {
       if (!inp) return;
       inp.addEventListener('change', function () {
         patchBatch(lineIdx, bidx, inp.className, inp.value);
@@ -401,6 +407,7 @@ function initPage_inward() {
     if (!row) return;
     if (cls.indexOf('inw-b-batchno') >= 0) row.batch_no = val;
     if (cls.indexOf('inw-b-arn') >= 0) row.arn_no = val;
+    if (cls.indexOf('inw-b-brand') >= 0) row.brand_name = val;
     if (cls.indexOf('inw-b-packstyle') >= 0) row.pack_style = val;
     if (cls.indexOf('inw-b-mfg') >= 0) row.mfg_dt = val;
     if (cls.indexOf('inw-b-exp') >= 0) row.exp_dt = val;
@@ -521,6 +528,7 @@ function initPage_inward() {
             ln.batches.push({
               batch_no: '',
               arn_no: '',
+              brand_name: '',
               pack_style: '',
               mfg_dt: '',
               exp_dt: '',
@@ -935,6 +943,7 @@ function initPage_inward() {
     return {
       batch_no: b.batch_no != null ? String(b.batch_no) : '',
       arn_no: b.arn_no != null ? String(b.arn_no) : '',
+      brand_name: b.brand_name != null ? String(b.brand_name) : '',
       pack_style: b.pack_style != null ? String(b.pack_style) : '',
       mfg_dt: b.mfg_dt != null ? String(b.mfg_dt) : '',
       exp_dt: b.exp_dt != null ? String(b.exp_dt) : '',

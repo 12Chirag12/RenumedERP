@@ -65,6 +65,7 @@ _COL_DEFS_STANDARD = [
     {'key': 'pkg_style', 'lable': 'Packing Style', 'default': True},
     {'key': 'rate', 'label': 'Rate', 'default': True},
     {'key': 'batch_no', 'label': 'Batch no.', 'default': True},
+    {'key': 'brand_name', 'label': 'Brand name', 'default': True},
     {'key': 'product_name', 'label': 'Product name', 'default': True},
     {'key': 'transporter_name', 'label': 'Transporter name', 'default': True},
 ]
@@ -178,7 +179,10 @@ def _expand_rows(heds: list[TrnInwHed]) -> list[tuple[TrnInwHed, TrnInwDtl1, Trn
         for d1 in lines:
             item = d1.item
             if getattr(item, 'maintain_batch', None) == 'Y':
-                item_batches = [b for b in batches if b.item_id == d1.item_id]
+                item_batches = [
+                    b for b in batches
+                    if (b.inward_dtl1_id == d1.pk if getattr(b, 'inward_dtl1_id', None) else b.item_id == d1.item_id)
+                ]
                 if not item_batches:
                     out.append((hed, d1, None))
                 else:
@@ -277,6 +281,8 @@ def _serialize_row_standard(
             row['rate'] = ''
     if 'batch_no' in columns:
         row['batch_no'] = (batch.batch_no if batch else '') or ''
+    if 'brand_name' in columns:
+        row['brand_name'] = (getattr(batch, 'brand_name', '') if batch else '') or ''
     if 'product_name' in columns:
         if batch and batch.product_id and batch.product:
             row['product_name'] = batch.product.prod_name
