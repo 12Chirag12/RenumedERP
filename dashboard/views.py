@@ -27,18 +27,18 @@ from django.shortcuts import render
 def dashboard_view(request):
     """
     Main dashboard page.
-    Renders the executive Director Transaction Dashboard.
+    Renders the executive Transaction Dashboard.
     """
-    return render(request, 'dashboard/director_dashboard.html', {
-        'page_title': "Director's Transaction Command Center",
+    return render(request, 'dashboard/dashboard.html', {
+        'page_title': "Transaction Command Center",
     })
 
 
 @login_required
 def director_dashboard_view(request):
-    """Director Transaction Command Center dedicated view."""
-    return render(request, 'dashboard/director_dashboard.html', {
-        'page_title': "Director's Transaction Command Center",
+    """Dashboard view alias for backwards compatibility."""
+    return render(request, 'dashboard/dashboard.html', {
+        'page_title': "Transaction Command Center",
     })
 
 

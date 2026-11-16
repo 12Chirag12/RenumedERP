@@ -25,13 +25,13 @@ class DashboardViewsTest(TestCase):
         self.client.force_login(self.user)
         resp = self.client.get(reverse('dashboard'))
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, 'Director Transaction Command Center')
+        self.assertContains(resp, 'Transaction Command Center')
 
     def test_authenticated_director_dashboard_page(self):
         self.client.force_login(self.user)
         resp = self.client.get(reverse('director_dashboard'))
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, 'Director Transaction Command Center')
+        self.assertContains(resp, 'Transaction Command Center')
 
     def test_api_summary_kpis(self):
         self.client.force_login(self.user)
