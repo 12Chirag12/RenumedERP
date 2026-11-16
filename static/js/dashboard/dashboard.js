@@ -1,11 +1,11 @@
 /**
- * Director Transaction Command Center — director_dashboard.js
+ * Transaction Command Center — dashboard.js
  * Comprehensive interactive executive controller:
  * - Two distinct operational modes: Quick Periods vs Selected Time Period (Custom Range)
  * - Strict interactive client-side date validation (From/To missing, From > To checks)
  * - Timezone-safe local date formatting without UTC offset drift
  * - In-table instant text filtering across all columns with DYNAMIC TOTALS RECALCULATION
- * - Total row calculation for every numeric column (excluding dates) in tfoot and footer strips
+ * - Total row calculation for every numeric column in tfoot and footer strips
  * - Fixed date formatting to prevent 'Invalid Date' and Excel '########' column clipping
  * - 1-Click Excel (.xls) and CSV export with full auto-width and bold totals
  * - Zero-flicker full screen maximize / minimize (with Esc key support)
@@ -131,7 +131,7 @@ var DD = (function () {
 
   function updateActivePeriodBadge(fromISO, toISO) {
     if (currentPreset === 'all') {
-      setText('ddActivePeriodText', 'All Time (Complete Database History)');
+      setText('ddActivePeriodText', 'All Time (Complete Ledger History)');
       return;
     }
     var text = fmtDate(fromISO) + ' – ' + fmtDate(toISO);
@@ -219,7 +219,7 @@ var DD = (function () {
     var badge = document.getElementById('ddModeBadge');
     if (badge) {
       badge.className = 'dd-mode-badge dd-mode-custom';
-      badge.innerHTML = '<i class="bi bi-calendar-check"></i> <span>Active Mode:</span> <strong>Selected Time Period (Custom)</strong>';
+      badge.innerHTML = '<i class="bi bi-calendar-check"></i> <span>Active Mode:</span> <strong>Custom Date Range</strong>';
     }
 
     var fromVal = document.getElementById('ddFromDate').value;
@@ -251,19 +251,19 @@ var DD = (function () {
     var badge = document.getElementById('ddModeBadge');
     if (badge) {
       badge.className = 'dd-mode-badge dd-mode-custom';
-      badge.innerHTML = '<i class="bi bi-calendar-check"></i> <span>Active Mode:</span> <strong>Selected Period (' + fmtDate(fromVal) + ' to ' + fmtDate(toVal) + ')</strong>';
+      badge.innerHTML = '<i class="bi bi-calendar-check"></i> <span>Active Mode:</span> <strong>Custom (' + fmtDate(fromVal) + ' to ' + fmtDate(toVal) + ')</strong>';
     }
 
     var applyBtn = document.getElementById('ddApplyBtn');
     if (applyBtn) {
       applyBtn.disabled = true;
-      applyBtn.innerHTML = '<span class="dd-btn-spinner"></span> Applying...';
+      applyBtn.innerHTML = '<span class="dd-spinner" style="width:12px;height:12px;display:inline-block;"></span> Applying...';
     }
 
     loadAll(function () {
       if (applyBtn) {
         applyBtn.disabled = false;
-        applyBtn.innerHTML = '<i class="bi bi-funnel-fill"></i> Apply Filter';
+        applyBtn.innerHTML = '<i class="bi bi-funnel"></i> <span>Apply</span>';
       }
       showToast();
     });
@@ -307,6 +307,7 @@ var DD = (function () {
         presetName = 'This Month';
         fromDt.setDate(1);
         break;
+      case 'last_month':
       case 'lastmonth':
         presetName = 'Last Month';
         fromDt = new Date(today.getFullYear(), today.getMonth() - 1, 1);
@@ -452,17 +453,17 @@ var DD = (function () {
           }
 
           html += '<tr>' +
-            '<td data-date="' + esc(row.inward_dt) + '"><strong class="dd-date-strong">' + fmtDate(row.inward_dt) + '</strong></td>' +
-            '<td><span class="dd-code-strong">' + esc(row.grn_no) + '</span></td>' +
-            '<td><span class="dd-code-sub">' + esc(row.register_no) + '</span></td>' +
-            '<td>' + catBadge + '</td>' +
+            '<td data-date="' + esc(row.inward_dt) + '"><strong>' + fmtDate(row.inward_dt) + '</strong></td>' +
+            '<td><strong>' + esc(row.grn_no) + '</strong></td>' +
+            '<td>' + esc(row.register_no) + '</td>' +
+            '<td class="text-center">' + catBadge + '</td>' +
             '<td><strong>' + esc(row.supplier_name) + '</strong></td>' +
             '<td>' + esc(row.customer_name) + '</td>' +
             '<td>' + esc(row.inv_no) + '</td>' +
             '<td data-date="' + esc(row.inv_dt) + '">' + fmtDate(row.inv_dt) + '</td>' +
-            '<td><span class="dd-vehicle-pill">' + esc(row.vehicle_no) + '</span></td>' +
+            '<td>' + esc(row.vehicle_no) + '</td>' +
             '<td>' + esc(row.transporter_name) + driverInfo + '</td>' +
-            '<td><span class="dd-text-truncate" title="' + esc(row.products_display) + '">' + esc(row.products_display || '—') + '</span></td>' +
+            '<td>' + esc(row.products_display || '—') + '</td>' +
             '<td>' + (batchArns || '—') + '</td>' +
             '<td class="text-right" data-num="' + Number(row.items_count || 0) + '">' + fmtNum(row.items_count) + '</td>' +
             '<td class="text-right font-weight-bold" data-num="' + Number(row.total_qty || 0) + '">' + fmtQty(row.total_qty) + '</td>' +
@@ -520,30 +521,30 @@ var DD = (function () {
           totalNos += Number(row.batch_qty_n || 0);
 
           var rmBadge = row.rm_disp_flg === 'Y'
-            ? '<span class="dd-badge-status dd-badge-active"><i class="bi bi-check-circle-fill"></i> Completed</span>'
-            : '<span class="dd-badge-status dd-badge-pending"><i class="bi bi-hourglass-split"></i> Pending</span>';
+            ? '<span class="dd-badge-status dd-status-done"><i class="bi bi-check2"></i> Done</span>'
+            : '<span class="dd-badge-status dd-status-pending"><i class="bi bi-hourglass-split"></i> Pending</span>';
 
           var dprBadge = row.dpr_flg === 'Y'
-            ? '<span class="dd-badge-status dd-badge-active"><i class="bi bi-check-circle-fill"></i> Done</span>'
-            : '<span class="dd-badge-status dd-badge-pending"><i class="bi bi-clock"></i> Not Done</span>';
+            ? '<span class="dd-badge-status dd-status-done"><i class="bi bi-check2"></i> Done</span>'
+            : '<span class="dd-badge-status dd-status-not"><i class="bi bi-x"></i> Not Done</span>';
 
           var shiftBadge = row.shift_id === 'D' || row.shift_id === 'Day'
-            ? '<span class="dd-shift-pill dd-shift-day"><i class="bi bi-sun"></i> Day</span>'
-            : '<span class="dd-shift-pill dd-shift-night"><i class="bi bi-moon"></i> Night</span>';
+            ? 'Day'
+            : 'Night';
 
           html += '<tr>' +
-            '<td data-date="' + esc(row.gran_dt) + '"><strong class="dd-date-strong">' + fmtDate(row.gran_dt) + '</strong></td>' +
+            '<td data-date="' + esc(row.gran_dt) + '"><strong>' + fmtDate(row.gran_dt) + '</strong></td>' +
             '<td>' + shiftBadge + '</td>' +
             '<td>' + esc(row.section_name) + '</td>' +
             '<td>' + esc(row.customer_name) + '</td>' +
             '<td><strong>' + esc(row.product_name) + '</strong></td>' +
-            '<td><span class="dd-code-strong">' + esc(row.batch_no) + '</span></td>' +
+            '<td><strong>' + esc(row.batch_no) + '</strong></td>' +
             '<td class="text-right" data-num="' + Number(row.batch_qty_l || 0) + '">' + fmtQty(row.batch_qty_l) + '</td>' +
             '<td class="text-right" data-num="' + Number(row.batch_qty_n || 0) + '">' + fmtNum(row.batch_qty_n) + '</td>' +
-            '<td><span class="dd-mfg-pill">' + esc(row.mfg_dt) + '</span></td>' +
-            '<td><span class="dd-exp-pill">' + esc(row.exp_dt) + '</span></td>' +
+            '<td>' + esc(row.mfg_dt) + '</td>' +
+            '<td>' + esc(row.exp_dt) + '</td>' +
             '<td data-date="' + esc(row.blend_dt) + '">' + fmtDate(row.blend_dt) + '</td>' +
-            '<td><span class="dd-layer-pill">' + esc(row.layer_slot) + '</span></td>' +
+            '<td>' + esc(row.layer_slot) + '</td>' +
             '<td class="text-center">' + rmBadge + '</td>' +
             '<td class="text-center">' + dprBadge + '</td>' +
             '</tr>';
@@ -602,14 +603,14 @@ var DD = (function () {
           totalDisp += Number(row.total_dispensed_qty || 0);
 
           html += '<tr>' +
-            '<td data-date="' + esc(row.dispensing_dt) + '"><strong class="dd-date-strong">' + fmtDate(row.dispensing_dt) + '</strong></td>' +
+            '<td data-date="' + esc(row.dispensing_dt) + '"><strong>' + fmtDate(row.dispensing_dt) + '</strong></td>' +
             '<td>' + esc(row.customer_name) + '</td>' +
             '<td><strong>' + esc(row.product_name) + '</strong></td>' +
-            '<td><span class="dd-code-strong">' + esc(row.batch_no) + '</span></td>' +
-            '<td><span class="dd-spec-pill">' + esc(row.spec_name) + '</span></td>' +
+            '<td><strong>' + esc(row.batch_no) + '</strong></td>' +
+            '<td>' + esc(row.spec_name) + '</td>' +
             '<td>' + esc(row.machine_name) + '</td>' +
             '<td class="text-right" data-num="' + Number(row.lot_no || 0) + '">' + fmtNum(row.lot_no) + '</td>' +
-            '<td><i class="bi bi-person-check"></i> ' + esc(row.dispensed_by) + '</td>' +
+            '<td>' + esc(row.dispensed_by) + '</td>' +
             '<td>' + esc(row.worker_name) + '</td>' +
             '<td>' + esc(row.checked_by || '—') + '</td>' +
             '<td>' + esc(row.verified_by || '—') + '</td>' +
@@ -677,35 +678,35 @@ var DD = (function () {
           totalHelpers += Number(row.no_of_helper || 0);
 
           var statusBadge = (row.machine_working === 'working')
-            ? '<span class="dd-badge-status dd-badge-active"><i class="bi bi-play-circle-fill"></i> Running</span>'
-            : '<span class="dd-badge-status dd-badge-stoppage"><i class="bi bi-pause-circle-fill"></i> Stoppage</span>';
+            ? '<span class="dd-badge-status dd-status-run">● Running</span>'
+            : '<span class="dd-badge-status dd-status-stop">■ Stoppage</span>';
 
           var timeDisp = esc(row.start_time) + ' – ' + esc(row.end_time);
           if (row.total_time) {
-            timeDisp += ' <small>(' + esc(row.total_time) + ')</small>';
+            timeDisp += ' <small class="text-muted">(' + esc(row.total_time) + ')</small>';
           }
 
           var operatorLine = esc(row.operator1_name);
           if (row.operator2_name) {
-            operatorLine += ' <small class="text-muted">/ ' + esc(row.operator2_name) + '</small>';
+            operatorLine += ' / ' + esc(row.operator2_name);
           }
 
           html += '<tr>' +
-            '<td data-date="' + esc(row.trn_dpr_dt) + '"><strong class="dd-date-strong">' + fmtDate(row.trn_dpr_dt) + '</strong></td>' +
+            '<td data-date="' + esc(row.trn_dpr_dt) + '"><strong>' + fmtDate(row.trn_dpr_dt) + '</strong></td>' +
             '<td>' + esc(row.section_name) + '</td>' +
             '<td><strong>' + esc(row.machine_name) + '</strong></td>' +
-            '<td><span class="dd-shift-pill">' + esc(row.shift_id) + '</span></td>' +
+            '<td>' + esc(row.shift_id) + '</td>' +
             '<td>' + esc(row.customer_name) + '</td>' +
             '<td><strong>' + esc(row.product_name) + '</strong></td>' +
-            '<td><span class="dd-code-strong">' + esc(row.batch_no) + '</span></td>' +
+            '<td><strong>' + esc(row.batch_no) + '</strong></td>' +
             '<td class="text-right" data-num="' + Number(row.lot_no || 0) + '">' + fmtNum(row.lot_no) + '</td>' +
             '<td>' + timeDisp + '</td>' +
-            '<td>' + statusBadge + '</td>' +
+            '<td class="text-center">' + statusBadge + '</td>' +
             '<td class="text-right font-weight-bold" data-num="' + Number(row.qty_kg || 0) + '">' + fmtQty(row.qty_kg) + '</td>' +
             '<td class="text-right font-weight-bold" data-num="' + Number(row.qty_nos || 0) + '">' + fmtNum(row.qty_nos) + '</td>' +
             '<td>' + operatorLine + '</td>' +
             '<td class="text-right" data-num="' + Number(row.no_of_helper || 0) + '">' + fmtNum(row.no_of_helper) + '</td>' +
-            '<td><span class="dd-text-truncate" title="' + esc(row.remarks) + '">' + esc(row.remarks || '—') + '</span></td>' +
+            '<td>' + esc(row.remarks || '—') + '</td>' +
             '</tr>';
         });
 
@@ -770,17 +771,17 @@ var DD = (function () {
           totalManpower += Number(row.no_of_girls || 0);
 
           html += '<tr>' +
-            '<td data-date="' + esc(row.pkgcont_date) + '"><strong class="dd-date-strong">' + fmtDate(row.pkgcont_date) + '</strong></td>' +
+            '<td data-date="' + esc(row.pkgcont_date) + '"><strong>' + fmtDate(row.pkgcont_date) + '</strong></td>' +
             '<td><strong>' + esc(row.contractor_name) + '</strong></td>' +
             '<td>' + esc(row.customer_name) + '</td>' +
             '<td><strong>' + esc(row.product_name) + '</strong></td>' +
-            '<td><span class="dd-code-strong">' + esc(row.batch_no) + '</span></td>' +
-            '<td><span class="dd-pack-style-pill">' + esc(row.pkg_style_name) + '</span></td>' +
+            '<td><strong>' + esc(row.batch_no) + '</strong></td>' +
+            '<td>' + esc(row.pkg_style_name) + '</td>' +
             '<td class="text-right font-weight-bold" data-num="' + Number(row.shipper_no || 0) + '">' + fmtNum(row.shipper_no) + '</td>' +
             '<td class="text-right font-weight-bold" data-num="' + Number(row.qty_nos || 0) + '">' + fmtNum(row.qty_nos) + '</td>' +
             '<td class="text-right" data-num="' + Number(row.qty_loose || 0) + '">' + fmtNum(row.qty_loose) + '</td>' +
             '<td class="text-right" data-num="' + Number(row.no_of_girls || 0) + '">' + fmtNum(row.no_of_girls) + '</td>' +
-            '<td><span class="dd-text-truncate" title="' + esc(row.remarks) + '">' + esc(row.remarks || '—') + '</span></td>' +
+            '<td>' + esc(row.remarks || '—') + '</td>' +
             '</tr>';
         });
 
@@ -845,23 +846,23 @@ var DD = (function () {
           totalVal += Number(row.total_amt || 0);
 
           var allocBadge = row.is_completed
-            ? '<span class="dd-badge-status dd-badge-active"><i class="bi bi-check-all"></i> Allocated</span>'
-            : '<span class="dd-badge-status dd-badge-pending"><i class="bi bi-hourglass-top"></i> In Progress</span>';
+            ? '<span class="dd-badge-status dd-status-done">Allocated</span>'
+            : '<span class="dd-badge-status dd-status-pending">In Progress</span>';
 
           var dispatchBadge = row.is_sale_completed
-            ? '<span class="dd-badge-status dd-badge-active"><i class="bi bi-truck"></i> Dispatched</span>'
-            : '<span class="dd-badge-status dd-badge-secondary"><i class="bi bi-box-seam"></i> Pending</span>';
+            ? '<span class="dd-badge-status dd-status-done">Dispatched</span>'
+            : '<span class="dd-badge-status dd-status-pending">Pending</span>';
 
           html += '<tr>' +
-            '<td data-date="' + esc(row.ord_rec_dt) + '"><strong class="dd-date-strong">' + fmtDate(row.ord_rec_dt) + '</strong></td>' +
-            '<td><span class="dd-code-strong">' + esc(row.cust_ord_id) + '</span></td>' +
+            '<td data-date="' + esc(row.ord_rec_dt) + '"><strong>' + fmtDate(row.ord_rec_dt) + '</strong></td>' +
+            '<td><strong>' + esc(row.cust_ord_id) + '</strong></td>' +
             '<td data-date="' + esc(row.cust_ord_date) + '">' + fmtDate(row.cust_ord_date) + '</td>' +
             '<td><strong>' + esc(row.customer_name) + '</strong></td>' +
             '<td><strong>' + esc(row.product_name) + '</strong></td>' +
-            '<td><span class="dd-pack-style-pill">' + esc(row.pkg_style_name) + '</span></td>' +
+            '<td>' + esc(row.pkg_style_name) + '</td>' +
             '<td class="text-right" data-num="' + Number(row.order_qty || 0) + '">' + fmtQty(row.order_qty) + '</td>' +
             '<td class="text-right" data-num="' + Number(row.ord_qty_nos || 0) + '">' + fmtNum(row.ord_qty_nos) + '</td>' +
-            '<td class="text-right font-weight-bold ' + (row.remaining_qty > 0 ? 'text-amber' : 'text-muted') + '" data-num="' + Number(row.remaining_qty || 0) + '">' + fmtQty(row.remaining_qty) + '</td>' +
+            '<td class="text-right font-weight-bold" data-num="' + Number(row.remaining_qty || 0) + '">' + fmtQty(row.remaining_qty) + '</td>' +
             '<td class="text-center">' + allocBadge + '</td>' +
             '<td class="text-center">' + dispatchBadge + '</td>' +
             '<td class="text-right" data-num="' + Number(row.rate || 0) + '">' + fmtCurrency(row.rate) + '</td>' +
@@ -936,12 +937,12 @@ var DD = (function () {
           totalItems += Number(row.line_count || 0);
 
           html += '<tr>' +
-            '<td><span class="dd-code-strong">' + esc(row.invoice_no) + '</span></td>' +
-            '<td data-date="' + esc(row.invoice_dt) + '"><strong class="dd-date-strong">' + fmtDate(row.invoice_dt) + '</strong></td>' +
+            '<td><strong>' + esc(row.invoice_no) + '</strong></td>' +
+            '<td data-date="' + esc(row.invoice_dt) + '"><strong>' + fmtDate(row.invoice_dt) + '</strong></td>' +
             '<td><strong>' + esc(row.customer_name) + '</strong></td>' +
-            '<td><span class="dd-code-sub">' + esc(row.ref_po_no || '—') + '</span></td>' +
+            '<td>' + esc(row.ref_po_no || '—') + '</td>' +
             '<td>' + esc(row.transporter_name) + '</td>' +
-            '<td><span class="dd-text-truncate" title="' + esc(row.delivery_add) + '">' + esc(row.delivery_add) + '</span></td>' +
+            '<td>' + esc(row.delivery_add) + '</td>' +
             '<td class="text-right" data-num="' + Number(row.taxable_val || 0) + '">' + fmtCurrency(row.taxable_val) + '</td>' +
             '<td class="text-right" data-num="' + Number(row.cgst_amt || 0) + '">' + fmtCurrency(row.cgst_amt) + '</td>' +
             '<td class="text-right" data-num="' + Number(row.sgst_amt || 0) + '">' + fmtCurrency(row.sgst_amt) + '</td>' +
@@ -1018,17 +1019,15 @@ var DD = (function () {
             catBadge = '<span class="dd-badge-cat dd-badge-rm">RM</span>';
           } else if (row.category_code === 'PM') {
             catBadge = '<span class="dd-badge-cat dd-badge-pm">PM</span>';
-          } else if (row.category_code === 'FG') {
-            catBadge = '<span class="dd-badge-cat dd-badge-fg">FG</span>';
           }
 
           var balanceClass = Number(row.closing_qty) > 0 ? 'text-success font-weight-bold' : 'text-danger font-weight-bold';
 
           html += '<tr>' +
             '<td><strong>' + esc(row.customer_name) + '</strong></td>' +
-            '<td>' + catBadge + '</td>' +
+            '<td class="text-center">' + catBadge + '</td>' +
             '<td><strong>' + esc(row.sku_name) + '</strong></td>' +
-            '<td><span class="dd-code-strong">' + esc(row.batch_no || '—') + '</span></td>' +
+            '<td>' + esc(row.batch_no || '—') + '</td>' +
             '<td data-date="' + esc(row.mfg_date) + '">' + fmtDate(row.mfg_date) + '</td>' +
             '<td data-date="' + esc(row.exp_date) + '">' + fmtDate(row.exp_date) + '</td>' +
             '<td class="text-right" data-num="' + Number(row.opn_qty || 0) + '">' + fmtQty(row.opn_qty) + '</td>' +
@@ -1063,6 +1062,15 @@ var DD = (function () {
   // ── Master Loader ──
   function loadAll(cb) {
     var params = getRange();
+
+    // Trigger subtle spin on refresh button if present
+    var refreshBtn = document.querySelector('.dd-btn-refresh i');
+    if (refreshBtn) {
+      refreshBtn.style.animation = 'dd-spin 0.6s linear';
+      setTimeout(function () {
+        refreshBtn.style.animation = '';
+      }, 600);
+    }
 
     loadKPIs(params);
     loadInward(params);
@@ -1119,7 +1127,6 @@ var DD = (function () {
         for (var c = 0; c < footCells.length; c++) {
           if (c in colSums) {
             var rawSum = colSums[c];
-            // Format depending on currency / integer / decimal
             var currentText = footCells[c].textContent || '';
             if (currentText.indexOf('₹') > -1) {
               footCells[c].textContent = fmtCurrency(rawSum);
@@ -1139,7 +1146,7 @@ var DD = (function () {
   }
 
   // ── High-Grade Excel Workbook Export (.xls with Auto Column Widths & Bold Totals) ──
-  // Microsoft Excel natively auto-fits columns in HTML/XML spreadsheets, preventing '########' on dates!
+  // Microsoft Excel auto-fits columns in HTML/XML spreadsheets, avoiding '########' on dates!
   function exportTableToExcel(tableId, filename) {
     var table = document.getElementById(tableId);
     if (!table) return;
@@ -1154,6 +1161,12 @@ var DD = (function () {
       }
     });
 
+    // Ensure all date cells have explicit min-width and mso-number-format to prevent '########'
+    var allDateCells = clone.querySelectorAll('td[data-date], th');
+    allDateCells.forEach(function (c) {
+      c.setAttribute('style', (c.getAttribute('style') || '') + '; min-width: 120px; white-space: nowrap;');
+    });
+
     var excelHTML = '<html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
       'xmlns:x="urn:schemas-microsoft-com:office:excel" ' +
       'xmlns="http://www.w3.org/TR/REC-html40">' +
@@ -1165,14 +1178,14 @@ var DD = (function () {
       '</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->' +
       '<style>' +
       'table { border-collapse: collapse; width: 100%; font-family: Calibri, Arial, sans-serif; font-size: 11pt; } ' +
-      'th { background-color: #0B1F3A; color: #FFFFFF; font-weight: bold; padding: 8px 12px; border: 1px solid #C5D4E6; text-align: left; } ' +
+      'th { background-color: #0F172A; color: #FFFFFF; font-weight: bold; padding: 8px 14px; border: 1px solid #CBD5E1; text-align: left; } ' +
       'th.text-right { text-align: right; } ' +
       'th.text-center { text-align: center; } ' +
-      'td { border: 1px solid #E2E8F0; padding: 6px 10px; color: #0F172A; } ' +
+      'td { border: 1px solid #E2E8F0; padding: 6px 14px; color: #0F172A; white-space: nowrap; } ' +
       'td.text-right { text-align: right; mso-number-format: "#,##0.00"; } ' +
       'td.text-center { text-align: center; } ' +
-      '.dd-total-row td { background-color: #F1F5F9; font-weight: bold; border-top: 2px solid #0B1F3A; border-bottom: 3px double #0B1F3A; } ' +
-      '.dd-date-strong, [data-date] { mso-number-format: "\\@"; white-space: nowrap; } ' +
+      '.dd-total-row td { background-color: #F1F5F9; font-weight: bold; border-top: 2px solid #0F172A; border-bottom: 3px double #0F172A; } ' +
+      '[data-date] { mso-number-format: "\\@"; white-space: nowrap; min-width: 120px; } ' +
       '</style>' +
       '</head>' +
       '<body>' +

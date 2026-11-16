@@ -8,90 +8,55 @@
 {% endblock %}
 
 {% block content %}
-<div id="directorDashboard" data-page-init="directorDashboard" class="dd-container">
+<div id="directorDashboard" data-page-init="directorDashboard" class="dd-workspace">
 
-  <!-- Executive Header & Real-Time Lockup -->
-  <header class="dd-executive-header">
-    <div class="dd-header-brand">
-      <div class="dd-title-badge">
-        <i class="bi bi-shield-check"></i> Executive Suite
+  <!-- ========================================================
+       1. PAGE HEADER & EXECUTIVE METRICS BAR
+       ======================================================== -->
+  <header class="dd-header">
+    <div class="dd-header-main">
+      <div class="dd-breadcrumb">
+        <span class="dd-breadcrumb-root">PharmaERP</span>
+        <i class="bi bi-chevron-right dd-breadcrumb-sep"></i>
+        <span class="dd-breadcrumb-current">Operations & Transactions</span>
       </div>
-      <h1 class="dd-title">Transaction Command Center</h1>
-      <p class="dd-subtitle">
-        cGMP-grounded, real-time operational visibility across Procurement GRNs, Granulation Logsheets, RM Dispensing,
-        Production DPRs, Contractor Packing, Sales Orders, Dispatches & Central Inventory.
+      <div class="dd-title-row">
+        <h1 class="dd-page-title">Transaction Command Center</h1>
+        <span class="dd-status-badge">
+          <span class="dd-status-dot"></span>
+          cGMP Audit Stream Active
+        </span>
+      </div>
+      <p class="dd-page-desc">
+        Real-time multi-module transaction ledger across raw materials procurement, batch manufacturing, formulation dispensing, contractor packaging, customer orders, and warehouse inventory.
       </p>
     </div>
 
-    <div class="dd-header-meta">
-      <div class="dd-user-pill">
-        <i class="bi bi-person-badge"></i>
-        <span>
-          <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
-          <small>({{ request.user.profile.role|default:"Director / Management" }})</small>
-        </span>
+    <div class="dd-header-actions">
+      <div class="dd-user-meta">
+        <div class="dd-avatar-icon">
+          <i class="bi bi-person-circle"></i>
+        </div>
+        <div class="dd-user-details">
+          <span class="dd-user-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+          <span class="dd-user-role">{{ request.user.profile.role|default:"Director / Executive Management" }}</span>
+        </div>
       </div>
-      <div class="dd-live-indicator">
-        <span class="dd-pulse-dot"></span> Live ERP Stream
-      </div>
+      <button type="button" class="dd-btn-refresh" onclick="DD.loadAll()" title="Refresh transaction data">
+        <i class="bi bi-arrow-clockwise"></i>
+        <span>Sync Data</span>
+      </button>
     </div>
   </header>
 
-  <!-- Quick Section Jump Toolbar -->
-  <nav class="dd-jump-nav" aria-label="Section Jump Navigation">
-    <div class="dd-jump-label"><i class="bi bi-compass"></i> Jump to Section:</div>
-    <div class="dd-jump-links">
-      <button type="button" class="dd-jump-btn" onclick="DD.scrollToSection('sectionInward')">
-        <i class="bi bi-box-arrow-in-down"></i> Inwards (GRN)
-      </button>
-      <button type="button" class="dd-jump-btn" onclick="DD.scrollToSection('sectionLogsheet')">
-        <i class="bi bi-journal-text"></i> Granulation
-      </button>
-      <button type="button" class="dd-jump-btn" onclick="DD.scrollToSection('sectionDispensing')">
-        <i class="bi bi-eyedropper"></i> RM Dispensing
-      </button>
-      <button type="button" class="dd-jump-btn" onclick="DD.scrollToSection('sectionDpr')">
-        <i class="bi bi-gear-wide-connected"></i> Production (DPR)
-      </button>
-      <button type="button" class="dd-jump-btn" onclick="DD.scrollToSection('sectionPacking')">
-        <i class="bi bi-box-seam"></i> Contractor Packing
-      </button>
-      <button type="button" class="dd-jump-btn" onclick="DD.scrollToSection('sectionOrders')">
-        <i class="bi bi-cart-check"></i> Sales Orders
-      </button>
-      <button type="button" class="dd-jump-btn" onclick="DD.scrollToSection('sectionSales')">
-        <i class="bi bi-receipt"></i> Invoices & Dispatch
-      </button>
-      <button type="button" class="dd-jump-btn" onclick="DD.scrollToSection('sectionStock')">
-        <i class="bi bi-boxes"></i> Central Stock
-      </button>
-    </div>
-  </nav>
-
-  <!-- Interactive Date Range & Period Filter Bar with Dual Mode -->
-  <section class="dd-filter-card" id="ddFilterCard" aria-label="Transaction Filters">
-    <div class="dd-filter-header">
-      <div class="dd-filter-title">
-        <i class="bi bi-sliders"></i>
-        <span>Transaction Time Period Filter</span>
-      </div>
-      <div class="dd-mode-indicator" id="ddModeIndicator">
-        <span class="dd-mode-badge dd-mode-quick" id="ddModeBadge">
-          <i class="bi bi-lightning-charge-fill"></i> <span id="ddModePrefix">Active Mode:</span> <strong id="ddModeLabel">Quick Period (This Month)</strong>
-        </span>
-      </div>
-    </div>
-
-    <!-- Real-time Validation Message Banner -->
-    <div class="dd-validation-alert" id="ddValidationAlert" style="display: none;" role="alert">
-      <i class="bi bi-exclamation-triangle-fill"></i>
-      <span id="ddValidationMsg">From Date cannot be later than To Date.</span>
-    </div>
-
-    <div class="dd-filter-body">
-      <!-- 1-Click Quick Period Presets -->
-      <div class="dd-preset-group">
-        <span class="dd-group-label"><i class="bi bi-lightning-charge"></i> Quick Periods:</span>
+  <!-- ========================================================
+       2. UNIFIED FILTER & TIME PERIOD TOOLBAR (SaaS-GRADE)
+       ======================================================== -->
+  <section class="dd-filter-card" id="ddFilterCard" aria-label="Transaction Filter Toolbar">
+    <div class="dd-filter-main-bar">
+      <!-- Quick Period Segmented Control -->
+      <div class="dd-preset-track" role="tablist" aria-label="Quick Time Periods">
+        <span class="dd-preset-label"><i class="bi bi-calendar3"></i> Period:</span>
         <div class="dd-preset-buttons">
           <button type="button" class="dd-preset-btn" data-preset="today" onclick="DD.setQuickRange('today')">Today</button>
           <button type="button" class="dd-preset-btn" data-preset="yesterday" onclick="DD.setQuickRange('yesterday')">Yesterday</button>
@@ -104,160 +69,353 @@
         </div>
       </div>
 
-      <!-- Specific Time Period Custom Range Pickers -->
-      <div class="dd-filter-dates">
-        <span class="dd-group-label"><i class="bi bi-calendar-range"></i> Selected Time Period:</span>
-        <div class="dd-date-inputs">
-          <div class="dd-input-wrapper">
-            <label for="ddFromDate">From Date <span class="text-danger">*</span></label>
-            <input type="date" id="ddFromDate" class="dd-input" onchange="DD.onDateInputChanged()" title="Starting Date">
-          </div>
-          <span class="dd-date-separator">to</span>
-          <div class="dd-input-wrapper">
-            <label for="ddToDate">To Date <span class="text-danger">*</span></label>
-            <input type="date" id="ddToDate" class="dd-input" onchange="DD.onDateInputChanged()" title="Ending Date">
-          </div>
-          <button type="button" class="dd-btn-apply" id="ddApplyBtn" onclick="DD.applySelectedPeriod()" title="Apply custom time period filter">
-            <i class="bi bi-funnel-fill"></i> Apply Filter
-          </button>
-          <button type="button" class="dd-btn-reset" onclick="DD.resetToDefault()" title="Reset to current month">
-            <i class="bi bi-arrow-counterclockwise"></i> Reset
-          </button>
+      <!-- Custom Date Range Picker -->
+      <div class="dd-custom-range">
+        <div class="dd-date-field">
+          <label for="ddFromDate">From</label>
+          <input type="date" id="ddFromDate" class="dd-input-date" onchange="DD.onDateInputChanged()" title="From Date">
+        </div>
+        <span class="dd-range-sep">to</span>
+        <div class="dd-date-field">
+          <label for="ddToDate">To</label>
+          <input type="date" id="ddToDate" class="dd-input-date" onchange="DD.onDateInputChanged()" title="To Date">
+        </div>
+        <button type="button" class="dd-btn-apply" id="ddApplyBtn" onclick="DD.applySelectedPeriod()" title="Apply date filter">
+          <i class="bi bi-funnel"></i>
+          <span>Apply</span>
+        </button>
+        <button type="button" class="dd-btn-reset" onclick="DD.resetToDefault()" title="Reset to current month">
+          <i class="bi bi-arrow-counterclockwise"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Validation & Status Bar -->
+    <div class="dd-filter-status-bar">
+      <div class="dd-scope-info">
+        <span class="dd-scope-icon"><i class="bi bi-clock-history"></i></span>
+        <span class="dd-scope-label">Current Scope:</span>
+        <strong id="ddActivePeriodText" class="dd-scope-value">Loading period...</strong>
+        <div class="dd-mode-indicator" id="ddModeIndicator">
+          <span class="dd-mode-badge dd-mode-quick" id="ddModeBadge">
+            <i class="bi bi-lightning-charge-fill"></i>
+            <span id="ddModePrefix">Active Mode:</span>
+            <strong id="ddModeLabel">Quick Period (This Month)</strong>
+          </span>
+        </div>
+      </div>
+
+      <div class="dd-filter-toast" id="ddFilterSuccessToast" style="display:none;">
+        <i class="bi bi-check2-circle"></i> Filter applied successfully
+      </div>
+    </div>
+
+    <!-- Validation Alert -->
+    <div class="dd-validation-alert" id="ddValidationAlert" style="display: none;" role="alert">
+      <i class="bi bi-exclamation-circle-fill"></i>
+      <span id="ddValidationMsg">From Date cannot be later than To Date.</span>
+    </div>
+  </section>
+
+  <!-- ========================================================
+       3. EXECUTIVE OPERATIONAL METRICS (PILLARS)
+       ======================================================== -->
+  <section class="dd-kpi-grid" id="ddKpiGrid" aria-label="Executive Key Performance Indicators">
+    
+    <!-- Pillar 1: Procurement / Inwards -->
+    <div class="dd-kpi-card" onclick="DD.scrollToSection('sectionInward')" title="View Inward GRN transactions">
+      <div class="dd-kpi-header">
+        <span class="dd-kpi-title">Procurement & GRNs</span>
+        <span class="dd-kpi-icon-wrap"><i class="bi bi-box-arrow-in-down"></i></span>
+      </div>
+      <div class="dd-kpi-body">
+        <div class="dd-kpi-metric">
+          <span class="dd-kpi-number" id="kpiTotalInwards">—</span>
+          <span class="dd-kpi-unit">Receipts</span>
+        </div>
+        <div class="dd-kpi-meta-row">
+          <span class="dd-kpi-pill">RM: <strong id="kpiGrnRm">—</strong></span>
+          <span class="dd-kpi-pill">PM: <strong id="kpiGrnPm">—</strong></span>
+        </div>
+      </div>
+      <div class="dd-kpi-footer">
+        <span class="dd-kpi-link">View Inward Register <i class="bi bi-arrow-right-short"></i></span>
+      </div>
+    </div>
+
+    <!-- Pillar 2: Manufacturing & Granulation -->
+    <div class="dd-kpi-card" onclick="DD.scrollToSection('sectionDpr')" title="View Production DPR & Output">
+      <div class="dd-kpi-header">
+        <span class="dd-kpi-title">Production DPR Output</span>
+        <span class="dd-kpi-icon-wrap"><i class="bi bi-gear-wide-connected"></i></span>
+      </div>
+      <div class="dd-kpi-body">
+        <div class="dd-kpi-metric">
+          <span class="dd-kpi-number" id="kpiProdKg">—</span>
+        </div>
+        <div class="dd-kpi-meta-row">
+          <span>Units: <strong id="kpiProdNos">—</strong></span>
+          <span class="dd-kpi-sep">|</span>
+          <span class="text-success"><span id="kpiDprWorking">0</span> Run</span>
+          <span class="dd-kpi-sep">·</span>
+          <span class="text-danger"><span id="kpiDprStoppage">0</span> Stop</span>
+        </div>
+      </div>
+      <div class="dd-kpi-footer">
+        <span class="dd-kpi-link">View DPR Logs (<span id="kpiDpr">—</span> runs) <i class="bi bi-arrow-right-short"></i></span>
+      </div>
+    </div>
+
+    <!-- Pillar 3: Granulation Batches & Dispensing -->
+    <div class="dd-kpi-card" onclick="DD.scrollToSection('sectionLogsheet')" title="View Granulation Logsheets">
+      <div class="dd-kpi-header">
+        <span class="dd-kpi-title">Granulation & Dispensing</span>
+        <span class="dd-kpi-icon-wrap"><i class="bi bi-journal-text"></i></span>
+      </div>
+      <div class="dd-kpi-body">
+        <div class="dd-kpi-metric">
+          <span class="dd-kpi-number" id="kpiLogsheets">—</span>
+          <span class="dd-kpi-unit">Batches</span>
+        </div>
+        <div class="dd-kpi-meta-row">
+          <span>DPR Done: <strong id="kpiLogDprDone">—</strong></span>
+          <span class="dd-kpi-sep">|</span>
+          <span>Dispensing: <strong id="kpiDispensing">—</strong></span>
+          <span class="dd-kpi-hidden" id="kpiLogDispDone">—</span>
+        </div>
+      </div>
+      <div class="dd-kpi-footer">
+        <span class="dd-kpi-link">View Granulation Batches <i class="bi bi-arrow-right-short"></i></span>
+      </div>
+    </div>
+
+    <!-- Pillar 4: Packaging & Shippers -->
+    <div class="dd-kpi-card" onclick="DD.scrollToSection('sectionPacking')" title="View Contractor Packaging">
+      <div class="dd-kpi-header">
+        <span class="dd-kpi-title">Contractor Packaging</span>
+        <span class="dd-kpi-icon-wrap"><i class="bi bi-box-seam"></i></span>
+      </div>
+      <div class="dd-kpi-body">
+        <div class="dd-kpi-metric">
+          <span class="dd-kpi-number" id="kpiTotalShippers">—</span>
+        </div>
+        <div class="dd-kpi-meta-row">
+          <span>Packed Units: <strong id="kpiPackedNos">—</strong></span>
+        </div>
+      </div>
+      <div class="dd-kpi-footer">
+        <span class="dd-kpi-link">View Packaging Register <i class="bi bi-arrow-right-short"></i></span>
+      </div>
+    </div>
+
+    <!-- Pillar 5: Sales Orders Booked -->
+    <div class="dd-kpi-card" onclick="DD.scrollToSection('sectionOrders')" title="View Customer Sales Orders">
+      <div class="dd-kpi-header">
+        <span class="dd-kpi-title">Customer Sales Orders</span>
+        <span class="dd-kpi-icon-wrap"><i class="bi bi-cart-check"></i></span>
+      </div>
+      <div class="dd-kpi-body">
+        <div class="dd-kpi-metric">
+          <span class="dd-kpi-number" id="kpiSalesOrders">—</span>
+          <span class="dd-kpi-unit">Orders</span>
+        </div>
+        <div class="dd-kpi-meta-row">
+          <span>Booked Value: <strong id="kpiOrderVal">—</strong></span>
+        </div>
+      </div>
+      <div class="dd-kpi-footer">
+        <span class="dd-kpi-link">View Sales Orders <i class="bi bi-arrow-right-short"></i></span>
+      </div>
+    </div>
+
+    <!-- Pillar 6: Dispatched Invoices & Revenue -->
+    <div class="dd-kpi-card" onclick="DD.scrollToSection('sectionSales')" title="View Dispatched Sales Invoices">
+      <div class="dd-kpi-header">
+        <span class="dd-kpi-title">Billed Dispatches</span>
+        <span class="dd-kpi-icon-wrap"><i class="bi bi-receipt"></i></span>
+      </div>
+      <div class="dd-kpi-body">
+        <div class="dd-kpi-metric">
+          <span class="dd-kpi-number" id="kpiInvoiceAmt">—</span>
+        </div>
+        <div class="dd-kpi-meta-row">
+          <span>Invoices: <strong id="kpiSalesInvoices">—</strong> Dispatched</span>
+        </div>
+      </div>
+      <div class="dd-kpi-footer">
+        <span class="dd-kpi-link">View Dispatch Invoices <i class="bi bi-arrow-right-short"></i></span>
+      </div>
+    </div>
+
+    <!-- Pillar 7: Central Warehouse Stock -->
+    <div class="dd-kpi-card" onclick="DD.scrollToSection('sectionStock')" title="View Central Stock Inventory">
+      <div class="dd-kpi-header">
+        <span class="dd-kpi-title">Central Stock Ledgers</span>
+        <span class="dd-kpi-icon-wrap"><i class="bi bi-boxes"></i></span>
+      </div>
+      <div class="dd-kpi-body">
+        <div class="dd-kpi-metric">
+          <span class="dd-kpi-number" id="kpiActiveStock">—</span>
+          <span class="dd-kpi-unit">Batches</span>
+        </div>
+        <div class="dd-kpi-meta-row">
+          <span>Active Warehouse SKUs</span>
+        </div>
+      </div>
+      <div class="dd-kpi-footer">
+        <span class="dd-kpi-link">View Stock Ledgers <i class="bi bi-arrow-right-short"></i></span>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ========================================================
+       4. PHARMACEUTICAL PRODUCTION LIFECYCLE TRACK
+       ======================================================== -->
+  <section class="dd-pipeline-bar" aria-label="Operations Lifecycle Tracker">
+    <div class="dd-pipeline-header">
+      <span class="dd-pipeline-title"><i class="bi bi-diagram-3"></i> Operations Lifecycle</span>
+      <span class="dd-pipeline-sub">End-to-End Material Transformation Flow</span>
+    </div>
+    <div class="dd-pipeline-steps">
+      <div class="dd-step-item" onclick="DD.scrollToSection('sectionInward')">
+        <span class="dd-step-num">1</span>
+        <div class="dd-step-content">
+          <span class="dd-step-name">Inward Receipts</span>
+          <span class="dd-step-desc">Vendor Invoices & COA</span>
+        </div>
+      </div>
+      <i class="bi bi-arrow-right dd-step-arrow"></i>
+
+      <div class="dd-step-item" onclick="DD.scrollToSection('sectionDispensing')">
+        <span class="dd-step-num">2</span>
+        <div class="dd-step-content">
+          <span class="dd-step-name">RM Dispensing</span>
+          <span class="dd-step-desc">Formulation Staging</span>
+        </div>
+      </div>
+      <i class="bi bi-arrow-right dd-step-arrow"></i>
+
+      <div class="dd-step-item" onclick="DD.scrollToSection('sectionLogsheet')">
+        <span class="dd-step-num">3</span>
+        <div class="dd-step-content">
+          <span class="dd-step-name">Granulation</span>
+          <span class="dd-step-desc">Batch Logsheets</span>
+        </div>
+      </div>
+      <i class="bi bi-arrow-right dd-step-arrow"></i>
+
+      <div class="dd-step-item" onclick="DD.scrollToSection('sectionDpr')">
+        <span class="dd-step-num">4</span>
+        <div class="dd-step-content">
+          <span class="dd-step-name">Production (DPR)</span>
+          <span class="dd-step-desc">Machine Runtime & Output</span>
+        </div>
+      </div>
+      <i class="bi bi-arrow-right dd-step-arrow"></i>
+
+      <div class="dd-step-item" onclick="DD.scrollToSection('sectionPacking')">
+        <span class="dd-step-num">5</span>
+        <div class="dd-step-content">
+          <span class="dd-step-name">Packaging</span>
+          <span class="dd-step-desc">Shippers & Loose Units</span>
+        </div>
+      </div>
+      <i class="bi bi-arrow-right dd-step-arrow"></i>
+
+      <div class="dd-step-item" onclick="DD.scrollToSection('sectionSales')">
+        <span class="dd-step-num">6</span>
+        <div class="dd-step-content">
+          <span class="dd-step-name">Dispatch & Invoice</span>
+          <span class="dd-step-desc">Finished Goods Outward</span>
         </div>
       </div>
     </div>
-
-    <!-- Active Period Summary Strip -->
-    <div class="dd-filter-active-strip">
-      <div class="dd-active-label">
-        <i class="bi bi-clock-history"></i> Current Scope:
-        <strong id="ddActivePeriodText">Loading period...</strong>
-      </div>
-      <div class="dd-filter-toast" id="ddFilterSuccessToast" style="display:none;">
-        <i class="bi bi-check-circle-fill"></i> Filter updated successfully
-      </div>
-    </div>
   </section>
 
-  <!-- Consolidated 9-Metric Executive KPI Grid -->
-  <section class="dd-kpi-grid" id="ddKpiGrid" aria-label="Executive Key Performance Indicators">
-    <div class="dd-kpi-card kpi-inward" onclick="DD.scrollToSection('sectionInward')" title="Jump to Inward GRNs">
-      <div class="dd-kpi-icon"><i class="bi bi-box-arrow-in-down"></i></div>
-      <div class="dd-kpi-meta">
-        <span class="dd-kpi-label">Inward Receipts (GRN)</span>
-        <div class="dd-kpi-val" id="kpiTotalInwards">—</div>
-        <div class="dd-kpi-sub">RM: <strong id="kpiGrnRm">—</strong> | PM: <strong id="kpiGrnPm">—</strong></div>
-      </div>
+  <!-- ========================================================
+       5. STICKY SUB-NAVIGATION DOCK
+       ======================================================== -->
+  <nav class="dd-nav-dock" aria-label="Transaction Modules Navigation">
+    <div class="dd-dock-scroll">
+      <button type="button" class="dd-dock-btn" onclick="DD.scrollToSection('sectionInward')">
+        <i class="bi bi-box-arrow-in-down"></i>
+        <span>Inward GRN</span>
+        <span class="dd-dock-badge" id="badgeInward">0</span>
+      </button>
+      <button type="button" class="dd-dock-btn" onclick="DD.scrollToSection('sectionLogsheet')">
+        <i class="bi bi-journal-text"></i>
+        <span>Granulation</span>
+        <span class="dd-dock-badge" id="badgeLogsheet">0</span>
+      </button>
+      <button type="button" class="dd-dock-btn" onclick="DD.scrollToSection('sectionDispensing')">
+        <i class="bi bi-eyedropper"></i>
+        <span>RM Dispensing</span>
+        <span class="dd-dock-badge" id="badgeDispensing">0</span>
+      </button>
+      <button type="button" class="dd-dock-btn" onclick="DD.scrollToSection('sectionDpr')">
+        <i class="bi bi-gear-wide-connected"></i>
+        <span>Production DPR</span>
+        <span class="dd-dock-badge" id="badgeDpr">0</span>
+      </button>
+      <button type="button" class="dd-dock-btn" onclick="DD.scrollToSection('sectionPacking')">
+        <i class="bi bi-box-seam"></i>
+        <span>Packaging</span>
+        <span class="dd-dock-badge" id="badgePacking">0</span>
+      </button>
+      <button type="button" class="dd-dock-btn" onclick="DD.scrollToSection('sectionOrders')">
+        <i class="bi bi-cart-check"></i>
+        <span>Sales Orders</span>
+        <span class="dd-dock-badge" id="badgeOrders">0</span>
+      </button>
+      <button type="button" class="dd-dock-btn" onclick="DD.scrollToSection('sectionSales')">
+        <i class="bi bi-receipt"></i>
+        <span>Dispatched Invoices</span>
+        <span class="dd-dock-badge" id="badgeSales">0</span>
+      </button>
+      <button type="button" class="dd-dock-btn" onclick="DD.scrollToSection('sectionStock')">
+        <i class="bi bi-boxes"></i>
+        <span>Stock Overview</span>
+        <span class="dd-dock-badge" id="badgeStock">0</span>
+      </button>
     </div>
-
-    <div class="dd-kpi-card kpi-log" onclick="DD.scrollToSection('sectionLogsheet')" title="Jump to Granulation Logsheets">
-      <div class="dd-kpi-icon"><i class="bi bi-journal-text"></i></div>
-      <div class="dd-kpi-meta">
-        <span class="dd-kpi-label">Granulation Batches</span>
-        <div class="dd-kpi-val" id="kpiLogsheets">—</div>
-        <div class="dd-kpi-sub">DPR Done: <strong id="kpiLogDprDone">—</strong> | Disp: <strong id="kpiLogDispDone">—</strong></div>
-      </div>
-    </div>
-
-    <div class="dd-kpi-card kpi-disp" onclick="DD.scrollToSection('sectionDispensing')" title="Jump to RM Dispensing">
-      <div class="dd-kpi-icon"><i class="bi bi-eyedropper"></i></div>
-      <div class="dd-kpi-meta">
-        <span class="dd-kpi-label">RM Dispensings</span>
-        <div class="dd-kpi-val" id="kpiDispensing">—</div>
-        <div class="dd-kpi-sub">Formulation Staging</div>
-      </div>
-    </div>
-
-    <div class="dd-kpi-card kpi-dpr" onclick="DD.scrollToSection('sectionDpr')" title="Jump to DPR Production">
-      <div class="dd-kpi-icon"><i class="bi bi-gear-wide-connected"></i></div>
-      <div class="dd-kpi-meta">
-        <span class="dd-kpi-label">Production DPR Logs</span>
-        <div class="dd-kpi-val" id="kpiDpr">—</div>
-        <div class="dd-kpi-sub"><span class="text-success font-weight-bold">● <span id="kpiDprWorking">0</span> Run</span> | <span class="text-danger font-weight-bold">■ <span id="kpiDprStoppage">0</span> Stop</span></div>
-      </div>
-    </div>
-
-    <div class="dd-kpi-card kpi-prod" onclick="DD.scrollToSection('sectionDpr')" title="Jump to Total Production Output">
-      <div class="dd-kpi-icon"><i class="bi bi-speedometer2"></i></div>
-      <div class="dd-kpi-meta">
-        <span class="dd-kpi-label">Total Production Output</span>
-        <div class="dd-kpi-val" id="kpiProdKg">—</div>
-        <div class="dd-kpi-sub">Nos: <strong id="kpiProdNos">—</strong></div>
-      </div>
-    </div>
-
-    <div class="dd-kpi-card kpi-pack" onclick="DD.scrollToSection('sectionPacking')" title="Jump to Contractor Packaging">
-      <div class="dd-kpi-icon"><i class="bi bi-box-seam"></i></div>
-      <div class="dd-kpi-meta">
-        <span class="dd-kpi-label">Contractor Packaging</span>
-        <div class="dd-kpi-val" id="kpiTotalShippers">—</div>
-        <div class="dd-kpi-sub">Packed Nos: <strong id="kpiPackedNos">—</strong></div>
-      </div>
-    </div>
-
-    <div class="dd-kpi-card kpi-order" onclick="DD.scrollToSection('sectionOrders')" title="Jump to Customer Sales Orders">
-      <div class="dd-kpi-icon"><i class="bi bi-cart-check"></i></div>
-      <div class="dd-kpi-meta">
-        <span class="dd-kpi-label">Customer Sales Orders</span>
-        <div class="dd-kpi-val" id="kpiSalesOrders">—</div>
-        <div class="dd-kpi-sub"><strong id="kpiOrderVal">—</strong></div>
-      </div>
-    </div>
-
-    <div class="dd-kpi-card kpi-sls" onclick="DD.scrollToSection('sectionSales')" title="Jump to Invoices & Dispatches">
-      <div class="dd-kpi-icon"><i class="bi bi-receipt"></i></div>
-      <div class="dd-kpi-meta">
-        <span class="dd-kpi-label">Dispatched Invoices</span>
-        <div class="dd-kpi-val" id="kpiSalesInvoices">—</div>
-        <div class="dd-kpi-sub"><strong id="kpiInvoiceAmt">—</strong></div>
-      </div>
-    </div>
-
-    <div class="dd-kpi-card kpi-stock" onclick="DD.scrollToSection('sectionStock')" title="Jump to Central Stock">
-      <div class="dd-kpi-icon"><i class="bi bi-boxes"></i></div>
-      <div class="dd-kpi-meta">
-        <span class="dd-kpi-label">Central Stock Batches</span>
-        <div class="dd-kpi-val" id="kpiActiveStock">—</div>
-        <div class="dd-kpi-sub">Active Warehouse Ledgers</div>
-      </div>
-    </div>
-  </section>
-
+  </nav>
 
   <!-- ========================================================
        SECTION 1: INWARD LOGSHEET & MATERIAL RECEIPTS (GRN)
        ======================================================== -->
   <section class="dd-section" id="sectionInward">
     <div class="dd-section-header">
-      <div class="dd-section-left">
+      <div class="dd-section-title-wrap">
         <div class="dd-section-icon dd-icon-inward">
           <i class="bi bi-box-arrow-in-down"></i>
         </div>
-        <div>
+        <div class="dd-section-headings">
           <h2 class="dd-section-title">Inward Logsheet & Material Receipts (GRN)</h2>
           <span class="dd-section-sub">Raw Materials (RM) & Packaging Materials (PM) received with vendor invoice, transporter & COA/ARN reference</span>
         </div>
-        <span class="dd-badge-count" id="badgeInward">0</span>
       </div>
 
-      <div class="dd-section-actions">
+      <div class="dd-section-toolbar">
         <div class="dd-search-box">
           <i class="bi bi-search"></i>
           <input type="text" placeholder="Search GRN, Supplier, Batch, Vehicle..." oninput="DD.filterTable('tbodyInward', this.value, 'tfootInward')">
         </div>
-        <button class="dd-btn-action" onclick="DD.exportTableToExcel('tableInward', 'Inward_Logsheet_Report')" title="Export to Excel (.xls)">
-          <i class="bi bi-file-earmark-excel"></i> Excel
-        </button>
-        <button class="dd-btn-action" onclick="DD.exportTableToCSV('tableInward', 'Inward_Logsheet_Report')" title="Export to CSV (.csv)">
-          <i class="bi bi-file-earmark-text"></i> CSV
-        </button>
-        <button class="dd-btn-action" onclick="DD.printSection('sectionInward')" title="Print Section Report">
-          <i class="bi bi-printer"></i> Print
-        </button>
-        <button class="dd-expand-btn" onclick="DD.toggleExpand('sectionInward')" title="Maximize Full Screen">
-          <i class="bi bi-arrows-fullscreen"></i>
-          <span class="dd-expand-label">Maximize</span>
-        </button>
+        <div class="dd-btn-group">
+          <button class="dd-btn-action" onclick="DD.exportTableToExcel('tableInward', 'Inward_Logsheet_Report')" title="Export to Excel (.xls)">
+            <i class="bi bi-file-earmark-excel"></i> <span>Excel</span>
+          </button>
+          <button class="dd-btn-action" onclick="DD.exportTableToCSV('tableInward', 'Inward_Logsheet_Report')" title="Export to CSV (.csv)">
+            <i class="bi bi-file-earmark-text"></i> <span>CSV</span>
+          </button>
+          <button class="dd-btn-action" onclick="DD.printSection('sectionInward')" title="Print Section Report">
+            <i class="bi bi-printer"></i> <span>Print</span>
+          </button>
+          <button class="dd-expand-btn" onclick="DD.toggleExpand('sectionInward')" title="Toggle Fullscreen">
+            <i class="bi bi-arrows-fullscreen"></i>
+            <span class="dd-expand-label">Maximize</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -274,14 +432,14 @@
         <table class="dd-table" id="tableInward">
           <thead>
             <tr>
-              <th>Inward Date</th>
+              <th style="min-width: 105px;">Inward Date</th>
               <th>GRN No.</th>
               <th>Reg. No.</th>
-              <th>Type</th>
+              <th class="text-center">Type</th>
               <th>Supplier / Vendor</th>
               <th>Customer / Principal</th>
               <th>Bill / Inv. No.</th>
-              <th>Bill Date</th>
+              <th style="min-width: 105px;">Bill Date</th>
               <th>Vehicle No.</th>
               <th>Transporter & Driver</th>
               <th>Material Description</th>
@@ -297,7 +455,7 @@
               <td><strong>TOTAL</strong></td>
               <td>—</td>
               <td>—</td>
-              <td>—</td>
+              <td class="text-center">—</td>
               <td>—</td>
               <td>—</td>
               <td>—</td>
@@ -321,41 +479,41 @@
     </div>
   </section>
 
-
   <!-- ========================================================
        SECTION 2: GRANULATION LOGSHEET REGISTER
        ======================================================== -->
   <section class="dd-section" id="sectionLogsheet">
     <div class="dd-section-header">
-      <div class="dd-section-left">
+      <div class="dd-section-title-wrap">
         <div class="dd-section-icon dd-icon-log">
           <i class="bi bi-journal-text"></i>
         </div>
-        <div>
+        <div class="dd-section-headings">
           <h2 class="dd-section-title">Granulation Logsheet Register</h2>
           <span class="dd-section-sub">Granulation batches, allocated batch numbers, sizes, manufacturing & expiry schedules</span>
         </div>
-        <span class="dd-badge-count" id="badgeLogsheet">0</span>
       </div>
 
-      <div class="dd-section-actions">
+      <div class="dd-section-toolbar">
         <div class="dd-search-box">
           <i class="bi bi-search"></i>
           <input type="text" placeholder="Search Batch No, Product, Customer..." oninput="DD.filterTable('tbodyLogsheet', this.value, 'tfootLogsheet')">
         </div>
-        <button class="dd-btn-action" onclick="DD.exportTableToExcel('tableLogsheet', 'Granulation_Logsheet_Report')" title="Export to Excel (.xls)">
-          <i class="bi bi-file-earmark-excel"></i> Excel
-        </button>
-        <button class="dd-btn-action" onclick="DD.exportTableToCSV('tableLogsheet', 'Granulation_Logsheet_Report')" title="Export to CSV (.csv)">
-          <i class="bi bi-file-earmark-text"></i> CSV
-        </button>
-        <button class="dd-btn-action" onclick="DD.printSection('sectionLogsheet')" title="Print Section Report">
-          <i class="bi bi-printer"></i> Print
-        </button>
-        <button class="dd-expand-btn" onclick="DD.toggleExpand('sectionLogsheet')" title="Maximize Full Screen">
-          <i class="bi bi-arrows-fullscreen"></i>
-          <span class="dd-expand-label">Maximize</span>
-        </button>
+        <div class="dd-btn-group">
+          <button class="dd-btn-action" onclick="DD.exportTableToExcel('tableLogsheet', 'Granulation_Logsheet_Report')" title="Export to Excel (.xls)">
+            <i class="bi bi-file-earmark-excel"></i> <span>Excel</span>
+          </button>
+          <button class="dd-btn-action" onclick="DD.exportTableToCSV('tableLogsheet', 'Granulation_Logsheet_Report')" title="Export to CSV (.csv)">
+            <i class="bi bi-file-earmark-text"></i> <span>CSV</span>
+          </button>
+          <button class="dd-btn-action" onclick="DD.printSection('sectionLogsheet')" title="Print Section Report">
+            <i class="bi bi-printer"></i> <span>Print</span>
+          </button>
+          <button class="dd-expand-btn" onclick="DD.toggleExpand('sectionLogsheet')" title="Toggle Fullscreen">
+            <i class="bi bi-arrows-fullscreen"></i>
+            <span class="dd-expand-label">Maximize</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -372,7 +530,7 @@
         <table class="dd-table" id="tableLogsheet">
           <thead>
             <tr>
-              <th>Granulation Date</th>
+              <th style="min-width: 105px;">Granulation Date</th>
               <th>Shift</th>
               <th>Section</th>
               <th>Customer</th>
@@ -380,9 +538,9 @@
               <th>B.No. (Batch)</th>
               <th class="text-right">Batch (Lacs)</th>
               <th class="text-right">Batch (Nos)</th>
-              <th>Mfg. Date</th>
-              <th>Exp. Date</th>
-              <th>Blending Date</th>
+              <th style="min-width: 95px;">Mfg. Date</th>
+              <th style="min-width: 95px;">Exp. Date</th>
+              <th style="min-width: 95px;">Blending Date</th>
               <th>Layer / Colour</th>
               <th class="text-center">RM Dispensed</th>
               <th class="text-center">DPR Done</th>
@@ -417,41 +575,41 @@
     </div>
   </section>
 
-
   <!-- ========================================================
        SECTION 3: RAW MATERIAL (RM) DISPENSING
        ======================================================== -->
   <section class="dd-section" id="sectionDispensing">
     <div class="dd-section-header">
-      <div class="dd-section-left">
+      <div class="dd-section-title-wrap">
         <div class="dd-section-icon dd-icon-disp">
           <i class="bi bi-eyedropper"></i>
         </div>
-        <div>
+        <div class="dd-section-headings">
           <h2 class="dd-section-title">Raw Material (RM) Dispensing Register</h2>
           <span class="dd-section-sub">Formulation dispensing, lot weights, chemist, worker & verification tracking</span>
         </div>
-        <span class="dd-badge-count" id="badgeDispensing">0</span>
       </div>
 
-      <div class="dd-section-actions">
+      <div class="dd-section-toolbar">
         <div class="dd-search-box">
           <i class="bi bi-search"></i>
           <input type="text" placeholder="Search Product, Batch, Chemist..." oninput="DD.filterTable('tbodyDispensing', this.value, 'tfootDispensing')">
         </div>
-        <button class="dd-btn-action" onclick="DD.exportTableToExcel('tableDispensing', 'RM_Dispensing_Report')" title="Export to Excel (.xls)">
-          <i class="bi bi-file-earmark-excel"></i> Excel
-        </button>
-        <button class="dd-btn-action" onclick="DD.exportTableToCSV('tableDispensing', 'RM_Dispensing_Report')" title="Export to CSV (.csv)">
-          <i class="bi bi-file-earmark-text"></i> CSV
-        </button>
-        <button class="dd-btn-action" onclick="DD.printSection('sectionDispensing')" title="Print Section Report">
-          <i class="bi bi-printer"></i> Print
-        </button>
-        <button class="dd-expand-btn" onclick="DD.toggleExpand('sectionDispensing')" title="Maximize Full Screen">
-          <i class="bi bi-arrows-fullscreen"></i>
-          <span class="dd-expand-label">Maximize</span>
-        </button>
+        <div class="dd-btn-group">
+          <button class="dd-btn-action" onclick="DD.exportTableToExcel('tableDispensing', 'RM_Dispensing_Report')" title="Export to Excel (.xls)">
+            <i class="bi bi-file-earmark-excel"></i> <span>Excel</span>
+          </button>
+          <button class="dd-btn-action" onclick="DD.exportTableToCSV('tableDispensing', 'RM_Dispensing_Report')" title="Export to CSV (.csv)">
+            <i class="bi bi-file-earmark-text"></i> <span>CSV</span>
+          </button>
+          <button class="dd-btn-action" onclick="DD.printSection('sectionDispensing')" title="Print Section Report">
+            <i class="bi bi-printer"></i> <span>Print</span>
+          </button>
+          <button class="dd-expand-btn" onclick="DD.toggleExpand('sectionDispensing')" title="Toggle Fullscreen">
+            <i class="bi bi-arrows-fullscreen"></i>
+            <span class="dd-expand-label">Maximize</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -468,7 +626,7 @@
         <table class="dd-table" id="tableDispensing">
           <thead>
             <tr>
-              <th>Dispensing Date</th>
+              <th style="min-width: 105px;">Dispensing Date</th>
               <th>Customer</th>
               <th>Product Name</th>
               <th>Batch No.</th>
@@ -512,41 +670,41 @@
     </div>
   </section>
 
-
   <!-- ========================================================
        SECTION 4: DAILY PRODUCTION REPORT (DPR)
        ======================================================== -->
   <section class="dd-section" id="sectionDpr">
     <div class="dd-section-header">
-      <div class="dd-section-left">
+      <div class="dd-section-title-wrap">
         <div class="dd-section-icon dd-icon-dpr">
           <i class="bi bi-gear-wide-connected"></i>
         </div>
-        <div>
+        <div class="dd-section-headings">
           <h2 class="dd-section-title">Daily Production Report (DPR)</h2>
           <span class="dd-section-sub">Machine runtime, operational throughput, stoppages, operators & yield logs</span>
         </div>
-        <span class="dd-badge-count" id="badgeDpr">0</span>
       </div>
 
-      <div class="dd-section-actions">
+      <div class="dd-section-toolbar">
         <div class="dd-search-box">
           <i class="bi bi-search"></i>
           <input type="text" placeholder="Search Machine, Section, Product..." oninput="DD.filterTable('tbodyDpr', this.value, 'tfootDpr')">
         </div>
-        <button class="dd-btn-action" onclick="DD.exportTableToExcel('tableDpr', 'Daily_Production_Report_DPR')" title="Export to Excel (.xls)">
-          <i class="bi bi-file-earmark-excel"></i> Excel
-        </button>
-        <button class="dd-btn-action" onclick="DD.exportTableToCSV('tableDpr', 'Daily_Production_Report_DPR')" title="Export to CSV (.csv)">
-          <i class="bi bi-file-earmark-text"></i> CSV
-        </button>
-        <button class="dd-btn-action" onclick="DD.printSection('sectionDpr')" title="Print Section Report">
-          <i class="bi bi-printer"></i> Print
-        </button>
-        <button class="dd-expand-btn" onclick="DD.toggleExpand('sectionDpr')" title="Maximize Full Screen">
-          <i class="bi bi-arrows-fullscreen"></i>
-          <span class="dd-expand-label">Maximize</span>
-        </button>
+        <div class="dd-btn-group">
+          <button class="dd-btn-action" onclick="DD.exportTableToExcel('tableDpr', 'Daily_Production_Report_DPR')" title="Export to Excel (.xls)">
+            <i class="bi bi-file-earmark-excel"></i> <span>Excel</span>
+          </button>
+          <button class="dd-btn-action" onclick="DD.exportTableToCSV('tableDpr', 'Daily_Production_Report_DPR')" title="Export to CSV (.csv)">
+            <i class="bi bi-file-earmark-text"></i> <span>CSV</span>
+          </button>
+          <button class="dd-btn-action" onclick="DD.printSection('sectionDpr')" title="Print Section Report">
+            <i class="bi bi-printer"></i> <span>Print</span>
+          </button>
+          <button class="dd-expand-btn" onclick="DD.toggleExpand('sectionDpr')" title="Toggle Fullscreen">
+            <i class="bi bi-arrows-fullscreen"></i>
+            <span class="dd-expand-label">Maximize</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -563,7 +721,7 @@
         <table class="dd-table" id="tableDpr">
           <thead>
             <tr>
-              <th>DPR Date</th>
+              <th style="min-width: 105px;">DPR Date</th>
               <th>Section</th>
               <th>Machine</th>
               <th>Shift</th>
@@ -572,7 +730,7 @@
               <th>Batch No.</th>
               <th class="text-right">Lot No.</th>
               <th>Time Window</th>
-              <th>Status</th>
+              <th class="text-center">Status</th>
               <th class="text-right">Output (kg)</th>
               <th class="text-right">Output (Nos)</th>
               <th>Operator</th>
@@ -592,7 +750,7 @@
               <td>—</td>
               <td class="text-right font-weight-bold" id="tfDprLots">0</td>
               <td>—</td>
-              <td>—</td>
+              <td class="text-center">—</td>
               <td class="text-right font-weight-bold" id="tfDprKg">0.00</td>
               <td class="text-right font-weight-bold" id="tfDprNos">0</td>
               <td>—</td>
@@ -612,41 +770,41 @@
     </div>
   </section>
 
-
   <!-- ========================================================
        SECTION 5: CONTRACTOR PACKAGING
        ======================================================== -->
   <section class="dd-section" id="sectionPacking">
     <div class="dd-section-header">
-      <div class="dd-section-left">
+      <div class="dd-section-title-wrap">
         <div class="dd-section-icon dd-icon-pack">
           <i class="bi bi-box-seam"></i>
         </div>
-        <div>
+        <div class="dd-section-headings">
           <h2 class="dd-section-title">Contractor Daily Packaging Register</h2>
           <span class="dd-section-sub">Shippers, blister/strip packaging styles, units packed, loose balances & manpower</span>
         </div>
-        <span class="dd-badge-count" id="badgePacking">0</span>
       </div>
 
-      <div class="dd-section-actions">
+      <div class="dd-section-toolbar">
         <div class="dd-search-box">
           <i class="bi bi-search"></i>
           <input type="text" placeholder="Search Contractor, Product, Batch..." oninput="DD.filterTable('tbodyPacking', this.value, 'tfootPacking')">
         </div>
-        <button class="dd-btn-action" onclick="DD.exportTableToExcel('tablePacking', 'Contractor_Packaging_Report')" title="Export to Excel (.xls)">
-          <i class="bi bi-file-earmark-excel"></i> Excel
-        </button>
-        <button class="dd-btn-action" onclick="DD.exportTableToCSV('tablePacking', 'Contractor_Packaging_Report')" title="Export to CSV (.csv)">
-          <i class="bi bi-file-earmark-text"></i> CSV
-        </button>
-        <button class="dd-btn-action" onclick="DD.printSection('sectionPacking')" title="Print Section Report">
-          <i class="bi bi-printer"></i> Print
-        </button>
-        <button class="dd-expand-btn" onclick="DD.toggleExpand('sectionPacking')" title="Maximize Full Screen">
-          <i class="bi bi-arrows-fullscreen"></i>
-          <span class="dd-expand-label">Maximize</span>
-        </button>
+        <div class="dd-btn-group">
+          <button class="dd-btn-action" onclick="DD.exportTableToExcel('tablePacking', 'Contractor_Packaging_Report')" title="Export to Excel (.xls)">
+            <i class="bi bi-file-earmark-excel"></i> <span>Excel</span>
+          </button>
+          <button class="dd-btn-action" onclick="DD.exportTableToCSV('tablePacking', 'Contractor_Packaging_Report')" title="Export to CSV (.csv)">
+            <i class="bi bi-file-earmark-text"></i> <span>CSV</span>
+          </button>
+          <button class="dd-btn-action" onclick="DD.printSection('sectionPacking')" title="Print Section Report">
+            <i class="bi bi-printer"></i> <span>Print</span>
+          </button>
+          <button class="dd-expand-btn" onclick="DD.toggleExpand('sectionPacking')" title="Toggle Fullscreen">
+            <i class="bi bi-arrows-fullscreen"></i>
+            <span class="dd-expand-label">Maximize</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -663,7 +821,7 @@
         <table class="dd-table" id="tablePacking">
           <thead>
             <tr>
-              <th>Packing Date</th>
+              <th style="min-width: 105px;">Packing Date</th>
               <th>Contractor / Operator</th>
               <th>Customer</th>
               <th>Product Name</th>
@@ -704,41 +862,41 @@
     </div>
   </section>
 
-
   <!-- ========================================================
        SECTION 6: CUSTOMER SALES ORDERS & FULFILLMENT
        ======================================================== -->
   <section class="dd-section" id="sectionOrders">
     <div class="dd-section-header">
-      <div class="dd-section-left">
+      <div class="dd-section-title-wrap">
         <div class="dd-section-icon dd-icon-orders">
           <i class="bi bi-cart-check"></i>
         </div>
-        <div>
+        <div class="dd-section-headings">
           <h2 class="dd-section-title">Customer Sales Orders & Order Fulfillment</h2>
           <span class="dd-section-sub">Booked customer orders, allocation status, pending production balances & dispatch tracking</span>
         </div>
-        <span class="dd-badge-count" id="badgeOrders">0</span>
       </div>
 
-      <div class="dd-section-actions">
+      <div class="dd-section-toolbar">
         <div class="dd-search-box">
           <i class="bi bi-search"></i>
           <input type="text" placeholder="Search PO No, Customer, Product..." oninput="DD.filterTable('tbodyOrders', this.value, 'tfootOrders')">
         </div>
-        <button class="dd-btn-action" onclick="DD.exportTableToExcel('tableOrders', 'Sales_Orders_Fulfillment_Report')" title="Export to Excel (.xls)">
-          <i class="bi bi-file-earmark-excel"></i> Excel
-        </button>
-        <button class="dd-btn-action" onclick="DD.exportTableToCSV('tableOrders', 'Sales_Orders_Fulfillment_Report')" title="Export to CSV (.csv)">
-          <i class="bi bi-file-earmark-text"></i> CSV
-        </button>
-        <button class="dd-btn-action" onclick="DD.printSection('sectionOrders')" title="Print Section Report">
-          <i class="bi bi-printer"></i> Print
-        </button>
-        <button class="dd-expand-btn" onclick="DD.toggleExpand('sectionOrders')" title="Maximize Full Screen">
-          <i class="bi bi-arrows-fullscreen"></i>
-          <span class="dd-expand-label">Maximize</span>
-        </button>
+        <div class="dd-btn-group">
+          <button class="dd-btn-action" onclick="DD.exportTableToExcel('tableOrders', 'Sales_Orders_Fulfillment_Report')" title="Export to Excel (.xls)">
+            <i class="bi bi-file-earmark-excel"></i> <span>Excel</span>
+          </button>
+          <button class="dd-btn-action" onclick="DD.exportTableToCSV('tableOrders', 'Sales_Orders_Fulfillment_Report')" title="Export to CSV (.csv)">
+            <i class="bi bi-file-earmark-text"></i> <span>CSV</span>
+          </button>
+          <button class="dd-btn-action" onclick="DD.printSection('sectionOrders')" title="Print Section Report">
+            <i class="bi bi-printer"></i> <span>Print</span>
+          </button>
+          <button class="dd-expand-btn" onclick="DD.toggleExpand('sectionOrders')" title="Toggle Fullscreen">
+            <i class="bi bi-arrows-fullscreen"></i>
+            <span class="dd-expand-label">Maximize</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -755,17 +913,17 @@
         <table class="dd-table" id="tableOrders">
           <thead>
             <tr>
-              <th>Order Date</th>
+              <th style="min-width: 105px;">Order Date</th>
               <th>Customer PO No.</th>
-              <th>PO Date</th>
+              <th style="min-width: 105px;">PO Date</th>
               <th>Customer</th>
               <th>Product Name</th>
               <th>Packing Style</th>
               <th class="text-right">Order Qty (Lacs)</th>
               <th class="text-right">Order Qty (Nos)</th>
               <th class="text-right">Remaining (Lacs)</th>
-              <th class="text-center">Allocation Status</th>
-              <th class="text-center">Dispatch Status</th>
+              <th class="text-center">Allocation</th>
+              <th class="text-center">Dispatch</th>
               <th class="text-right">Rate (₹)</th>
               <th class="text-right">Order Total (₹)</th>
             </tr>
@@ -800,41 +958,41 @@
     </div>
   </section>
 
-
   <!-- ========================================================
        SECTION 7: SALES INVOICES & FINISHED GOODS DISPATCHES
        ======================================================== -->
   <section class="dd-section" id="sectionSales">
     <div class="dd-section-header">
-      <div class="dd-section-left">
+      <div class="dd-section-title-wrap">
         <div class="dd-section-icon dd-icon-sls">
           <i class="bi bi-receipt"></i>
         </div>
-        <div>
+        <div class="dd-section-headings">
           <h2 class="dd-section-title">Sales Invoices & Finished Goods Dispatches</h2>
           <span class="dd-section-sub">Tax invoices, delivery destinations, transporter, GST breakdown & billed revenue</span>
         </div>
-        <span class="dd-badge-count" id="badgeSales">0</span>
       </div>
 
-      <div class="dd-section-actions">
+      <div class="dd-section-toolbar">
         <div class="dd-search-box">
           <i class="bi bi-search"></i>
           <input type="text" placeholder="Search Invoice No, Customer, PO..." oninput="DD.filterTable('tbodySales', this.value, 'tfootSales')">
         </div>
-        <button class="dd-btn-action" onclick="DD.exportTableToExcel('tableSales', 'Sales_Invoices_Dispatches_Report')" title="Export to Excel (.xls)">
-          <i class="bi bi-file-earmark-excel"></i> Excel
-        </button>
-        <button class="dd-btn-action" onclick="DD.exportTableToCSV('tableSales', 'Sales_Invoices_Dispatches_Report')" title="Export to CSV (.csv)">
-          <i class="bi bi-file-earmark-text"></i> CSV
-        </button>
-        <button class="dd-btn-action" onclick="DD.printSection('sectionSales')" title="Print Section Report">
-          <i class="bi bi-printer"></i> Print
-        </button>
-        <button class="dd-expand-btn" onclick="DD.toggleExpand('sectionSales')" title="Maximize Full Screen">
-          <i class="bi bi-arrows-fullscreen"></i>
-          <span class="dd-expand-label">Maximize</span>
-        </button>
+        <div class="dd-btn-group">
+          <button class="dd-btn-action" onclick="DD.exportTableToExcel('tableSales', 'Sales_Invoices_Dispatches_Report')" title="Export to Excel (.xls)">
+            <i class="bi bi-file-earmark-excel"></i> <span>Excel</span>
+          </button>
+          <button class="dd-btn-action" onclick="DD.exportTableToCSV('tableSales', 'Sales_Invoices_Dispatches_Report')" title="Export to CSV (.csv)">
+            <i class="bi bi-file-earmark-text"></i> <span>CSV</span>
+          </button>
+          <button class="dd-btn-action" onclick="DD.printSection('sectionSales')" title="Print Section Report">
+            <i class="bi bi-printer"></i> <span>Print</span>
+          </button>
+          <button class="dd-expand-btn" onclick="DD.toggleExpand('sectionSales')" title="Toggle Fullscreen">
+            <i class="bi bi-arrows-fullscreen"></i>
+            <span class="dd-expand-label">Maximize</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -852,7 +1010,7 @@
           <thead>
             <tr>
               <th>Invoice No.</th>
-              <th>Invoice Date</th>
+              <th style="min-width: 105px;">Invoice Date</th>
               <th>Customer</th>
               <th>Ref. PO No.</th>
               <th>Transporter</th>
@@ -893,41 +1051,41 @@
     </div>
   </section>
 
-
   <!-- ========================================================
        SECTION 8: CENTRAL LIVE STOCK OVERVIEW
        ======================================================== -->
   <section class="dd-section" id="sectionStock">
     <div class="dd-section-header">
-      <div class="dd-section-left">
+      <div class="dd-section-title-wrap">
         <div class="dd-section-icon dd-icon-stock">
           <i class="bi bi-boxes"></i>
         </div>
-        <div>
+        <div class="dd-section-headings">
           <h2 class="dd-section-title">Central Live Stock Overview</h2>
           <span class="dd-section-sub">Current raw materials (RM), packaging materials (PM) & finished goods (FG) closing balances</span>
         </div>
-        <span class="dd-badge-count" id="badgeStock">0</span>
       </div>
 
-      <div class="dd-section-actions">
+      <div class="dd-section-toolbar">
         <div class="dd-search-box">
           <i class="bi bi-search"></i>
           <input type="text" placeholder="Search SKU, Batch No, Customer..." oninput="DD.filterTable('tbodyStock', this.value, 'tfootStock')">
         </div>
-        <button class="dd-btn-action" onclick="DD.exportTableToExcel('tableStock', 'Live_Stock_Inventory_Report')" title="Export to Excel (.xls)">
-          <i class="bi bi-file-earmark-excel"></i> Excel
-        </button>
-        <button class="dd-btn-action" onclick="DD.exportTableToCSV('tableStock', 'Live_Stock_Inventory_Report')" title="Export to CSV (.csv)">
-          <i class="bi bi-file-earmark-text"></i> CSV
-        </button>
-        <button class="dd-btn-action" onclick="DD.printSection('sectionStock')" title="Print Section Report">
-          <i class="bi bi-printer"></i> Print
-        </button>
-        <button class="dd-expand-btn" onclick="DD.toggleExpand('sectionStock')" title="Maximize Full Screen">
-          <i class="bi bi-arrows-fullscreen"></i>
-          <span class="dd-expand-label">Maximize</span>
-        </button>
+        <div class="dd-btn-group">
+          <button class="dd-btn-action" onclick="DD.exportTableToExcel('tableStock', 'Live_Stock_Inventory_Report')" title="Export to Excel (.xls)">
+            <i class="bi bi-file-earmark-excel"></i> <span>Excel</span>
+          </button>
+          <button class="dd-btn-action" onclick="DD.exportTableToCSV('tableStock', 'Live_Stock_Inventory_Report')" title="Export to CSV (.csv)">
+            <i class="bi bi-file-earmark-text"></i> <span>CSV</span>
+          </button>
+          <button class="dd-btn-action" onclick="DD.printSection('sectionStock')" title="Print Section Report">
+            <i class="bi bi-printer"></i> <span>Print</span>
+          </button>
+          <button class="dd-expand-btn" onclick="DD.toggleExpand('sectionStock')" title="Toggle Fullscreen">
+            <i class="bi bi-arrows-fullscreen"></i>
+            <span class="dd-expand-label">Maximize</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -945,23 +1103,23 @@
           <thead>
             <tr>
               <th>Customer / Principal</th>
-              <th>Type</th>
+              <th class="text-center">Type</th>
               <th>Material / Product (SKU)</th>
               <th>Batch No.</th>
-              <th>Mfg. Date</th>
-              <th>Exp. Date</th>
+              <th style="min-width: 95px;">Mfg. Date</th>
+              <th style="min-width: 95px;">Exp. Date</th>
               <th class="text-right">Opening Qty</th>
               <th class="text-right">Receipts</th>
               <th class="text-right">Issues</th>
               <th class="text-right">Available Balance</th>
-              <th>Last Transaction Date</th>
+              <th style="min-width: 105px;">Last Trans Date</th>
             </tr>
           </thead>
           <tbody id="tbodyStock"></tbody>
           <tfoot id="tfootStock" class="dd-table-footer">
             <tr class="dd-total-row">
               <td><strong>TOTAL</strong></td>
-              <td>—</td>
+              <td class="text-center">—</td>
               <td>—</td>
               <td>—</td>
               <td>—</td>
