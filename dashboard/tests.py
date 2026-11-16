@@ -45,6 +45,8 @@ class DashboardViewsTest(TestCase):
         self.assertIn('total_inwards', data)
         self.assertIn('total_grn_rm', data)
         self.assertIn('total_grn_pm', data)
+        self.assertIn('total_inw_rm_qty', data)
+        self.assertIn('total_inw_pm_qty', data)
         self.assertIn('total_dpr', data)
         self.assertIn('total_logsheets', data)
         self.assertIn('total_packaging_entries', data)
@@ -67,6 +69,12 @@ class DashboardViewsTest(TestCase):
         data = resp.json()
         self.assertIn('data', data)
         self.assertIsInstance(data['data'], list)
+        self.assertIn('total_rm_qty', data)
+        self.assertIn('total_pm_qty', data)
+        self.assertIn('total_rm_lines', data)
+        self.assertIn('total_pm_lines', data)
+        self.assertIn('total_rm_count', data)
+        self.assertIn('total_pm_count', data)
 
     def test_api_granulation_logsheet(self):
         self.client.force_login(self.user)
@@ -147,6 +155,23 @@ class DashboardViewsTest(TestCase):
         data = resp.json()
         self.assertIn('data', data)
         self.assertIsInstance(data['data'], list)
+        self.assertIn('totals', data)
+        self.assertIn('RM', data['totals'])
+        self.assertIn('PM', data['totals'])
+        self.assertIn('FG', data['totals'])
+        self.assertIn('ALL', data['totals'])
+
+    def test_api_stock_overview_periodic(self):
+        self.client.force_login(self.user)
+        resp = self.client.get(reverse('dashboard_stock_overview'), {
+            'from_date': '2026-01-01',
+            'to_date': '2026-03-31',
+        })
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data.get('is_periodic'))
+        self.assertEqual(data.get('from_date'), '2026-01-01')
+        self.assertEqual(data.get('to_date'), '2026-03-31')
 
     def test_api_custom_date_range(self):
         self.client.force_login(self.user)

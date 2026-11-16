@@ -100,6 +100,8 @@ def api_summary_kpis(request):
     total_inwards = inwards_qs.count()
     total_grn_rm = inwards_qs.filter(grn_category_id='RM').count()
     total_grn_pm = inwards_qs.filter(grn_category_id='PM').count()
+    total_inw_rm_qty = _dec(inwards_qs.filter(grn_category_id='RM').aggregate(qty=Sum('lines__quantity'))['qty'])
+    total_inw_pm_qty = _dec(inwards_qs.filter(grn_category_id='PM').aggregate(qty=Sum('lines__quantity'))['qty'])
 
     # Granulation Logsheets
     logsheets_qs = TrnLogSheet.objects.filter(gran_dt__range=(from_dt, to_dt))
@@ -152,6 +154,8 @@ def api_summary_kpis(request):
         'total_inwards': total_inwards,
         'total_grn_rm': total_grn_rm,
         'total_grn_pm': total_grn_pm,
+        'total_inw_rm_qty': total_inw_rm_qty,
+        'total_inw_pm_qty': total_inw_pm_qty,
         'total_logsheets': total_logsheets,
         'logsheets_dpr_done': logsheets_dpr_done,
         'logsheets_disp_done': logsheets_disp_done,
@@ -226,15 +230,30 @@ def api_inward_logsheet(request):
             'driver_no': h.driver_no or '',
             'items_count': h.items_count or 0,
             'total_qty': _dec(h.total_qty),
+            'uom': 'kg' if str(h.grn_category_id or '').upper() == 'RM' else 'Nos',
             'products_display': h.products_display or '',
             'batches_display': ', '.join(batches) if batches else '',
             'arns_display': ', '.join(arns) if arns else '',
             'has_doc': bool(h.documents),
             'remarks': h.remarks or '',
         })
+
+    total_rm_qty = sum(Decimal(str(h.total_qty or 0)) for h in qs if str(h.grn_category_id or '').upper() == 'RM')
+    total_pm_qty = sum(Decimal(str(h.total_qty or 0)) for h in qs if str(h.grn_category_id or '').upper() == 'PM')
+    total_rm_lines = sum(h.items_count or 0 for h in qs if str(h.grn_category_id or '').upper() == 'RM')
+    total_pm_lines = sum(h.items_count or 0 for h in qs if str(h.grn_category_id or '').upper() == 'PM')
+    total_rm_count = sum(1 for h in qs if str(h.grn_category_id or '').upper() == 'RM')
+    total_pm_count = sum(1 for h in qs if str(h.grn_category_id or '').upper() == 'PM')
+
     return JsonResponse({
         'data': data,
         'total_records': len(data),
+        'total_rm_qty': _dec(total_rm_qty),
+        'total_pm_qty': _dec(total_pm_qty),
+        'total_rm_lines': total_rm_lines,
+        'total_pm_lines': total_pm_lines,
+        'total_rm_count': total_rm_count,
+        'total_pm_count': total_pm_count,
         'from_date': from_dt.isoformat(),
         'to_date': to_dt.isoformat(),
     })
@@ -567,46 +586,129 @@ def api_sales_summary(request):
 @login_required
 def api_stock_overview(request):
     """
-    Current central stock balance ledger overview:
-    Customer, Item Category (RM / PM / FG), Item/Product SKU, Batch No,
+    Central stock balance ledger overview with optional periodic movement filtering:
+    Customer, Item Category (RM / PM / FG), Item/Product SKU, UOM, Batch No,
     Mfg Date, Exp Date, Opening Qty, Receipts, Issues, Available Closing Balance,
     and Last Transaction Date.
+    Supports time period filtering (periodic movement) or live real-time balances.
     """
+    from decimal import Decimal
     from inventory.models import StockHed
+    from inventory.ledger_service import compute_periodic_stock_movements
+
+    from_dt, to_dt = _parse_date_range(request)
+    is_live = request.GET.get('live', '').strip().lower() in ('1', 'true', 'yes')
+    is_all = request.GET.get('all', '').strip().lower() in ('1', 'true', 'yes')
+    is_periodic = not is_live and not is_all and bool(request.GET.get('from_date') or request.GET.get('to_date'))
 
     qs = (
         StockHed.objects
         .filter(is_closed=False)
-        .select_related('customer', 'product', 'item', 'item_category')
-        .order_by('customer__cust_name', 'item_category__prod_cat_name')
+        .select_related(
+            'customer',
+            'product',
+            'product__uom',
+            'item',
+            'item__uom',
+            'item_category',
+            'financial_year',
+        )
+        .order_by('customer__cust_name', 'item_category__prod_cat_name', 'product__prod_name', 'item__item_name')
     )
 
+    all_hed_rows = list(qs)
+    hed_ids = [s.pk for s in all_hed_rows]
+
+    period_data = {}
+    if is_periodic and hed_ids:
+        period_data = compute_periodic_stock_movements(hed_ids, from_date=from_dt, to_date=to_dt)
+
     data = []
-    for s in qs:
+    totals = {
+        'RM': {'opn': Decimal('0'), 'rcpt': Decimal('0'), 'issue': Decimal('0'), 'closing': Decimal('0'), 'count': 0},
+        'PM': {'opn': Decimal('0'), 'rcpt': Decimal('0'), 'issue': Decimal('0'), 'closing': Decimal('0'), 'count': 0},
+        'FG': {'opn': Decimal('0'), 'rcpt': Decimal('0'), 'issue': Decimal('0'), 'closing': Decimal('0'), 'count': 0},
+        'ALL': {'opn': Decimal('0'), 'rcpt': Decimal('0'), 'issue': Decimal('0'), 'closing': Decimal('0'), 'count': 0},
+    }
+
+    for s in all_hed_rows:
         sku_name = ''
-        sku_type = 'RM/PM'
+        sku_type = 'RM'
+        uom_str = ''
+
         if s.product:
             sku_name = s.product.prod_name
             sku_type = 'FG'
+            if s.product.uom:
+                uom_str = s.product.uom.short_name or s.product.uom.uom_name
+            else:
+                uom_str = 'Nos'
         elif s.item:
             sku_name = s.item.item_name
-            sku_type = 'RM' if str(s.item_category_id or '') == 'RM' else 'PM'
+            sku_type = 'RM' if str(s.item_category_id or '').upper() == 'RM' else 'PM'
+            if s.item.uom:
+                uom_str = s.item.uom.short_name or s.item.uom.uom_name
+            else:
+                uom_str = 'kg' if sku_type == 'RM' else 'Nos'
+
+        cat_code = str(s.item_category_id or sku_type).upper()
+        if cat_code not in ('RM', 'PM', 'FG'):
+            cat_code = sku_type
+
+        if is_periodic and s.pk in period_data:
+            mv = period_data[s.pk]
+            opn = mv.get('opening_qty', Decimal('0'))
+            rcpt = mv.get('receipt_qty', Decimal('0'))
+            issue = mv.get('issue_qty', Decimal('0'))
+            closing = mv.get('closing_qty', Decimal('0'))
+        else:
+            opn = s.opn_qty or Decimal('0')
+            rcpt = s.rcpt_qty or Decimal('0')
+            issue = s.issue_qty or Decimal('0')
+            closing = s.closing_qty or Decimal('0')
+
+        if cat_code in totals:
+            totals[cat_code]['opn'] += opn
+            totals[cat_code]['rcpt'] += rcpt
+            totals[cat_code]['issue'] += issue
+            totals[cat_code]['closing'] += closing
+            totals[cat_code]['count'] += 1
+
+        totals['ALL']['opn'] += opn
+        totals['ALL']['rcpt'] += rcpt
+        totals['ALL']['issue'] += issue
+        totals['ALL']['closing'] += closing
+        totals['ALL']['count'] += 1
 
         data.append({
             'customer_name': s.customer.cust_name if s.customer else '—',
             'category': s.item_category.prod_cat_name if s.item_category else sku_type,
-            'category_code': str(s.item_category_id or sku_type),
+            'category_code': cat_code,
             'sku_name': sku_name,
+            'uom': uom_str or '—',
             'batch_no': s.batch_no or '—',
             'mfg_date': s.mfg_date.isoformat() if s.mfg_date else '—',
             'exp_date': s.exp_date.isoformat() if s.exp_date else '—',
-            'opn_qty': _dec(s.opn_qty),
-            'rcpt_qty': _dec(s.rcpt_qty),
-            'issue_qty': _dec(s.issue_qty),
-            'closing_qty': _dec(s.closing_qty),
+            'opn_qty': _dec(opn),
+            'rcpt_qty': _dec(rcpt),
+            'issue_qty': _dec(issue),
+            'closing_qty': _dec(closing),
             'last_trn_date': s.last_trn_date.isoformat() if s.last_trn_date else '—',
         })
+
     return JsonResponse({
         'data': data,
         'total_records': len(data),
+        'is_periodic': is_periodic,
+        'from_date': from_dt.isoformat() if is_periodic else '',
+        'to_date': to_dt.isoformat() if is_periodic else '',
+        'totals': {
+            k: {
+                'opn': _dec(v['opn']),
+                'rcpt': _dec(v['rcpt']),
+                'issue': _dec(v['issue']),
+                'closing': _dec(v['closing']),
+                'count': v['count'],
+            } for k, v in totals.items()
+        }
     })

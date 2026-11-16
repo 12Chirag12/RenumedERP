@@ -134,8 +134,8 @@
           <span class="dd-kpi-unit">Receipts</span>
         </div>
         <div class="dd-kpi-meta-row">
-          <span class="dd-kpi-pill">RM: <strong id="kpiGrnRm">—</strong></span>
-          <span class="dd-kpi-pill">PM: <strong id="kpiGrnPm">—</strong></span>
+          <span class="dd-kpi-pill">RM: <strong id="kpiGrnRm">—</strong> (<span id="kpiGrnRmQty">0.00</span> kg)</span>
+          <span class="dd-kpi-pill">PM: <strong id="kpiGrnPm">—</strong> (<span id="kpiGrnPmQty">0</span> Nos)</span>
         </div>
       </div>
       <div class="dd-kpi-footer">
@@ -465,7 +465,11 @@
               <td>—</td>
               <td>—</td>
               <td class="text-right font-weight-bold" id="tfInwardLines">0</td>
-              <td class="text-right font-weight-bold" id="tfInwardQty">0.00</td>
+              <td class="text-right font-weight-bold" style="white-space: nowrap;">
+                <span class="dd-split-pill rm-pill">RM: <strong id="tfInwardRmQty">0.00</strong> kg</span>
+                <span class="dd-split-pill pm-pill">PM: <strong id="tfInwardPmQty">0</strong> Nos</span>
+                <span id="tfInwardQty" style="display:none;">0.00</span>
+              </td>
               <td class="text-center">—</td>
             </tr>
           </tfoot>
@@ -473,9 +477,11 @@
       </div>
     </div>
     <div class="dd-section-footer" id="footerInward">
-      <div class="dd-footer-stat">Showing <strong id="footCountInward">0</strong> GRNs</div>
+      <div class="dd-footer-stat">Showing <strong id="footCountInward">0</strong> GRNs (<span id="footCountInwardRm">0</span> RM, <span id="footCountInwardPm">0</span> PM)</div>
       <div class="dd-footer-stat">Total Item Lines: <strong id="footLinesInward">0</strong></div>
-      <div class="dd-footer-stat">Total Received Qty: <strong id="footQtyInward">0.00</strong></div>
+      <div class="dd-footer-stat dd-stat-highlight">Total RM Received: <strong id="footRmQtyInward">0.00</strong> kg</div>
+      <div class="dd-footer-stat dd-stat-highlight">Total PM Received: <strong id="footPmQtyInward">0</strong> Nos</div>
+      <span id="footQtyInward" style="display:none;">0.00</span>
     </div>
   </section>
 
@@ -1067,9 +1073,31 @@
       </div>
 
       <div class="dd-section-toolbar">
+        <!-- Category Filter Tabs -->
+        <div class="dd-stock-tabs" role="tablist" aria-label="Stock Category Tabs">
+          <button type="button" class="dd-stock-tab active" data-cat="ALL" onclick="DD.setStockCategory('ALL')">All (<span id="tabCountStockAll">0</span>)</button>
+          <button type="button" class="dd-stock-tab" data-cat="RM" onclick="DD.setStockCategory('RM')">RM (<span id="tabCountStockRm">0</span>)</button>
+          <button type="button" class="dd-stock-tab" data-cat="PM" onclick="DD.setStockCategory('PM')">PM (<span id="tabCountStockPm">0</span>)</button>
+          <button type="button" class="dd-stock-tab" data-cat="FG" onclick="DD.setStockCategory('FG')">FG (<span id="tabCountStockFg">0</span>)</button>
+        </div>
+
+        <!-- Stock Period Selector -->
+        <div class="dd-stock-period-box" title="Stock Time Period Scope">
+          <i class="bi bi-calendar-event"></i>
+          <select id="stockPeriodSelect" onchange="DD.onStockPeriodSelect(this.value)" class="dd-stock-select" title="Stock Movement Period Scope">
+            <option value="sync" selected>Sync with Dashboard Period</option>
+            <option value="live">Live As of Today (No Filter)</option>
+            <option value="month">This Month</option>
+            <option value="last_month">Last Month</option>
+            <option value="quarter">This Quarter</option>
+            <option value="year">Financial Year</option>
+            <option value="all">All Time Ledger</option>
+          </select>
+        </div>
+
         <div class="dd-search-box">
           <i class="bi bi-search"></i>
-          <input type="text" placeholder="Search SKU, Batch No, Customer..." oninput="DD.filterTable('tbodyStock', this.value, 'tfootStock')">
+          <input type="text" placeholder="Search SKU, Batch, UOM..." oninput="DD.filterStockTable(this.value)">
         </div>
         <div class="dd-btn-group">
           <button class="dd-btn-action" onclick="DD.exportTableToExcel('tableStock', 'Live_Stock_Inventory_Report')" title="Export to Excel (.xls)">
@@ -1105,6 +1133,7 @@
               <th>Customer / Principal</th>
               <th class="text-center">Type</th>
               <th>Material / Product (SKU)</th>
+              <th class="text-center">UOM</th>
               <th>Batch No.</th>
               <th style="min-width: 95px;">Mfg. Date</th>
               <th style="min-width: 95px;">Exp. Date</th>
@@ -1121,6 +1150,7 @@
               <td><strong>TOTAL</strong></td>
               <td class="text-center">—</td>
               <td>—</td>
+              <td class="text-center">—</td>
               <td>—</td>
               <td>—</td>
               <td>—</td>
@@ -1135,11 +1165,17 @@
       </div>
     </div>
     <div class="dd-section-footer" id="footerStock">
-      <div class="dd-footer-stat">Total Monitored SKUs / Batches: <strong id="footCountStock">0</strong></div>
-      <div class="dd-footer-stat">Total Opening: <strong id="footOpnStock">0.00</strong></div>
-      <div class="dd-footer-stat">Total Receipts (+): <strong id="footRcptStock">+0.00</strong></div>
-      <div class="dd-footer-stat">Total Issues (-): <strong id="footIssueStock">-0.00</strong></div>
-      <div class="dd-footer-stat">Total Available Balance: <strong id="footBalStock">0.00</strong></div>
+      <div class="dd-footer-stat">Monitored Lines: <strong id="footCountStock">0</strong></div>
+      <div class="dd-footer-stat dd-stat-highlight">RM Balance: <strong id="footBalStockRm">0.00</strong> kg</div>
+      <div class="dd-footer-stat dd-stat-highlight">PM Balance: <strong id="footBalStockPm">0</strong> Nos</div>
+      <div class="dd-footer-stat dd-stat-highlight">FG Balance: <strong id="footBalStockFg">0</strong> Units</div>
+      <div class="dd-footer-stat" style="margin-left: auto;">
+        <span class="text-muted">Scope: </span><strong id="footStockScopeText">Sync with Dashboard</strong>
+      </div>
+      <span id="footOpnStock" style="display:none;">0.00</span>
+      <span id="footRcptStock" style="display:none;">0.00</span>
+      <span id="footIssueStock" style="display:none;">0.00</span>
+      <span id="footBalStock" style="display:none;">0.00</span>
     </div>
   </section>
 

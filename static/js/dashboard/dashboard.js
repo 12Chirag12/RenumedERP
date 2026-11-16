@@ -365,6 +365,8 @@ var DD = (function () {
         setText('kpiTotalInwards', fmtNum(d.total_inwards));
         setText('kpiGrnRm', fmtNum(d.total_grn_rm));
         setText('kpiGrnPm', fmtNum(d.total_grn_pm));
+        setText('kpiGrnRmQty', fmtQty(d.total_inw_rm_qty));
+        setText('kpiGrnPmQty', fmtNum(d.total_inw_pm_qty));
 
         setText('kpiLogsheets', fmtNum(d.total_logsheets));
         setText('kpiLogDprDone', fmtNum(d.logsheets_dpr_done));
@@ -413,9 +415,16 @@ var DD = (function () {
 
         if (!data.length) {
           showEl('emptyInward');
+          setText('footCountInward', '0');
+          setText('footCountInwardRm', '0');
+          setText('footCountInwardPm', '0');
           setText('footLinesInward', '0');
+          setText('footRmQtyInward', '0.00');
+          setText('footPmQtyInward', '0');
           setText('footQtyInward', '0.00');
           setText('tfInwardLines', '0');
+          setText('tfInwardRmQty', '0.00');
+          setText('tfInwardPmQty', '0');
           setText('tfInwardQty', '0.00');
           return;
         }
@@ -429,9 +438,15 @@ var DD = (function () {
           totalQty += Number(row.total_qty || 0);
           totalLines += Number(row.items_count || 0);
 
-          var catBadge = row.grn_category === 'RM'
+          var catCode = String(row.grn_category || '').toUpperCase();
+          var isRm = (catCode === 'RM');
+          var isPm = (catCode === 'PM');
+          var uomLabel = row.uom || (isRm ? 'kg' : (isPm ? 'Nos' : ''));
+          var qtyDisp = isRm ? fmtQty(row.total_qty) : (isPm ? fmtNum(row.total_qty) : fmtQty(row.total_qty));
+
+          var catBadge = isRm
             ? '<span class="dd-badge-cat dd-badge-rm">RM</span>'
-            : (row.grn_category === 'PM'
+            : (isPm
               ? '<span class="dd-badge-cat dd-badge-pm">PM</span>'
               : '<span class="dd-badge-cat">' + esc(row.grn_category) + '</span>');
 
@@ -452,7 +467,7 @@ var DD = (function () {
             batchArns += '</div>';
           }
 
-          html += '<tr>' +
+          html += '<tr data-cat="' + esc(catCode) + '" data-qty="' + Number(row.total_qty || 0) + '" data-lines="' + Number(row.items_count || 0) + '">' +
             '<td data-date="' + esc(row.inward_dt) + '"><strong>' + fmtDate(row.inward_dt) + '</strong></td>' +
             '<td><strong>' + esc(row.grn_no) + '</strong></td>' +
             '<td>' + esc(row.register_no) + '</td>' +
@@ -466,17 +481,25 @@ var DD = (function () {
             '<td>' + esc(row.products_display || '—') + '</td>' +
             '<td>' + (batchArns || '—') + '</td>' +
             '<td class="text-right" data-num="' + Number(row.items_count || 0) + '">' + fmtNum(row.items_count) + '</td>' +
-            '<td class="text-right font-weight-bold" data-num="' + Number(row.total_qty || 0) + '">' + fmtQty(row.total_qty) + '</td>' +
+            '<td class="text-right font-weight-bold" data-num="' + Number(row.total_qty || 0) + '" data-cat="' + esc(catCode) + '">' + qtyDisp + ' <span class="dd-unit-sub">' + esc(uomLabel) + '</span></td>' +
             '<td class="text-center">' + docBadge + '</td>' +
             '</tr>';
         });
 
         tbody.innerHTML = html;
 
-        // Populate both tfoot and footer strip
+        // Populate both tfoot and footer strip with separated RM / PM metrics
         setText('tfInwardLines', fmtNum(totalLines));
+        setText('tfInwardRmQty', fmtQty(res.total_rm_qty));
+        setText('tfInwardPmQty', fmtNum(res.total_pm_qty));
         setText('tfInwardQty', fmtQty(totalQty));
+
+        setText('footCountInward', fmtNum(res.total_records));
+        setText('footCountInwardRm', fmtNum(res.total_rm_count));
+        setText('footCountInwardPm', fmtNum(res.total_pm_count));
         setText('footLinesInward', fmtNum(totalLines));
+        setText('footRmQtyInward', fmtQty(res.total_rm_qty));
+        setText('footPmQtyInward', fmtNum(res.total_pm_qty));
         setText('footQtyInward', fmtQty(totalQty));
 
         showEl('tableWrapInward');
@@ -974,19 +997,94 @@ var DD = (function () {
       });
   }
 
-  function loadStock() {
+  var currentStockCategory = 'ALL';
+
+  function getStockPeriodParams(dashParams) {
+    var select = document.getElementById('stockPeriodSelect');
+    var mode = select ? select.value : 'sync';
+    var today = new Date();
+    var fromDt = new Date();
+    var toDt = new Date();
+
+    if (mode === 'live') {
+      setText('footStockScopeText', 'Live As of Today (Cumulative Ledger)');
+      return { live: '1' };
+    }
+    if (mode === 'all') {
+      setText('footStockScopeText', 'All Time (Complete History)');
+      return { all: '1' };
+    }
+    if (mode === 'month') {
+      fromDt.setDate(1);
+      setText('footStockScopeText', 'This Month (' + fmtDate(formatLocalISO(fromDt)) + ' – Today)');
+      return { from_date: formatLocalISO(fromDt), to_date: formatLocalISO(toDt) };
+    }
+    if (mode === 'last_month') {
+      fromDt = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      toDt = new Date(today.getFullYear(), today.getMonth(), 0);
+      setText('footStockScopeText', 'Last Month (' + fmtDate(formatLocalISO(fromDt)) + ' – ' + fmtDate(formatLocalISO(toDt)) + ')');
+      return { from_date: formatLocalISO(fromDt), to_date: formatLocalISO(toDt) };
+    }
+    if (mode === 'quarter') {
+      var currentQ = Math.floor(today.getMonth() / 3);
+      fromDt = new Date(today.getFullYear(), currentQ * 3, 1);
+      setText('footStockScopeText', 'This Quarter (' + fmtDate(formatLocalISO(fromDt)) + ' – Today)');
+      return { from_date: formatLocalISO(fromDt), to_date: formatLocalISO(toDt) };
+    }
+    if (mode === 'year') {
+      var fyStartYear = today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1;
+      fromDt = new Date(fyStartYear, 3, 1);
+      toDt = new Date(fyStartYear + 1, 2, 31);
+      if (toDt > today) toDt = today;
+      setText('footStockScopeText', 'Financial Year (' + fyStartYear + '–' + (fyStartYear + 1) + ')');
+      return { from_date: formatLocalISO(fromDt), to_date: formatLocalISO(toDt) };
+    }
+
+    // mode === 'sync'
+    var range = dashParams || getRange();
+    if (range.all) {
+      setText('footStockScopeText', 'Sync with Dashboard (All Time)');
+    } else if (range.from_date && range.to_date) {
+      setText('footStockScopeText', 'Sync (' + fmtDate(range.from_date) + ' – ' + fmtDate(range.to_date) + ')');
+    } else {
+      setText('footStockScopeText', 'Sync with Dashboard Period');
+    }
+    return range;
+  }
+
+  function loadStock(params) {
     showEl('loadingStock');
     hideEl('emptyStock');
     hideEl('tableWrapStock');
 
-    fetch('/dashboard/api/stock-overview/')
+    var queryParams = getStockPeriodParams(params);
+
+    fetch(qs('/dashboard/api/stock-overview/', queryParams))
       .then(function (r) { return r.json(); })
       .then(function (res) {
         hideEl('loadingStock');
         var data = res.data || [];
         DATA_STORE.stock = data;
+
+        var totals = res.totals || {};
+        var allTotals = totals.ALL || {};
+        var rmTotals = totals.RM || {};
+        var pmTotals = totals.PM || {};
+        var fgTotals = totals.FG || {};
+
         setText('badgeStock', fmtNum(res.total_records));
         setText('footCountStock', fmtNum(res.total_records));
+
+        // Category Tab Badges
+        setText('tabCountStockAll', fmtNum(allTotals.count !== undefined ? allTotals.count : res.total_records));
+        setText('tabCountStockRm', fmtNum(rmTotals.count || 0));
+        setText('tabCountStockPm', fmtNum(pmTotals.count || 0));
+        setText('tabCountStockFg', fmtNum(fgTotals.count || 0));
+
+        // Category Balances in Footer Strip
+        setText('footBalStockRm', fmtQty(rmTotals.closing || 0));
+        setText('footBalStockPm', fmtNum(pmTotals.closing || 0));
+        setText('footBalStockFg', fmtNum(fgTotals.closing || 0));
 
         if (!data.length) {
           showEl('emptyStock');
@@ -1002,61 +1100,114 @@ var DD = (function () {
         }
 
         var tbody = document.getElementById('tbodyStock');
-        var totalOpn = 0;
-        var totalRcpt = 0;
-        var totalIssue = 0;
-        var totalBal = 0;
         var html = '';
 
         data.forEach(function (row) {
-          totalOpn += Number(row.opn_qty || 0);
-          totalRcpt += Number(row.rcpt_qty || 0);
-          totalIssue += Number(row.issue_qty || 0);
-          totalBal += Number(row.closing_qty || 0);
-
+          var catCode = String(row.category_code || 'RM').toUpperCase();
           var catBadge = '<span class="dd-badge-cat">' + esc(row.category) + '</span>';
-          if (row.category_code === 'RM') {
+          if (catCode === 'RM') {
             catBadge = '<span class="dd-badge-cat dd-badge-rm">RM</span>';
-          } else if (row.category_code === 'PM') {
+          } else if (catCode === 'PM') {
             catBadge = '<span class="dd-badge-cat dd-badge-pm">PM</span>';
+          } else if (catCode === 'FG') {
+            catBadge = '<span class="dd-badge-cat dd-badge-fg">FG</span>';
           }
 
+          var uomBadge = '<span class="dd-uom-pill">' + esc(row.uom || '—') + '</span>';
+          var isRm = (catCode === 'RM');
+          var opnDisp = isRm ? fmtQty(row.opn_qty) : fmtNum(row.opn_qty);
+          var rcptDisp = '+' + (isRm ? fmtQty(row.rcpt_qty) : fmtNum(row.rcpt_qty));
+          var issueDisp = '-' + (isRm ? fmtQty(row.issue_qty) : fmtNum(row.issue_qty));
+          var balDisp = isRm ? fmtQty(row.closing_qty) : fmtNum(row.closing_qty);
           var balanceClass = Number(row.closing_qty) > 0 ? 'text-success font-weight-bold' : 'text-danger font-weight-bold';
 
-          html += '<tr>' +
+          html += '<tr data-cat="' + esc(catCode) + '">' +
             '<td><strong>' + esc(row.customer_name) + '</strong></td>' +
             '<td class="text-center">' + catBadge + '</td>' +
             '<td><strong>' + esc(row.sku_name) + '</strong></td>' +
+            '<td class="text-center">' + uomBadge + '</td>' +
             '<td>' + esc(row.batch_no || '—') + '</td>' +
             '<td data-date="' + esc(row.mfg_date) + '">' + fmtDate(row.mfg_date) + '</td>' +
             '<td data-date="' + esc(row.exp_date) + '">' + fmtDate(row.exp_date) + '</td>' +
-            '<td class="text-right" data-num="' + Number(row.opn_qty || 0) + '">' + fmtQty(row.opn_qty) + '</td>' +
-            '<td class="text-right text-success" data-num="' + Number(row.rcpt_qty || 0) + '">+' + fmtQty(row.rcpt_qty) + '</td>' +
-            '<td class="text-right text-danger" data-num="' + Number(row.issue_qty || 0) + '">-' + fmtQty(row.issue_qty) + '</td>' +
-            '<td class="text-right ' + balanceClass + '" data-num="' + Number(row.closing_qty || 0) + '">' + fmtQty(row.closing_qty) + '</td>' +
+            '<td class="text-right" data-num="' + Number(row.opn_qty || 0) + '">' + opnDisp + '</td>' +
+            '<td class="text-right text-success" data-num="' + Number(row.rcpt_qty || 0) + '">' + rcptDisp + '</td>' +
+            '<td class="text-right text-danger" data-num="' + Number(row.issue_qty || 0) + '">' + issueDisp + '</td>' +
+            '<td class="text-right ' + balanceClass + '" data-num="' + Number(row.closing_qty || 0) + '">' + balDisp + '</td>' +
             '<td data-date="' + esc(row.last_trn_date) + '">' + fmtDate(row.last_trn_date) + '</td>' +
             '</tr>';
         });
 
         tbody.innerHTML = html;
-
-        setText('tfStkOpn', fmtQty(totalOpn));
-        setText('tfStkRcpt', '+' + fmtQty(totalRcpt));
-        setText('tfStkIssue', '-' + fmtQty(totalIssue));
-        setText('tfStkBal', fmtQty(totalBal));
-
-        setText('footOpnStock', fmtQty(totalOpn));
-        setText('footRcptStock', '+' + fmtQty(totalRcpt));
-        setText('footIssueStock', '-' + fmtQty(totalIssue));
-        setText('footBalStock', fmtQty(totalBal));
-
         showEl('tableWrapStock');
+
+        filterStockTable();
       })
       .catch(function (err) {
         hideEl('loadingStock');
         showEl('emptyStock');
         console.error('Error loading Stock Overview:', err);
       });
+  }
+
+  function setStockCategory(cat) {
+    currentStockCategory = (cat || 'ALL').toUpperCase();
+    var tabs = document.querySelectorAll('.dd-stock-tab');
+    tabs.forEach(function (t) {
+      if ((t.getAttribute('data-cat') || '').toUpperCase() === currentStockCategory) {
+        t.classList.add('active');
+      } else {
+        t.classList.remove('active');
+      }
+    });
+    filterStockTable();
+  }
+
+  function onStockPeriodSelect(mode) {
+    loadStock();
+  }
+
+  function filterStockTable(query) {
+    var searchInput = document.querySelector('#sectionStock input[type="text"]');
+    var q = (query !== undefined ? query : (searchInput ? searchInput.value : '')).toLowerCase().trim();
+    var tbody = document.getElementById('tbodyStock');
+    if (!tbody) return;
+    var rows = tbody.getElementsByTagName('tr');
+
+    var visibleCount = 0;
+    var totOpn = 0;
+    var totRcpt = 0;
+    var totIssue = 0;
+    var totBal = 0;
+
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      var rowCat = (r.getAttribute('data-cat') || '').toUpperCase();
+      var matchesCat = (currentStockCategory === 'ALL' || rowCat === currentStockCategory);
+      var rowText = (r.textContent || r.innerText).toLowerCase();
+      var matchesQuery = (q === '' || rowText.indexOf(q) > -1);
+
+      if (matchesCat && matchesQuery) {
+        r.style.display = '';
+        visibleCount++;
+        var cells = r.querySelectorAll('td');
+        if (cells[7] && cells[7].hasAttribute('data-num')) totOpn += parseFloat(cells[7].getAttribute('data-num')) || 0;
+        if (cells[8] && cells[8].hasAttribute('data-num')) totRcpt += parseFloat(cells[8].getAttribute('data-num')) || 0;
+        if (cells[9] && cells[9].hasAttribute('data-num')) totIssue += parseFloat(cells[9].getAttribute('data-num')) || 0;
+        if (cells[10] && cells[10].hasAttribute('data-num')) totBal += parseFloat(cells[10].getAttribute('data-num')) || 0;
+      } else {
+        r.style.display = 'none';
+      }
+    }
+
+    setText('footCountStock', fmtNum(visibleCount));
+
+    var isAllInt = (currentStockCategory === 'PM' || currentStockCategory === 'FG');
+    var fmtFn = isAllInt ? fmtNum : fmtQty;
+
+    setText('tfStkOpn', fmtFn(totOpn));
+    setText('tfStkRcpt', '+' + fmtFn(totRcpt));
+    setText('tfStkIssue', '-' + fmtFn(totIssue));
+    setText('tfStkBal', fmtFn(totBal));
   }
 
   // ── Master Loader ──
@@ -1080,7 +1231,7 @@ var DD = (function () {
     loadPacking(params);
     loadOrders(params);
     loadSales(params);
-    loadStock();
+    loadStock(params);
 
     if (typeof cb === 'function') {
       setTimeout(cb, 350);
@@ -1118,9 +1269,49 @@ var DD = (function () {
       }
     }
 
-    // Update tfoot row if present
+    // Special handling for Inward table to dynamically recalculate RM and PM separately
+    if (tbodyId === 'tbodyInward') {
+      var visibleRmQty = 0;
+      var visiblePmQty = 0;
+      var visibleRmLines = 0;
+      var visiblePmLines = 0;
+      var visibleRmCount = 0;
+      var visiblePmCount = 0;
+
+      for (var k = 0; k < rows.length; k++) {
+        if (rows[k].style.display !== 'none') {
+          var rowCat = (rows[k].getAttribute('data-cat') || '').toUpperCase();
+          var rowQty = parseFloat(rows[k].getAttribute('data-qty')) || 0;
+          var rowLines = parseInt(rows[k].getAttribute('data-lines')) || 0;
+          if (rowCat === 'RM') {
+            visibleRmQty += rowQty;
+            visibleRmLines += rowLines;
+            visibleRmCount++;
+          } else if (rowCat === 'PM') {
+            visiblePmQty += rowQty;
+            visiblePmLines += rowLines;
+            visiblePmCount++;
+          }
+        }
+      }
+
+      setText('tfInwardRmQty', fmtQty(visibleRmQty));
+      setText('tfInwardPmQty', fmtNum(visiblePmQty));
+      setText('tfInwardLines', fmtNum(visibleRmLines + visiblePmLines));
+      setText('tfInwardQty', fmtQty(visibleRmQty + visiblePmQty));
+
+      setText('footCountInward', fmtNum(visibleCount));
+      setText('footCountInwardRm', fmtNum(visibleRmCount));
+      setText('footCountInwardPm', fmtNum(visiblePmCount));
+      setText('footLinesInward', fmtNum(visibleRmLines + visiblePmLines));
+      setText('footRmQtyInward', fmtQty(visibleRmQty));
+      setText('footPmQtyInward', fmtNum(visiblePmQty));
+      setText('footQtyInward', fmtQty(visibleRmQty + visiblePmQty));
+    }
+
+    // Update tfoot row if present (excluding tbodyInward which uses split RM/PM pills above)
     var tfoot = document.getElementById(tfootId);
-    if (tfoot) {
+    if (tfoot && tbodyId !== 'tbodyInward') {
       var footRow = tfoot.querySelector('tr');
       if (footRow) {
         var footCells = footRow.querySelectorAll('td');
@@ -1333,6 +1524,9 @@ var DD = (function () {
     onDateInputChanged: onDateInputChanged,
     scrollToSection: scrollToSection,
     filterTable: filterTable,
+    filterStockTable: filterStockTable,
+    setStockCategory: setStockCategory,
+    onStockPeriodSelect: onStockPeriodSelect,
     exportTableToExcel: exportTableToExcel,
     exportTableToCSV: exportTableToCSV,
     printSection: printSection,
