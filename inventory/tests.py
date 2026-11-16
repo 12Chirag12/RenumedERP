@@ -73,3 +73,51 @@ class InwardInventoryPostingTests(SimpleTestCase):
         self.assertEqual(posted.kwargs['qty_delta'], Decimal('20.000'))
         self.assertEqual(reversed_call.kwargs['batch_no'], '')
         self.assertEqual(reversed_call.kwargs['qty_delta'], Decimal('-20.000'))
+
+    def test_conversion_factor_multiplies_inward_quantity(self):
+        # 1 kg inward with conversion factor 1000 -> 1000 grams in inventory
+        item = SimpleNamespace(
+            pk=35,
+            item_category_id='RM',
+            sample_qty=Decimal('0'),
+            conversion_factor=Decimal('1000.0000'),
+        )
+        line = SimpleNamespace(
+            item=item,
+            item_id=item.pk,
+            quantity=Decimal('1.000'),
+        )
+        inward = SimpleNamespace(
+            pk=10,
+            customer_id=8,
+            inward_dt=date(2026, 9, 12),
+            lines=_Lines(line),
+        )
+        self.assertEqual(
+            list(_inward_item_inventory_postings(line, inward)),
+            [(None, Decimal('1000.000'))],
+        )
+
+    def test_conversion_factor_with_sample_qty(self):
+        # 2 kg inward with 0.1 kg sample -> 1.9 kg net * 1000 = 1900 grams
+        item = SimpleNamespace(
+            pk=36,
+            item_category_id='RM',
+            sample_qty=Decimal('0.100'),
+            conversion_factor=Decimal('1000.0000'),
+        )
+        line = SimpleNamespace(
+            item=item,
+            item_id=item.pk,
+            quantity=Decimal('2.000'),
+        )
+        inward = SimpleNamespace(
+            pk=11,
+            customer_id=8,
+            inward_dt=date(2026, 9, 12),
+            lines=_Lines(line),
+        )
+        self.assertEqual(
+            list(_inward_item_inventory_postings(line, inward)),
+            [(None, Decimal('1900.000'))],
+        )

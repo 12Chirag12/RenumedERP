@@ -531,13 +531,14 @@ class InwardForm(forms.Form):
         if not cat_pk:
             raise forms.ValidationError('Select GRN type (RM or PM) before adding items.')
 
-        seen_items = set()
+        seen_item_pkg_styles = {}
         validated = []
 
         for idx, row in enumerate(rows, start=1):
             if not isinstance(row, dict):
                 raise forms.ValidationError(f'Line {idx}: invalid row.')
             item_id = row.get('item_id')
+            pkg_style = (row.get('pkg_style') or row.get('pkgsytle') or '').strip()
             qty_raw = row.get('qty')
             batches_raw = row.get('batches') or []
 
@@ -559,6 +560,22 @@ class InwardForm(forms.Form):
                 raise forms.ValidationError(
                     f'Line {idx}: item "{item.item_name}" has no UOM. Set it on the Item master first.'
                 )
+
+            if len(pkg_style) > 30:
+                raise forms.ValidationError(
+                    f'Line {idx}: packing style must be 30 characters or fewer.'
+                )
+
+            norm_pkg = pkg_style.lower()
+            item_pkg_key = (item.pk, norm_pkg)
+            if item_pkg_key in seen_item_pkg_styles:
+                prev_idx = seen_item_pkg_styles[item_pkg_key]
+                style_desc = f'packing style "{pkg_style}"' if pkg_style else 'empty packing style'
+                raise forms.ValidationError(
+                    f'Line {idx}: duplicate item — item "{item.item_name}" with {style_desc} '
+                    f'is already added in Line {prev_idx}. The same item cannot have the same packing style.'
+                )
+            seen_item_pkg_styles[item_pkg_key] = idx
 
             try:
                 qty = Decimal(str(qty_raw))

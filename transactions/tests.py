@@ -1039,6 +1039,15 @@ class InwardSameItemAndBrandNameTests(TestCase):
             mfg_date='N',
             exp_date='N',
         )
+        cls.item2 = MstItem.objects.create(
+            item_name='Ibuprofen Powder',
+            item_category=cls.cat,
+            item_type=cls.item_type,
+            uom=cls.uom,
+            maintain_batch='Y',
+            mfg_date='N',
+            exp_date='N',
+        )
 
     def test_allow_same_item_multiple_times_unbatched(self):
         import json
@@ -1169,6 +1178,162 @@ class InwardSameItemAndBrandNameTests(TestCase):
         self.assertEqual(len(parsed_lines[1]['batches']), 1)
         self.assertEqual(parsed_lines[1]['batches'][0]['batch_no'], 'BATCH-B1')
         self.assertEqual(parsed_lines[1]['batches'][0]['brand_name'], '')
+
+    def test_same_item_same_packing_style_raises_validation_error(self):
+        import json
+        from transactions.forms.inward import InwardForm
+
+        form_data = {
+            'inward_dt': '2025-05-15',
+            'register_no': 'R-88003',
+            'grn_category': self.cat.pk,
+            'grn_no': 'RM-88003',
+            'customer': self.cust.pk,
+            'supplier': self.supplier.pk,
+            'inv_no': 'INV-SAME-03',
+            'inv_dt': '2025-05-15',
+            'lines_json': json.dumps([
+                {
+                    'item_id': self.item.pk,
+                    'pkg_style': 'Drum 25kg',
+                    'qty': '50.000',
+                    'rate': '350.00',
+                    'use_batches': False,
+                    'batches': [],
+                },
+                {
+                    'item_id': self.item.pk,
+                    'pkg_style': 'drum 25kg',  # Case-insensitive duplicate
+                    'qty': '25.000',
+                    'rate': '350.00',
+                    'use_batches': False,
+                    'batches': [],
+                },
+            ]),
+        }
+        form = InwardForm(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('lines_json', form.errors)
+        self.assertTrue(
+            any('The same item cannot have the same packing style' in err for err in form.errors['lines_json'])
+        )
+
+    def test_same_item_same_empty_packing_style_raises_validation_error(self):
+        import json
+        from transactions.forms.inward import InwardForm
+
+        form_data = {
+            'inward_dt': '2025-05-16',
+            'register_no': 'R-88004',
+            'grn_category': self.cat.pk,
+            'grn_no': 'RM-88004',
+            'customer': self.cust.pk,
+            'supplier': self.supplier.pk,
+            'inv_no': 'INV-SAME-04',
+            'inv_dt': '2025-05-16',
+            'lines_json': json.dumps([
+                {
+                    'item_id': self.item.pk,
+                    'pkg_style': '',
+                    'qty': '50.000',
+                    'rate': '350.00',
+                    'use_batches': False,
+                    'batches': [],
+                },
+                {
+                    'item_id': self.item.pk,
+                    'pkg_style': '   ',  # Empty/whitespace duplicate
+                    'qty': '25.000',
+                    'rate': '350.00',
+                    'use_batches': False,
+                    'batches': [],
+                },
+            ]),
+        }
+        form = InwardForm(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('lines_json', form.errors)
+        self.assertTrue(
+            any('The same item cannot have the same packing style' in err for err in form.errors['lines_json'])
+        )
+
+    def test_different_items_same_packing_style_is_allowed(self):
+        import json
+        from transactions.forms.inward import InwardForm
+        from transactions.models import TrnInwDtl1
+
+        form_data = {
+            'inward_dt': '2025-05-17',
+            'register_no': 'R-88005',
+            'grn_category': self.cat.pk,
+            'grn_no': 'RM-88005',
+            'customer': self.cust.pk,
+            'supplier': self.supplier.pk,
+            'inv_no': 'INV-DIFF-05',
+            'inv_dt': '2025-05-17',
+            'lines_json': json.dumps([
+                {
+                    'item_id': self.item.pk,
+                    'pkg_style': 'Drum 25kg',
+                    'qty': '50.000',
+                    'rate': '350.00',
+                    'use_batches': False,
+                    'batches': [],
+                },
+                {
+                    'item_id': self.item2.pk,
+                    'pkg_style': 'Drum 25kg',  # Different item with same packing style is allowed!
+                    'qty': '100.000',
+                    'rate': '500.00',
+                    'use_batches': False,
+                    'batches': [],
+                },
+            ]),
+        }
+        form = InwardForm(data=form_data)
+        self.assertTrue(form.is_valid(), form.errors)
+        hed = form.save()
+        self.assertIsNotNone(hed)
+        lines = list(TrnInwDtl1.objects.filter(inward=hed).order_by('dtl1_id'))
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(lines[0].item_id, self.item.pk)
+        self.assertEqual(lines[1].item_id, self.item2.pk)
+        self.assertEqual(lines[0].pkg_style, 'Drum 25kg')
+        self.assertEqual(lines[1].pkg_style, 'Drum 25kg')
+
+    def test_model_clean_same_item_same_packing_style(self):
+        from django.core.exceptions import ValidationError
+        from transactions.models import TrnInwHed, TrnInwDtl1
+
+        hed = TrnInwHed.objects.create(
+            inward_dt=date(2025, 5, 18),
+            register_no='R-88006',
+            grn_category=self.cat,
+            grn_no='RM-88006',
+            customer=self.cust,
+            supplier=self.supplier,
+            inv_no='INV-TEST-06',
+            inv_dt=date(2025, 5, 18),
+        )
+        line1 = TrnInwDtl1.objects.create(
+            inward=hed,
+            item=self.item,
+            pkg_style='Box 20kg',
+            quantity=Decimal('10.000'),
+            uom=self.uom,
+            rate=Decimal('100.00'),
+        )
+        line2 = TrnInwDtl1(
+            inward=hed,
+            item=self.item,
+            pkg_style='box 20kg',  # Same item + same packing style
+            quantity=Decimal('5.000'),
+            uom=self.uom,
+            rate=Decimal('100.00'),
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            line2.clean()
+        self.assertIn('pkg_style', ctx.exception.message_dict)
 
 
 

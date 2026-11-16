@@ -338,6 +338,10 @@ function initPage_inward() {
           '<input type="text" class="cu-input inw-b-arn" maxlength="15" value="' + escHtml(b.arn_no) + '" placeholder="Optional">' +
         '</div>' +
       '</div>' +
+      '<div class="inw-br-field inw-br-brand">' +
+        '<label>Brand name</label>' +
+        '<input type="text" maxlength="150" class="cu-input inw-b-brand" value="' + escHtml(b.brand_name) + '" placeholder="Optional">' +
+      '</div>' +
       '<div class="inw-br-field">' +
         '<label>Manufacturing date' + (line.mfg_date_enabled ? ' <span class="req">*</span>' : '') + '</label>' +
         '<input type="date" class="cu-input inw-b-mfg" value="' + escHtml(b.mfg_dt) + '">' +
@@ -354,10 +358,6 @@ function initPage_inward() {
         '<label>Qty <span class="req">*</span></label>' +
         '<input type="number" class="cu-input inw-b-qty" min="0.001" step="0.001" value="' +
         escHtml(b.batch_qty) + '">' +
-      '</div>' +
-      '<div class="inw-br-field inw-br-brand">' +
-        '<label>Brand name</label>' +
-        '<input type="text" maxlength="150" class="cu-input inw-b-brand" value="' + escHtml(b.brand_name) + '" placeholder="Optional">' +
       '</div>' +
       '<div class="inw-br-field inw-br-prod">' +
         '<label>Product</label>' +
@@ -649,6 +649,23 @@ function initPage_inward() {
       if (!Array.isArray(rows) || !rows.length) {
         if (showErr) setLinesErr('Add at least one item.');
         return false;
+      }
+      var seenItemPkgStyles = {};
+      for (var rIdx = 0; rIdx < rows.length; rIdx++) {
+        var r = rows[rIdx];
+        if (!r.item_id) continue;
+        var normPkg = (r.pkg_style || '').trim().toLowerCase();
+        var key = String(r.item_id) + '::' + normPkg;
+        if (seenItemPkgStyles[key] !== undefined) {
+          var firstIdx = seenItemPkgStyles[key] + 1;
+          var curIdx = rIdx + 1;
+          var msg = normPkg
+            ? 'Line ' + curIdx + ': Same item with packing style "' + (r.pkg_style || '').trim() + '" is already added in Line ' + firstIdx + '. The same item cannot have the same packing style.'
+            : 'Line ' + curIdx + ': Same item with empty packing style is already added in Line ' + firstIdx + '. The same item cannot have the same packing style.';
+          if (showErr) setLinesErr(msg);
+          return false;
+        }
+        seenItemPkgStyles[key] = rIdx;
       }
     } catch (e) {
       if (showErr) setLinesErr('Invalid item data.');

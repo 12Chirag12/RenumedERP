@@ -69,12 +69,30 @@
                 </div>
               </div>
 
-              <div class="cu-row-2">
+              <div class="cu-row-3">
                 <div class="cu-field">
-                  <label class="cu-label">UOM <span class="req">*</span></label>
+                  <label class="cu-label">Purchase UOM <span class="req">*</span></label>
                   {{ form.uom }}
                   {% if form.uom.errors %}<span class="field-error">{{ form.uom.errors.0 }}</span>{% endif %}
                 </div>
+                <div class="cu-field">
+                  <label class="cu-label">Issued UOM</label>
+                  {{ form.issue_uom }}
+                  {% if form.issue_uom.errors %}<span class="field-error">{{ form.issue_uom.errors.0 }}</span>{% endif %}
+                </div>
+                <div class="cu-field">
+                  <label class="cu-label">Conversion Factor</label>
+                  <input type="number" name="conversion_factor" id="productConversionFactorInput" class="cu-input"
+                    placeholder="1.0000" min="0.0001" step="0.0001"
+                    value="{{ form.conversion_factor.value|default:'1.0000' }}" />
+                  <span class="uom-conv-hint" id="productUomConversionPreview" style="font-size: 10px; color: var(--text-mid); margin-top: 2px;">
+                    1 Purchase UOM = 1.0000 Issued UOM
+                  </span>
+                  {% if form.conversion_factor.errors %}<span class="field-error">{{ form.conversion_factor.errors.0 }}</span>{% endif %}
+                </div>
+              </div>
+
+              <div class="cu-row-2">
                 <div class="cu-field">
                   <label class="cu-label">HSN Code</label>
                   <input type="text" name="hsn_code" id="hsnCodeInput" class="cu-input"
@@ -173,7 +191,9 @@
             <th>Generic Name</th>
             <th>Type</th>
             <th>Category</th>
-            <th>UOM</th>
+            <th>Purch. UOM</th>
+            <th>Issued UOM</th>
+            <th>Conv. Factor</th>
             <th>HSN Code</th>
             <th>Layer</th>
             <th>1st Color</th>
@@ -191,6 +211,8 @@
             <td><span class="type-badge">{{ prod.prod_type.item_type_name }}</span></td>
             <td><span class="cat-badge">{{ prod.prod_category.prod_cat_name }}</span></td>
             <td>{{ prod.uom.short_name }}</td>
+            <td>{% if prod.issue_uom %}{{ prod.issue_uom.short_name }}{% elif prod.uom %}{{ prod.uom.short_name }}{% else %}—{% endif %}</td>
+            <td>{{ prod.conversion_factor|default:"1.0000" }}</td>
             <td>{{ prod.hsn_code|default:"—" }}</td>
             <td><span class="layer-badge layer-badge--{{ prod.tablet_layer|lower }}">{{ prod.tablet_layer }}</span></td>
             <td>{{ prod.first_color.color_name|default:"—" }}</td>
@@ -216,7 +238,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="12" class="empty-row">No products found. Use the form above to add one.</td>
+            <td colspan="14" class="empty-row">No products found. Use the form above to add one.</td>
           </tr>
           {% endfor %}
         </tbody>

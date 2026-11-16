@@ -931,10 +931,11 @@ def item_uom_ajax(request):
     if not item_id:
         return JsonResponse({'uom_id': None, 'uom_name': ''})
     try:
-        item = MstItem.objects.select_related('uom').get(pk=item_id)
-        if not item.uom_id:
+        item = MstItem.objects.select_related('uom', 'issue_uom').get(pk=item_id)
+        effective_uom = item.issue_uom or item.uom
+        if not effective_uom:
             return JsonResponse({'uom_id': None, 'uom_name': '', 'error': 'Item has no UOM set.'})
-        return JsonResponse({'uom_id': item.uom_id, 'uom_name': item.uom.short_name})
+        return JsonResponse({'uom_id': effective_uom.uom_id, 'uom_name': effective_uom.short_name})
     except MstItem.DoesNotExist:
         return JsonResponse({'uom_id': None, 'uom_name': ''})
 

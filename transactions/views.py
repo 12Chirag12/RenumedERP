@@ -1237,11 +1237,12 @@ def rm_dispensing_bom_items_ajax(request):
     q3 = Decimal('0.001')
     for r in (
         MstBomRmDtl.objects.filter(spec_id=spec_id)
-        .select_related('stage', 'item', 'item__uom')
+        .select_related('stage', 'item', 'item__uom', 'item__issue_uom')
         .order_by('dtl_id')
     ):
         qty_per_lakh = (r.qty / spec.batch_size) if spec.batch_size else 0
-        uom = r.item.uom.short_name if r.item and r.item.uom else ''
+        eff_uom = (r.item.issue_uom or r.item.uom) if r.item else None
+        uom = eff_uom.short_name if eff_uom else ''
         std_qty = None
         if batch_size_l is not None:
             try:

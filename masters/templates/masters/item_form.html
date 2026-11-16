@@ -49,8 +49,8 @@
               {% endif %}
             </div>
 
-            <!-- Row 2: Item Type | Item Category (auto-fill) | UOM -->
-            <div class="cu-row-3">
+            <!-- Row 2: Item Type | Item Category (auto-fill) -->
+            <div class="cu-row-2-eq">
 
               <div class="cu-field">
                 <label class="cu-label">Item Type <span class="req">*</span></label>
@@ -71,11 +71,37 @@
                 {% endif %}
               </div>
 
+            </div>
+
+            <!-- Row 3: Purchase UOM | Issued UOM | Conversion Factor -->
+            <div class="cu-row-3">
+
               <div class="cu-field">
-                <label class="cu-label">UOM <span class="req">*</span></label>
+                <label class="cu-label">Purchase UOM <span class="req">*</span></label>
                 {{ form.uom }}
                 {% if form.uom.errors %}
                   <span class="field-error">{{ form.uom.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+              <div class="cu-field">
+                <label class="cu-label">Issued UOM</label>
+                {{ form.issue_uom }}
+                {% if form.issue_uom.errors %}
+                  <span class="field-error">{{ form.issue_uom.errors.0 }}</span>
+                {% endif %}
+              </div>
+
+              <div class="cu-field">
+                <label class="cu-label">Conversion Factor</label>
+                <input type="number" name="conversion_factor" id="conversionFactorInput" class="cu-input"
+                  placeholder="1.0000" min="0.0001" step="0.0001"
+                  value="{{ form.conversion_factor.value|default:'1.0000' }}" />
+                <span class="uom-conv-hint" id="uomConversionPreview" style="font-size: 10px; color: var(--text-mid); margin-top: 2px;">
+                  1 Purchase UOM = 1.0000 Issued UOM
+                </span>
+                {% if form.conversion_factor.errors %}
+                  <span class="field-error">{{ form.conversion_factor.errors.0 }}</span>
                 {% endif %}
               </div>
 
@@ -217,7 +243,9 @@
             <th>Item Name</th>
             <th>Item Type</th>
             <th>Category</th>
-            <th>UOM</th>
+            <th>Purch. UOM</th>
+            <th>Issued UOM</th>
+            <th>Conv. Factor</th>
             <th>HSN Code</th>
             <th>Min Level</th>
             <th>Max Level</th>
@@ -237,6 +265,8 @@
             <td><span class="type-badge">{{ item.item_type.item_type_name }}</span></td>
             <td><span class="cat-badge">{{ item.item_category.prod_cat_name }}</span></td>
             <td>{% if item.uom %}{{ item.uom.short_name }}{% else %}—{% endif %}</td>
+            <td>{% if item.issue_uom %}{{ item.issue_uom.short_name }}{% elif item.uom %}{{ item.uom.short_name }}{% else %}—{% endif %}</td>
+            <td>{{ item.conversion_factor|default:"1.0000" }}</td>
             <td>{{ item.hsn_code|default:"—" }}</td>
             <td>{{ item.min_level|default:"—" }}</td>
             <td>{{ item.max_level|default:"—" }}</td>
@@ -259,7 +289,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="14" class="empty-row">No items found. Use the form above to add one.</td>
+            <td colspan="16" class="empty-row">No items found. Use the form above to add one.</td>
           </tr>
           {% endfor %}
         </tbody>

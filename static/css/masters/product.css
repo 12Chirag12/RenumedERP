@@ -119,6 +119,12 @@
   gap: var(--form-field-grid-gap);
 }
 
+.product-page .cu-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--form-field-grid-gap);
+}
+
 .product-page .cu-row-3-colors {
   display: grid;
   grid-template-columns: 1.2fr 1fr 1fr;

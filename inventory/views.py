@@ -212,6 +212,7 @@ def inventory_stock_view(request):
             'product__uom',
             'item',
             'item__uom',
+            'item__issue_uom',
             'item_category',
             'financial_year',
         ).order_by('customer__cust_name', 'product__prod_name', 'item__item_name', 'batch_no')
@@ -271,8 +272,8 @@ def inventory_stock_view(request):
                 uom_name = ''
                 if r.product_id and r.product.uom:
                     uom_name = r.product.uom.short_name
-                elif r.item_id and r.item.uom:
-                    uom_name = r.item.uom.short_name
+                elif r.item_id and (r.item.issue_uom or r.item.uom):
+                    uom_name = (r.item.issue_uom or r.item.uom).short_name
                 rows_export.append({
                     'customer': r.customer.cust_name,
                     'category': r.item_category.prod_cat_id if r.item_category else '',
@@ -326,6 +327,7 @@ def inventory_stock_view(request):
             'product__uom',
             'item',
             'item__uom',
+            'item__issue_uom',
             'item_category',
             'opened_in_fy',
         ).order_by('customer__cust_name', 'product__prod_name', 'item__item_name', 'batch_no')
@@ -441,8 +443,8 @@ def inventory_stock_lifecycle_ajax(request):
         uom_str = ''
         if hed_row.product and hed_row.product.uom:
             uom_str = hed_row.product.uom.short_name
-        elif hed_row.item and hed_row.item.uom:
-            uom_str = hed_row.item.uom.short_name
+        elif hed_row.item and (hed_row.item.issue_uom or hed_row.item.uom):
+            uom_str = (hed_row.item.issue_uom or hed_row.item.uom).short_name
 
         payload = {
             'inv_id': hed_row.stock_lnkno,

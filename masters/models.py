@@ -544,8 +544,25 @@ class MstProd(models.Model):
         'MstUom',
         on_delete=models.PROTECT,
         db_column='uom_id',
-        verbose_name='Unit of Measurement',
+        verbose_name='Purchase UOM',
         related_name='products',
+    )
+
+    issue_uom = models.ForeignKey(
+        'MstUom',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        db_column='issue_uom_id',
+        verbose_name='Issued UOM',
+        related_name='issued_products',
+    )
+
+    conversion_factor = models.DecimalField(
+        max_digits=12,
+        decimal_places=4,
+        default=1,
+        verbose_name='Conversion Factor',
     )
  
     hsn_code = models.CharField(
@@ -690,10 +707,27 @@ class MstItem(models.Model):
         'MstUom',
         on_delete=models.PROTECT,
         db_column='uom_id',
-        verbose_name='UOM',
+        verbose_name='Purchase UOM',
         related_name='items',
         blank=True,
         null=True,
+    )
+
+    issue_uom = models.ForeignKey(
+        'MstUom',
+        on_delete=models.PROTECT,
+        db_column='issue_uom_id',
+        verbose_name='Issued UOM',
+        related_name='issued_items',
+        blank=True,
+        null=True,
+    )
+
+    conversion_factor = models.DecimalField(
+        max_digits=12,
+        decimal_places=4,
+        default=1,
+        verbose_name='Conversion Factor',
     )
 
     class Meta:

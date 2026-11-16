@@ -14,6 +14,8 @@ _DEFAULT_COLUMNS = [
     'item_category',
     'item_type',
     'uom',
+    'issue_uom',
+    'conversion_factor',
     'hsn_code',
     'min_level',
     'max_level',
@@ -58,7 +60,9 @@ def get_ui_config() -> dict:
             {'key': 'item_name', 'label': 'Item name', 'default': True},
             {'key': 'item_category', 'label': 'Item category', 'default': True},
             {'key': 'item_type', 'label': 'Item type', 'default': True},
-            {'key': 'uom', 'label': 'UOM', 'default': True},
+            {'key': 'uom', 'label': 'Purchase UOM', 'default': True},
+            {'key': 'issue_uom', 'label': 'Issued UOM', 'default': True},
+            {'key': 'conversion_factor', 'label': 'Conversion factor', 'default': True},
             {'key': 'hsn_code', 'label': 'HSN code', 'default': True},
             {'key': 'min_level', 'label': 'Min. stock level', 'default': False},
             {'key': 'max_level', 'label': 'Max. stock level', 'default': False},
@@ -94,7 +98,7 @@ def filter_options_item_type():
 
 
 def _base_queryset(filters: dict, search: str):
-    qs = MstItem.objects.select_related('item_type', 'item_category', 'uom').order_by('item_name')
+    qs = MstItem.objects.select_related('item_type', 'item_category', 'uom', 'issue_uom').order_by('item_name')
 
     ic = filters.get('item_category') or {}
     if ic.get('mode') == 'select':
@@ -130,6 +134,11 @@ def _serialize(obj: MstItem, columns: list[str]) -> dict:
         row['item_type'] = obj.item_type.item_type_name if obj.item_type_id else ''
     if 'uom' in columns:
         row['uom'] = obj.uom.short_name if obj.uom_id else ''
+    if 'issue_uom' in columns:
+        eff = obj.issue_uom or obj.uom
+        row['issue_uom'] = eff.short_name if eff else ''
+    if 'conversion_factor' in columns:
+        row['conversion_factor'] = str(obj.conversion_factor or '1.0000')
     if 'hsn_code' in columns:
         row['hsn_code'] = obj.hsn_code or ''
     if 'min_level' in columns:

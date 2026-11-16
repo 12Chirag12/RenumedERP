@@ -79,6 +79,14 @@ def _inward_item_inventory_postings(d1, _hed: TrnInwHed):
     sample_cap = _q_inv_qty(getattr(item, 'sample_qty', 0) or 0)
     received = _q_inv_qty(d1.quantity)
     posted = _q_inv_qty(received - min(sample_cap, received))
+    conv = getattr(item, 'conversion_factor', None) or Decimal('1')
+    try:
+        conv = Decimal(str(conv))
+        if conv <= 0:
+            conv = Decimal('1')
+    except Exception:
+        conv = Decimal('1')
+    posted = _q_inv_qty(posted * conv)
     if posted > 0:
         yield (None, posted)
 

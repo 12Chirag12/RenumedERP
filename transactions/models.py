@@ -297,6 +297,19 @@ class TrnInwDtl1(models.Model):
                 raise ValidationError(
                     {'uom': _('UOM must match the item master UOM for this item.')}
                 )
+        if self.inward_id and self.item_id:
+            norm_pkg = (self.pkg_style or '').strip()
+            qs = TrnInwDtl1.objects.filter(
+                inward_id=self.inward_id,
+                item_id=self.item_id,
+                pkg_style__iexact=norm_pkg,
+            )
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+            if qs.exists():
+                raise ValidationError(
+                    {'pkg_style': _('The same item cannot have the same packing style in the same inward.')}
+                )
 
     def save(self, *args, **kwargs):
         self.full_clean()

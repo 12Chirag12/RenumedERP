@@ -1235,10 +1235,34 @@ class ProductForm(forms.Form):
     # M2: queryset populated per-request in __init__
     uom = forms.ModelChoiceField(
         queryset=MstUom.objects.none(),
-        label='UOM',
-        empty_label='— Select UOM —',
+        label='Purchase UOM',
+        empty_label='— Select Purchase UOM —',
         widget=forms.Select(attrs={
             'class': 'cu-select searchable-dropdown', 'id': 'uomSelect',
+        }),
+    )
+
+    issue_uom = forms.ModelChoiceField(
+        queryset=MstUom.objects.none(),
+        label='Issued UOM',
+        required=False,
+        empty_label='— Select Issued UOM —',
+        widget=forms.Select(attrs={
+            'class': 'cu-select searchable-dropdown', 'id': 'productIssueUomSelect',
+        }),
+    )
+
+    conversion_factor = forms.DecimalField(
+        max_digits=12, decimal_places=4,
+        required=False, initial=1,
+        min_value=Decimal('0.0001'),
+        label='Conversion Factor',
+        widget=forms.NumberInput(attrs={
+            'class': 'cu-input',
+            'id': 'productConversionFactorInput',
+            'min': '0.0001',
+            'step': '0.0001',
+            'placeholder': '1.0000',
         }),
     )
  
@@ -1282,7 +1306,8 @@ class ProductForm(forms.Form):
             MstItemType.objects.select_related('item_category')
             .filter(item_category__prod_cat_name__iexact='Finished Goods')
         )
-        self.fields['uom'].queryset           = MstUom.objects.all()
+        self.fields['uom'].queryset           = MstUom.objects.all().order_by('uom_name')
+        self.fields['issue_uom'].queryset     = MstUom.objects.all().order_by('uom_name')
         self.fields['first_color'].queryset   = MstColor.objects.all()
         self.fields['second_color'].queryset  = MstColor.objects.all()
  
@@ -1335,6 +1360,12 @@ class ProductForm(forms.Form):
         layer        = cleaned.get('tablet_layer')
         first_color  = cleaned.get('first_color')
         second_color = cleaned.get('second_color')
+
+        if not cleaned.get('issue_uom'):
+            cleaned['issue_uom'] = cleaned.get('uom')
+        cf = cleaned.get('conversion_factor')
+        if not cf or cf <= 0:
+            cleaned['conversion_factor'] = Decimal('1.0000')
  
         if layer == 'Double':
             if not first_color:
@@ -1363,6 +1394,8 @@ class ProductForm(forms.Form):
             # prod_category_id hidden field needs the raw PK string
             'prod_category_id':  inst.prod_category_id,
             'uom':               inst.uom,
+            'issue_uom':         inst.issue_uom,
+            'conversion_factor': inst.conversion_factor,
             'hsn_code':          inst.hsn_code,
             'tablet_layer':      inst.tablet_layer,
             'first_color':       inst.first_color,
@@ -1411,8 +1444,10 @@ class ProductForm(forms.Form):
             generic_name  = cd['generic_name'],
             prod_type     = cd['prod_type'],         # MstItemType instance → saves item_type_id
             prod_category = cd['prod_category_id'],  # MstProdCat instance  → saves prod_cat_id
-            uom           = cd['uom'],
-            hsn_code      = cd.get('hsn_code') or None,
+            uom               = cd['uom'],
+            issue_uom         = cd.get('issue_uom') or cd['uom'],
+            conversion_factor = cd.get('conversion_factor') or Decimal('1.0000'),
+            hsn_code          = cd.get('hsn_code') or None,
             tablet_layer  = cd['tablet_layer'],
             first_color   = cd.get('first_color') or None,
             second_color  = cd.get('second_color') or None,
@@ -1530,9 +1565,33 @@ class ItemForm(forms.Form):
 
     uom = forms.ModelChoiceField(
         queryset=MstUom.objects.none(),
-        label='UOM',
-        empty_label='— Select UOM —',
+        label='Purchase UOM',
+        empty_label='— Select Purchase UOM —',
         widget=forms.Select(attrs={'class': 'cu-select searchable-dropdown', 'id': 'itemUomSelect'}),
+    )
+
+    issue_uom = forms.ModelChoiceField(
+        queryset=MstUom.objects.none(),
+        label='Issued UOM',
+        required=False,
+        empty_label='— Select Issued UOM —',
+        widget=forms.Select(attrs={'class': 'cu-select searchable-dropdown', 'id': 'itemIssueUomSelect'}),
+    )
+
+    conversion_factor = forms.DecimalField(
+        max_digits=12,
+        decimal_places=4,
+        required=False,
+        initial=1,
+        min_value=Decimal('0.0001'),
+        label='Conversion Factor',
+        widget=forms.NumberInput(attrs={
+            'class': 'cu-input',
+            'id': 'conversionFactorInput',
+            'min': '0.0001',
+            'step': '0.0001',
+            'placeholder': '1.0000',
+        }),
     )
  
     def __init__(self, *args, **kwargs):
@@ -1543,6 +1602,7 @@ class ItemForm(forms.Form):
             MstItemType.objects.select_related('item_category').all()
         )
         self.fields['uom'].queryset = MstUom.objects.all().order_by('uom_name')
+        self.fields['issue_uom'].queryset = MstUom.objects.all().order_by('uom_name')
  
     # ── Field-level validation ──────────────────────────────────
  
@@ -1596,6 +1656,12 @@ class ItemForm(forms.Form):
  
     def clean(self):
         cleaned = super().clean()
+
+        if not cleaned.get('issue_uom'):
+            cleaned['issue_uom'] = cleaned.get('uom')
+        cf = cleaned.get('conversion_factor')
+        if not cf or cf <= 0:
+            cleaned['conversion_factor'] = Decimal('1.0000')
  
         # max_level >= min_level
         min_lvl = cleaned.get('min_level')
@@ -1637,6 +1703,8 @@ class ItemForm(forms.Form):
             'last_purchase_rate': inst.last_purchase_rate,
             'sample_qty':         inst.sample_qty,
             'uom':                inst.uom,
+            'issue_uom':          inst.issue_uom,
+            'conversion_factor':  inst.conversion_factor,
         }
  
     def save(self):
@@ -1651,6 +1719,8 @@ class ItemForm(forms.Form):
             item_type          = cd['item_type'],           # MstItemType instance
             item_category      = cd['item_category_id'],    # MstProdCat instance
             uom                = cd['uom'],
+            issue_uom          = cd.get('issue_uom') or cd['uom'],
+            conversion_factor  = cd.get('conversion_factor') or Decimal('1.0000'),
             hsn_code           = cd.get('hsn_code') or None,
             min_level          = cd.get('min_level'),
             max_level          = cd.get('max_level'),

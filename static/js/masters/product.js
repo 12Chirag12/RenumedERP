@@ -108,7 +108,75 @@ function initPage_product() {
     });
   }
 
-  /* ── 4. resetForm ───────────────────────────────────────────── */
+  /* ── 4. UOM conversion preview and auto-conversion ─────────── */
+  function getShortName(selectEl) {
+    if (!selectEl || selectEl.selectedIndex < 0) return '';
+    var opt = selectEl.options[selectEl.selectedIndex];
+    if (!opt || !opt.value) return '';
+    var txt = opt.text.trim();
+    var m = txt.match(/\(([^)]+)\)/);
+    return m ? m[1].trim() : txt;
+  }
+
+  function getStandardConversion(fromUom, toUom) {
+    var f = (fromUom || '').toUpperCase();
+    var t = (toUom || '').toUpperCase();
+    if (!f || !t) return null;
+    if (f === t) return '1.0000';
+
+    if ((f === 'KGS' || f === 'KG' || f.indexOf('KILO') !== -1) && (t === 'GMS' || t === 'GM' || t.indexOf('GRAM') !== -1)) return '1000.0000';
+    if ((f === 'GMS' || f === 'GM' || f.indexOf('GRAM') !== -1) && (t === 'MGS' || t === 'MG' || t.indexOf('MILLI') !== -1)) return '1000.0000';
+    if ((f === 'KGS' || f === 'KG') && (t === 'MGS' || t === 'MG')) return '1000000.0000';
+    if ((f === 'TON' || f === 'TONS') && (t === 'KGS' || t === 'KG')) return '1000.0000';
+    if ((f === 'LTR' || f === 'LIT') && (t === 'ML' || t.indexOf('MILLI') !== -1)) return '1000.0000';
+    if ((f === 'MTR' || f.indexOf('METER') !== -1) && (t === 'CMS' || t.indexOf('CENTI') !== -1)) return '100.0000';
+    if ((f === 'MTR' || f.indexOf('METER') !== -1) && (t === 'MM' || t.indexOf('MILLI') !== -1)) return '1000.0000';
+
+    return null;
+  }
+
+  var purchSelect = document.getElementById('uomSelect');
+  var issueSelect = document.getElementById('productIssueUomSelect');
+  var factorInput = document.getElementById('productConversionFactorInput');
+  var previewEl   = document.getElementById('productUomConversionPreview');
+
+  function updatePreview() {
+    if (!previewEl || !factorInput) return;
+    var pName = getShortName(purchSelect) || 'Purchase UOM';
+    var iName = getShortName(issueSelect) || getShortName(purchSelect) || 'Issued UOM';
+    var factor = factorInput.value ? parseFloat(factorInput.value) : 1;
+    if (isNaN(factor) || factor <= 0) factor = 1;
+    previewEl.textContent = '1 ' + pName + ' = ' + factor + ' ' + iName;
+  }
+
+  function onUomChange(isPurchChange) {
+    if (!purchSelect || !issueSelect || !factorInput) return;
+    var pVal = purchSelect.value;
+    var iVal = issueSelect.value;
+
+    if (isPurchChange && pVal && !iVal) {
+      issueSelect.value = pVal;
+    }
+
+    var pName = getShortName(purchSelect);
+    var iName = getShortName(issueSelect);
+    var stdFactor = getStandardConversion(pName, iName);
+    if (stdFactor !== null) {
+      factorInput.value = stdFactor;
+    } else if (pVal && iVal && pVal === iVal) {
+      factorInput.value = '1.0000';
+    } else if (!factorInput.value) {
+      factorInput.value = '1.0000';
+    }
+    updatePreview();
+  }
+
+  if (purchSelect) { purchSelect.addEventListener('change', function () { onUomChange(true); }); }
+  if (issueSelect) { issueSelect.addEventListener('change', function () { onUomChange(false); }); }
+  if (factorInput) { factorInput.addEventListener('input', updatePreview); }
+  updatePreview();
+
+  /* ── 5. resetForm ───────────────────────────────────────────── */
   window.resetForm = function () {
     var form = document.getElementById('productForm');
     if (typeof clearMasterFormValidationUI === 'function' && form) clearMasterFormValidationUI(form);
@@ -123,6 +191,8 @@ function initPage_product() {
 
     // Re-apply default layer state
     applyLayerState('Single');
+    if (factorInput) factorInput.value = '1.0000';
+    updatePreview();
 
     if (prodTypeSelect) { prodTypeSelect.focus(); }
   };

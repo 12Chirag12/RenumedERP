@@ -5,10 +5,10 @@ from django.core.exceptions import ValidationError
 from django.http import QueryDict
 from django.urls import reverse
 from masters.models import (
-    MstCust, MstCustProd, MstProd, MstState, MstItemType, MstProdCat, MstUom,
+    MstCust, MstCustProd, MstProd, MstItem, MstState, MstItemType, MstProdCat, MstUom,
     MstDepartment, MstSection,
 )
-from masters.forms import CustomerForm, OperatorForm
+from masters.forms import CustomerForm, OperatorForm, ItemForm
 from masters.views import customer_view
 
 User = get_user_model()
@@ -188,3 +188,81 @@ class OperatorFormTests(TestCase):
         )
         self.assertFalse(submitted_form.is_valid())
         self.assertIn('Select at least one section.', submitted_form.non_field_errors())
+
+
+class ItemMasterUomConversionTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.uom_kg = MstUom.objects.create(uom_name='Kilogram', short_name='KG')
+        cls.uom_gm = MstUom.objects.create(uom_name='Gram', short_name='GM')
+        cls.cat = MstProdCat.objects.create(prod_cat_id='RM', prod_cat_name='Raw Material')
+        cls.item_type = MstItemType.objects.create(item_type_name='API', item_category=cls.cat)
+        cls.user = User.objects.create_superuser('itemadmin', 'item@example.com', 'pass123')
+
+    def test_item_creation_with_purchase_and_issued_uom(self):
+        item = MstItem.objects.create(
+            item_name='Paracetamol API',
+            item_type=self.item_type,
+            item_category=self.cat,
+            uom=self.uom_kg,
+            issue_uom=self.uom_gm,
+            conversion_factor=1000,
+        )
+        self.assertEqual(item.uom, self.uom_kg)
+        self.assertEqual(item.issue_uom, self.uom_gm)
+        self.assertEqual(item.conversion_factor, 1000)
+
+    def test_item_form_defaults_issue_uom_to_purchase_uom_if_omitted(self):
+        form = ItemForm(data={
+            'item_name': 'Aspirin Powder',
+            'item_type': self.item_type.pk,
+            'item_category_id': self.cat.pk,
+            'uom': self.uom_kg.pk,
+            'maintain_batch': 'N',
+            'mfg_date': 'N',
+            'exp_date': 'N',
+            'last_purchase_rate': '150.00',
+            'sample_qty': '0.000',
+        })
+        self.assertTrue(form.is_valid(), form.errors)
+        item = form.save()
+        self.assertEqual(item.uom, self.uom_kg)
+        self.assertEqual(item.issue_uom, self.uom_kg)
+        self.assertEqual(item.conversion_factor, 1)
+
+    def test_item_form_saves_custom_issued_uom_and_conversion_factor(self):
+        form = ItemForm(data={
+            'item_name': 'Ibuprofen DC',
+            'item_type': self.item_type.pk,
+            'item_category_id': self.cat.pk,
+            'uom': self.uom_kg.pk,
+            'issue_uom': self.uom_gm.pk,
+            'conversion_factor': '1000.0000',
+            'maintain_batch': 'N',
+            'mfg_date': 'N',
+            'exp_date': 'N',
+            'last_purchase_rate': '250.00',
+            'sample_qty': '0.000',
+        })
+        self.assertTrue(form.is_valid(), form.errors)
+        item = form.save()
+        self.assertEqual(item.uom, self.uom_kg)
+        self.assertEqual(item.issue_uom, self.uom_gm)
+        self.assertEqual(item.conversion_factor, 1000)
+
+    def test_item_uom_ajax_returns_issued_uom_for_bom(self):
+        item = MstItem.objects.create(
+            item_name='Gelatin Roll',
+            item_type=self.item_type,
+            item_category=self.cat,
+            uom=self.uom_kg,
+            issue_uom=self.uom_gm,
+            conversion_factor=1000,
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('item_uom_ajax'), {'item_id': item.pk})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['uom_id'], self.uom_gm.uom_id)
+        self.assertEqual(data['uom_name'], 'GM')
+

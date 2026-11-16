@@ -453,6 +453,14 @@ def post_inward_ledger(hed: TrnInwHed) -> None:
         sample_cap = _q(getattr(item, 'sample_qty', 0) or 0)
         received = _q(d1.quantity)
         posted = _q(received - min(sample_cap, received))
+        conv = getattr(item, 'conversion_factor', None) or Decimal('1')
+        try:
+            conv = Decimal(str(conv))
+            if conv <= 0:
+                conv = Decimal('1')
+        except Exception:
+            conv = Decimal('1')
+        posted = _q(posted * conv)
         if posted <= 0:
             continue
 

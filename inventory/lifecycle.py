@@ -376,7 +376,7 @@ def build_inventory_lifecycle(
         batch_no=bn,
         product_id=product_id,
         item_id=item_id,
-    ).select_related('customer', 'product', 'product__uom', 'item', 'item__uom').order_by('-inv_id').first()
+    ).select_related('customer', 'product', 'product__uom', 'item', 'item__uom', 'item__issue_uom').order_by('-inv_id').first()
 
     sku_name = ''
     uom = ''
@@ -386,7 +386,8 @@ def build_inventory_lifecycle(
             uom = stock_row.product.uom.short_name if stock_row.product.uom else ''
         else:
             sku_name = stock_row.item.item_name
-            uom = stock_row.item.uom.short_name if stock_row.item.uom else ''
+            eff_u = stock_row.item.issue_uom or stock_row.item.uom
+            uom = eff_u.short_name if eff_u else ''
         customer_name = stock_row.customer.cust_name
     else:
         from masters.models import MstCust, MstItem, MstProd
@@ -398,10 +399,11 @@ def build_inventory_lifecycle(
                 sku_name = p.prod_name
                 uom = p.uom.short_name if p.uom else ''
         elif item_id:
-            it = MstItem.objects.select_related('uom').filter(pk=item_id).first()
+            it = MstItem.objects.select_related('uom', 'issue_uom').filter(pk=item_id).first()
             if it:
                 sku_name = it.item_name
-                uom = it.uom.short_name if it.uom else ''
+                eff_u = it.issue_uom or it.uom
+                uom = eff_u.short_name if eff_u else ''
 
     open_sum = InventoryStock.objects.filter(
         customer_id=customer_id,
