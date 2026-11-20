@@ -46,6 +46,27 @@
     }
   }
 
+  function fmtDateTime(iso) {
+    if (!iso || iso === '—' || iso === 'None') return '';
+    try {
+      var dt = new Date(iso);
+      if (!isNaN(dt.getTime())) {
+        return dt.toLocaleString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true,
+        });
+      }
+      return String(iso).replace('T', ' ');
+    } catch (e) {
+      return String(iso);
+    }
+  }
+
   function getPresetDates(preset) {
     var today = new Date();
     var fromDt = new Date();
@@ -120,8 +141,12 @@
       var detail = ev.detail ? ('<span class="inv-lc-detail">' + esc(ev.detail) + '</span>') : '';
       var n = parseFloat(ev.qty_delta);
       var deltaCls = n < 0 ? ' inv-lc-delta--neg' : (n > 0 ? ' inv-lc-delta--pos' : '');
+      var dateCol = esc(fmtDate(ev.trn_date));
+      if (ev.created_at) {
+        dateCol += '<br><small class="text-muted" style="font-size:0.75rem;"><i class="bi bi-clock"></i> ' + esc(fmtDateTime(ev.created_at)) + '</small>';
+      }
       html +=
-        '<tr><td>' + esc(fmtDate(ev.trn_date)) + '</td>' +
+        '<tr><td>' + dateCol + '</td>' +
         '<td><span class="inv-lc-type">' + esc(ev.label) + '</span>' + detail + '</td>' +
         '<td>' + doc + '</td>' +
         '<td class="num' + deltaCls + '">' + esc(fmtDelta(ev.qty_delta, uom)) + '</td>' +

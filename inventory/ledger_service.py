@@ -7,7 +7,7 @@ with atomic locking (select_for_update) and negative stock prevention.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, time
 from decimal import Decimal, ROUND_HALF_UP
 from typing import TYPE_CHECKING
 
@@ -75,14 +75,48 @@ def get_fg_closing_balance(
     return _q(total)
 
 
+def _parse_filter_bound(val: date | datetime | str | None, is_end: bool = False) -> datetime | None:
+    if not val:
+        return None
+    if isinstance(val, datetime):
+        return val if timezone.is_aware(val) else timezone.make_aware(val, timezone.get_current_timezone())
+    if isinstance(val, date):
+        t = time.max if is_end else time.min
+        return timezone.make_aware(datetime.combine(val, t), timezone.get_current_timezone())
+    s = str(val).strip()
+    if not s:
+        return None
+    if s.endswith('Z'):
+        s = s[:-1] + '+00:00'
+    has_time = ('T' in s or ' ' in s or ':' in s)
+    try:
+        dt = datetime.fromisoformat(s)
+        if not has_time:
+            t = time.max if is_end else time.min
+            dt = datetime.combine(dt.date(), t)
+        if not timezone.is_aware(dt):
+            dt = timezone.make_aware(dt, timezone.get_current_timezone())
+        return dt
+    except ValueError:
+        pass
+    for fmt in ('%Y-%m-%d', '%d-%m-%Y', '%d/%m/%Y', '%Y/%m/%d'):
+        try:
+            d = datetime.strptime(s, fmt).date()
+            t = time.max if is_end else time.min
+            return timezone.make_aware(datetime.combine(d, t), timezone.get_current_timezone())
+        except ValueError:
+            pass
+    return None
+
+
 def compute_periodic_stock_movements(
     stock_hed_ids: list[int],
-    from_date: date | None = None,
-    to_date: date | None = None,
+    from_date: date | datetime | str | None = None,
+    to_date: date | datetime | str | None = None,
 ) -> dict[int, dict[str, Decimal]]:
     """
     Calculate opening, receipt, issue, and closing quantities for a set of StockHed IDs
-    over an optional [from_date, to_date] window using StockDtl movements.
+    over an optional [from_date, to_date] window using StockDtl movements and real-time timestamps.
     """
     from collections import defaultdict
     res: dict[int, dict[str, Decimal]] = defaultdict(lambda: {
@@ -95,23 +129,70 @@ def compute_periodic_stock_movements(
     if not stock_hed_ids:
         return res
 
-    qs = StockDtl.objects.filter(stock_id__in=stock_hed_ids)
-    if to_date:
-        qs = qs.filter(trn_date__lte=to_date)
+    from_has_time = False
+    if from_date:
+        if isinstance(from_date, datetime):
+            from_has_time = True
+        elif isinstance(from_date, str) and ('T' in from_date or ' ' in from_date or ':' in from_date):
+            from_has_time = True
 
-    for m in qs.only('stock_id', 'trn_type', 'trn_date', 'quantity', 'is_reversal'):
+    to_has_time = False
+    if to_date:
+        if isinstance(to_date, datetime):
+            to_has_time = True
+        elif isinstance(to_date, str) and ('T' in to_date or ' ' in to_date or ':' in to_date):
+            to_has_time = True
+
+    has_time = from_has_time or to_has_time
+
+    from_dt = _parse_filter_bound(from_date, is_end=False)
+    to_dt = _parse_filter_bound(to_date, is_end=True)
+
+    if from_dt and to_dt and from_dt > to_dt:
+        from_dt, to_dt = to_dt, from_dt
+
+    qs = StockDtl.objects.filter(stock_id__in=stock_hed_ids).order_by('trn_date', 'stock_dtl_id')
+
+    for m in qs.only('stock_id', 'trn_type', 'trn_date', 'quantity', 'is_reversal', 'created_at'):
         sid = m.stock_id
         sign = Decimal('-1') if m.is_reversal else Decimal('1')
         qty = _q(m.quantity) * sign
 
-        if from_date and m.trn_date < from_date:
+        is_after = False
+        is_prior = False
+
+        if has_time:
+            m_ts = m.created_at
+            if m_ts is not None and not timezone.is_aware(m_ts):
+                m_ts = timezone.make_aware(m_ts, timezone.get_current_timezone())
+            if m_ts is not None:
+                if to_dt and m_ts > to_dt:
+                    is_after = True
+                if from_dt and m_ts < from_dt:
+                    is_prior = True
+            else:
+                if to_dt and m.trn_date > timezone.localtime(to_dt).date():
+                    is_after = True
+                if from_dt and m.trn_date < timezone.localtime(from_dt).date():
+                    is_prior = True
+        else:
+            m_d = m.trn_date or (timezone.localtime(m.created_at).date() if m.created_at else None)
+            if to_dt and m_d and m_d > timezone.localtime(to_dt).date():
+                is_after = True
+            if from_dt and m_d and m_d < timezone.localtime(from_dt).date():
+                is_prior = True
+
+        if is_after:
+            continue
+
+        if is_prior:
             if m.trn_type in (StockDtl.TYPE_OPENING, StockDtl.TYPE_RECEIPT):
                 res[sid]['opening_qty'] = _q(res[sid]['opening_qty'] + qty)
             else:
                 res[sid]['opening_qty'] = _q(res[sid]['opening_qty'] - qty)
         else:
             if m.trn_type == StockDtl.TYPE_OPENING:
-                if from_date is None:
+                if from_dt is None:
                     res[sid]['opening_qty'] = _q(res[sid]['opening_qty'] + qty)
                 else:
                     res[sid]['receipt_qty'] = _q(res[sid]['receipt_qty'] + qty)

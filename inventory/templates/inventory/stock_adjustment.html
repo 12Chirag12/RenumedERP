@@ -47,8 +47,13 @@
             </select>
           </div>
           <div class="cu-field">
-            <label class="cu-label" for="stkAdjDate">Document date</label>
-            <input type="date" id="stkAdjDate" class="cu-input" required>
+            <span class="cu-label">Document date</span>
+            <div class="auto-date-badge" style="padding: 6px 0;">
+              <span class="badge bg-light text-dark border">
+                <i class="bi bi-clock"></i> Auto-assigned (Real-Time)
+              </span>
+            </div>
+            <input type="hidden" id="stkAdjDate" value="{{ today|default:'' }}">
           </div>
           <div class="cu-field stk-adj-radio-field">
             <span class="cu-label">Type</span>

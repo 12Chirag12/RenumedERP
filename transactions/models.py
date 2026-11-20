@@ -17,6 +17,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 import re
@@ -138,6 +139,21 @@ class TrnInwHed(models.Model):
         help_text='Relative path under MEDIA_ROOT for the uploaded header document (PDF/image).',
     )
 
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        null=True,
+        blank=True,
+        verbose_name=_('Created at'),
+        help_text=_('Real-time system timestamp when the inward was initially entered.'),
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        null=True,
+        blank=True,
+        verbose_name=_('Updated at'),
+        help_text=_('Real-time system timestamp when the inward was last modified.'),
+    )
+
     class Meta:
         db_table = 'TrnInwHed'
         verbose_name = 'Inward (Header)'
@@ -162,6 +178,8 @@ class TrnInwHed(models.Model):
         return f"Inward {self.inward_id} — GRN {self.grn_no}"
 
     def clean(self):
+        if not self.inward_dt:
+            self.inward_dt = timezone.localdate()
         super().clean()
         if self.register_no:
             self.register_no = self.register_no.strip().upper()
@@ -182,6 +200,8 @@ class TrnInwHed(models.Model):
                 raise ValidationError({'grn_no': _('GRN no. prefix must match the selected GRN type.')})
 
     def save(self, *args, **kwargs):
+        if not self.inward_dt:
+            self.inward_dt = timezone.localdate()
         if self.inward_dt:
             # Ensure FY row exists (e.g. new FY on 1-Apr) without requiring admin UI or seed first.
             fy = get_or_create_financial_year_for_date(self.inward_dt)
@@ -1461,6 +1481,19 @@ class TrnlssHed(models.Model):
         null=True,
         db_column='Remarks',
         verbose_name='Remarks',
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        null=True,
+        blank=True,
+        verbose_name=_('Created at'),
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        null=True,
+        blank=True,
+        verbose_name=_('Updated at'),
     )
 
     class Meta:

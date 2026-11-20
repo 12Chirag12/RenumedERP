@@ -1,6 +1,6 @@
 import calendar
 import json
-from datetime import date, datetime
+from datetime import date, datetime, time
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.contrib import messages
@@ -10,6 +10,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods
 
 from masters.models import MstCust, MstCustProd, MstItem, MstItemType, MstProd, MstProdCat
@@ -45,6 +46,44 @@ def _parse_flexible_date(raw: str | None, is_end: bool = False) -> date | None:
             return date(dt.year, dt.month, 1)
         except ValueError:
             pass
+    return None
+
+
+def _parse_flexible_iso_datetime(val: str | date | datetime | None, is_end: bool = False) -> datetime | None:
+    """Parse flexible ISO datetime or date string into a timezone-aware datetime."""
+    if not val:
+        return None
+    if isinstance(val, datetime):
+        return val if timezone.is_aware(val) else timezone.make_aware(val, timezone.get_current_timezone())
+    if isinstance(val, date):
+        t = time.max if is_end else time.min
+        return timezone.make_aware(datetime.combine(val, t), timezone.get_current_timezone())
+
+    s = str(val).strip()
+    if not s:
+        return None
+
+    s_iso = s
+    if s_iso.endswith('Z'):
+        s_iso = s_iso[:-1] + '+00:00'
+
+    has_time = ('T' in s or ' ' in s or ':' in s)
+    try:
+        dt = datetime.fromisoformat(s_iso)
+        if not has_time:
+            t = time.max if is_end else time.min
+            dt = datetime.combine(dt.date(), t)
+        if not timezone.is_aware(dt):
+            dt = timezone.make_aware(dt, timezone.get_current_timezone())
+        return dt
+    except ValueError:
+        pass
+
+    d = _parse_flexible_date(s, is_end=is_end)
+    if d:
+        t = time.max if is_end else time.min
+        return timezone.make_aware(datetime.combine(d, t), timezone.get_current_timezone())
+
     return None
 
 
@@ -407,25 +446,18 @@ def inventory_stock_view(request):
 @require_GET
 def inventory_stock_lifecycle_ajax(request):
     """Batch-wise movement history for one inventory ledger row (JSON)."""
-    from datetime import date
     inv_id = _int_or_none(request.GET.get('inv_id'))
     if inv_id is None:
         return JsonResponse({'error': 'inv_id is required.'}, status=400)
 
-    from_date = request.GET.get('from_date', '').strip()
-    to_date = request.GET.get('to_date', '').strip()
-    from_dt = None
-    to_dt = None
-    if from_date:
-        try:
-            from_dt = date.fromisoformat(from_date)
-        except ValueError:
-            from_dt = None
-    if to_date:
-        try:
-            to_dt = date.fromisoformat(to_date)
-        except ValueError:
-            to_dt = None
+    from_date = (request.GET.get('from_date') or '').strip()
+    to_date = (request.GET.get('to_date') or '').strip()
+    from_dt = _parse_flexible_iso_datetime(from_date, is_end=False)
+    to_dt = _parse_flexible_iso_datetime(to_date, is_end=True)
+
+    from_has_time = ('T' in from_date or ' ' in from_date or ':' in from_date) if from_date else False
+    to_has_time = ('T' in to_date or ' ' in to_date or ':' in to_date) if to_date else False
+    has_time = from_has_time or to_has_time
 
     if from_dt and to_dt and from_dt > to_dt:
         from_dt, to_dt = to_dt, from_dt
@@ -451,13 +483,30 @@ def inventory_stock_lifecycle_ajax(request):
                 delta = m.quantity if m.is_reversal else -m.quantity
             running_bal = (running_bal + delta).quantize(step, rounding=ROUND_HALF_UP)
 
+            prior = False
+            post = False
+            if has_time:
+                m_ts = m.created_at
+                if m_ts is not None and not timezone.is_aware(m_ts):
+                    m_ts = timezone.make_aware(m_ts, timezone.get_current_timezone())
+                if m_ts is not None:
+                    prior = bool(from_dt and m_ts < from_dt)
+                    post = bool(to_dt and m_ts > to_dt)
+                else:
+                    prior = bool(from_dt and m.trn_date < timezone.localtime(from_dt).date())
+                    post = bool(to_dt and m.trn_date > timezone.localtime(to_dt).date())
+            else:
+                m_d = m.trn_date or (timezone.localtime(m.created_at).date() if m.created_at else None)
+                prior = bool(from_dt and m_d and m_d < timezone.localtime(from_dt).date())
+                post = bool(to_dt and m_d and m_d > timezone.localtime(to_dt).date())
+
             # Check if this movement is prior to from_dt
-            if from_dt and m.trn_date < from_dt:
+            if prior:
                 period_opening_bal = running_bal
                 continue
 
             # Check if this movement is after to_dt
-            if to_dt and m.trn_date > to_dt:
+            if post:
                 continue
 
             # In selected period!
@@ -469,6 +518,7 @@ def inventory_stock_lifecycle_ajax(request):
             rev_tag = ' (Reversal)' if m.is_reversal else ''
             events.append({
                 'trn_date': m.trn_date.isoformat(),
+                'created_at': m.created_at.isoformat() if m.created_at else None,
                 'type_key': m.tran_id,
                 'label': f'{m.get_tran_id_display()}{rev_tag}',
                 'qty_delta': str(delta),
@@ -505,8 +555,8 @@ def inventory_stock_lifecycle_ajax(request):
             'computed_balance': str(running_bal),
             'balance_matches_ledger': hed_row.closing_qty == running_bal,
             'is_periodic': is_periodic,
-            'from_date': from_dt.isoformat() if from_dt else '',
-            'to_date': to_dt.isoformat() if to_dt else '',
+            'from_date': from_date if from_date else (from_dt.isoformat() if from_dt else ''),
+            'to_date': to_date if to_date else (to_dt.isoformat() if to_dt else ''),
             'period_opening_bal': str(period_opening_bal),
             'period_rcpt_qty': str(period_rcpt_qty),
             'period_issue_qty': str(period_issue_qty),
@@ -545,26 +595,40 @@ def inventory_stock_lifecycle_ajax(request):
     step = Decimal('1').scaleb(-QTY_DECIMAL_PLACES)
 
     for ev in all_events:
-        ev_dt_str = ev.get('trn_date')
-        ev_dt = None
-        if ev_dt_str:
-            try:
-                ev_dt = date.fromisoformat(ev_dt_str)
-            except ValueError:
-                pass
+        ev_created_at_str = ev.get('created_at')
+        ev_trn_date_str = ev.get('trn_date')
+        ev_ts = _parse_flexible_iso_datetime(ev_created_at_str) if ev_created_at_str else None
+        ev_d = _parse_flexible_date(ev_trn_date_str) if ev_trn_date_str else None
+
         delta = Decimal(str(ev.get('qty_delta') or '0'))
         bal = Decimal(str(ev.get('balance_after') or '0'))
 
-        if from_dt and ev_dt and ev_dt < from_dt:
+        prior = False
+        post = False
+        if has_time:
+            if ev_ts is not None:
+                prior = bool(from_dt and ev_ts < from_dt)
+                post = bool(to_dt and ev_ts > to_dt)
+            elif ev_d is not None:
+                prior = bool(from_dt and ev_d < timezone.localtime(from_dt).date())
+                post = bool(to_dt and ev_d > timezone.localtime(to_dt).date())
+        else:
+            m_d = ev_d or (timezone.localtime(ev_ts).date() if ev_ts else None)
+            prior = bool(from_dt and m_d and m_d < timezone.localtime(from_dt).date())
+            post = bool(to_dt and m_d and m_d > timezone.localtime(to_dt).date())
+
+        if prior:
             period_opening_bal = bal
             continue
-        if to_dt and ev_dt and ev_dt > to_dt:
+        if post:
             continue
 
         if delta >= Decimal('0'):
             period_rcpt_qty += delta
         else:
             period_issue_qty += abs(delta)
+        if 'created_at' not in ev:
+            ev['created_at'] = None
         filtered_events.append(ev)
 
     period_opening_bal = period_opening_bal.quantize(step, rounding=ROUND_HALF_UP)
@@ -574,8 +638,8 @@ def inventory_stock_lifecycle_ajax(request):
     period_net_change = (period_closing_bal - period_opening_bal).quantize(step, rounding=ROUND_HALF_UP)
 
     payload['is_periodic'] = is_periodic
-    payload['from_date'] = from_dt.isoformat() if from_dt else ''
-    payload['to_date'] = to_dt.isoformat() if to_dt else ''
+    payload['from_date'] = from_date if from_date else (from_dt.isoformat() if from_dt else '')
+    payload['to_date'] = to_date if to_date else (to_dt.isoformat() if to_dt else '')
     payload['period_opening_bal'] = str(period_opening_bal)
     payload['period_rcpt_qty'] = str(period_rcpt_qty)
     payload['period_issue_qty'] = str(period_issue_qty)
@@ -770,6 +834,8 @@ def stock_adjustment_view(request):
                 edit_pk_post = int(request.POST.get('edit_pk') or 0)
             except (TypeError, ValueError):
                 edit_pk_post = 0
+            if isinstance(body, dict) and not body.get('stk_adj_dt'):
+                body['stk_adj_dt'] = timezone.localdate().isoformat()
             e2, cleaned = validate_stock_adjustment_payload(body, edit_pk=edit_pk_post or None)
             if e2:
                 for msg in e2[:25]:

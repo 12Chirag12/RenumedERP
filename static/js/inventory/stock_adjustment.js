@@ -102,7 +102,7 @@ function initPage_stock_adj() {
 
   function readHeaderFromDom() {
     state.customer_id = customerSel ? customerSel.value : '';
-    state.stk_adj_dt = dateInp ? dateInp.value : '';
+    state.stk_adj_dt = (dateInp && dateInp.value) ? dateInp.value : (today || new Date().toISOString().slice(0, 10));
     state.stk_adj_type = getAdjType();
     state.item_type_id = itemTypeSel ? itemTypeSel.value : '';
     state.remarks = remarksTa ? remarksTa.value : '';

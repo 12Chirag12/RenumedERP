@@ -7,6 +7,7 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from transactions.constants import QTY_DECIMAL_PLACES, SO_QTY_DECIMAL_PLACES
@@ -202,6 +203,19 @@ class InventoryStock(models.Model):
         related_name='inventory_stock_opened_rows',
         verbose_name='Opened in FY',
         help_text='FY of first posting for this line (from transaction date). Used when closing a financial year.',
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        null=True,
+        blank=True,
+        verbose_name=_('Created at'),
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        null=True,
+        blank=True,
+        verbose_name=_('Updated at'),
     )
 
     class Meta:
@@ -410,7 +424,6 @@ class StockHed(models.Model):
         db_column='created_at',
         verbose_name=_('Created at'),
     )
-
     updated_at = models.DateTimeField(
         auto_now=True,
         db_column='updated_at',
@@ -626,8 +639,17 @@ class StockDtl(models.Model):
 
     created_at = models.DateTimeField(
         auto_now_add=True,
+        null=True,
+        blank=True,
         db_column='created_at',
         verbose_name=_('Created at'),
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        null=True,
+        blank=True,
+        db_column='updated_at',
+        verbose_name=_('Updated at'),
     )
 
     class Meta:
@@ -688,6 +710,19 @@ class TrnStkAdjHed(models.Model):
 
     remarks = models.TextField(blank=True, null=True, verbose_name='Remarks')
 
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        null=True,
+        blank=True,
+        verbose_name=_('Created at'),
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        null=True,
+        blank=True,
+        verbose_name=_('Updated at'),
+    )
+
     class Meta:
         db_table = 'TrnStkAdjHed'
         verbose_name = 'Stock adjustment (header)'
@@ -696,6 +731,11 @@ class TrnStkAdjHed(models.Model):
 
     def __str__(self):
         return f'StkAdj {self.stk_adj_id} {self.stk_adj_dt}'
+
+    def save(self, *args, **kwargs):
+        if not self.stk_adj_dt:
+            self.stk_adj_dt = timezone.localdate()
+        super().save(*args, **kwargs)
 
 
 class TrnStkAdjDtl1(models.Model):

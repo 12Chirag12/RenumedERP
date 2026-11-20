@@ -120,8 +120,8 @@ def _parse_optional_date(raw, line_idx, bidx, label):
 class InwardForm(forms.Form):
     inward_dt = forms.DateField(
         label='Inward Date',
-        error_messages={'required': 'Inward date is required.'},
-        widget=forms.DateInput(attrs={'class': 'cu-input', 'type': 'date', 'id': 'inwInwardDt'}),
+        required=False,
+        widget=forms.HiddenInput(attrs={'id': 'inwInwardDt'}),
     )
     customer = forms.ModelChoiceField(
         queryset=MstCust.objects.none(),
@@ -354,6 +354,14 @@ class InwardForm(forms.Form):
         cd = super().clean()
         inv_dt = cd.get('inv_dt')
         inward_dt = cd.get('inward_dt')
+        if not inward_dt:
+            if self.instance and self.instance.inward_dt:
+                inward_dt = self.instance.inward_dt
+            else:
+                inward_dt = timezone.localdate()
+            cd['inward_dt'] = inward_dt
+        if inv_dt and inv_dt > timezone.localdate():
+            self.add_error('inv_dt', 'Invoice date must not be in the future.')
         if inv_dt and inward_dt and inv_dt > inward_dt:
             self.add_error('inv_dt', 'Invoice date must not be after inward date.')
         if cd.get('driver_no') and not cd.get('driver_name'):
@@ -594,6 +602,9 @@ class InwardForm(forms.Form):
         lines = cd['lines_json']
         header_file = cd.get('header_document')
         prev_doc_path = self.instance.documents if self.instance else None
+        inward_dt = cd.get('inward_dt')
+        if not inward_dt:
+            inward_dt = self.instance.inward_dt if (self.instance and self.instance.inward_dt) else timezone.localdate()
         try:
             with db_transaction.atomic():
                 if self.instance:
@@ -603,7 +614,7 @@ class InwardForm(forms.Form):
                     ).get(pk=self.instance.pk)
                     reverse_inward_from_inventory(old_hed)
                     hed = self.instance
-                    hed.inward_dt = cd['inward_dt']
+                    hed.inward_dt = inward_dt
                     hed.customer = cd['customer']
                     hed.register_no = cd['register_no']
                     hed.grn_category = cd['grn_category']
@@ -623,7 +634,7 @@ class InwardForm(forms.Form):
                 else:
                     # CREATE path — build a fresh header.
                     hed = TrnInwHed(
-                        inward_dt=cd['inward_dt'],
+                        inward_dt=inward_dt,
                         customer=cd['customer'],
                         register_no=cd['register_no'],
                         grn_category=cd['grn_category'],
