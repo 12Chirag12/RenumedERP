@@ -234,13 +234,50 @@
     <div class="inv-stk-lifecycle-panel">
       <header class="inv-stk-lifecycle-head">
         <div>
-          <h3 id="invStkLifecycleTitle">Stock lifecycle</h3>
+          <h3 id="invStkLifecycleTitle">Stock Movement History & Lifecycle</h3>
           <p id="invStkLifecycleSub" class="inv-stk-lifecycle-sub"></p>
         </div>
         <button type="button" class="inv-stk-lifecycle-close" id="invStkLifecycleClose" aria-label="Close">
           <i class="bi bi-x-lg"></i>
         </button>
       </header>
+
+      <!-- Time Period Control Toolbar -->
+      <div class="inv-lc-toolbar" id="invLcToolbar">
+        <div class="inv-lc-toolbar-top">
+          <div class="inv-lc-presets" role="tablist" aria-label="History Time Period Presets">
+            <button type="button" class="inv-lc-preset-btn active" data-preset="all">All Time</button>
+            <button type="button" class="inv-lc-preset-btn" data-preset="month">This Month</button>
+            <button type="button" class="inv-lc-preset-btn" data-preset="last_month">Last Month</button>
+            <button type="button" class="inv-lc-preset-btn" data-preset="quarter">This Quarter</button>
+            <button type="button" class="inv-lc-preset-btn" data-preset="year">Financial Year</button>
+            <button type="button" class="inv-lc-preset-btn" data-preset="custom">Custom Range</button>
+          </div>
+
+          <div class="inv-lc-scope-badge" id="invLcScopeBadge">
+            <i class="bi bi-clock-history"></i>
+            <span id="invLcScopeText">Scope: Complete Lifetime History</span>
+          </div>
+        </div>
+
+        <div class="inv-lc-custom-dates" id="invLcCustomDates" style="display:none;">
+          <div class="inv-lc-date-field">
+            <label for="invLcFromDate">From Date:</label>
+            <input type="date" id="invLcFromDate" class="inv-lc-date-input">
+          </div>
+          <div class="inv-lc-date-field">
+            <label for="invLcToDate">To Date:</label>
+            <input type="date" id="invLcToDate" class="inv-lc-date-input">
+          </div>
+          <button type="button" class="inv-lc-btn-apply" id="invLcApplyBtn" title="Apply custom date range">
+            <i class="bi bi-funnel"></i> Apply
+          </button>
+          <button type="button" class="inv-lc-btn-reset" id="invLcResetBtn" title="Reset to All Time">
+            <i class="bi bi-arrow-counterclockwise"></i> Reset
+          </button>
+        </div>
+      </div>
+
       <div id="invStkLifecycleBody" class="inv-stk-lifecycle-body"></div>
     </div>
   </div>

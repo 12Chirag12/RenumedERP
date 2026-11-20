@@ -407,9 +407,30 @@ def inventory_stock_view(request):
 @require_GET
 def inventory_stock_lifecycle_ajax(request):
     """Batch-wise movement history for one inventory ledger row (JSON)."""
+    from datetime import date
     inv_id = _int_or_none(request.GET.get('inv_id'))
     if inv_id is None:
         return JsonResponse({'error': 'inv_id is required.'}, status=400)
+
+    from_date = request.GET.get('from_date', '').strip()
+    to_date = request.GET.get('to_date', '').strip()
+    from_dt = None
+    to_dt = None
+    if from_date:
+        try:
+            from_dt = date.fromisoformat(from_date)
+        except ValueError:
+            from_dt = None
+    if to_date:
+        try:
+            to_dt = date.fromisoformat(to_date)
+        except ValueError:
+            to_dt = None
+
+    if from_dt and to_dt and from_dt > to_dt:
+        from_dt, to_dt = to_dt, from_dt
+
+    is_periodic = bool(from_dt or to_dt)
 
     # Check StockHed first
     hed_row = StockHed.objects.select_related('customer', 'product', 'item').filter(pk=inv_id).first()
@@ -418,12 +439,33 @@ def inventory_stock_lifecycle_ajax(request):
         events = []
         running_bal = Decimal('0')
         step = Decimal('1').scaleb(-QTY_DECIMAL_PLACES)
+
+        period_opening_bal = Decimal('0')
+        period_rcpt_qty = Decimal('0')
+        period_issue_qty = Decimal('0')
+
         for m in movements:
             if m.trn_type in (StockDtl.TYPE_OPENING, StockDtl.TYPE_RECEIPT):
                 delta = -m.quantity if m.is_reversal else m.quantity
             else:
                 delta = m.quantity if m.is_reversal else -m.quantity
             running_bal = (running_bal + delta).quantize(step, rounding=ROUND_HALF_UP)
+
+            # Check if this movement is prior to from_dt
+            if from_dt and m.trn_date < from_dt:
+                period_opening_bal = running_bal
+                continue
+
+            # Check if this movement is after to_dt
+            if to_dt and m.trn_date > to_dt:
+                continue
+
+            # In selected period!
+            if delta >= Decimal('0'):
+                period_rcpt_qty += delta
+            else:
+                period_issue_qty += abs(delta)
+
             rev_tag = ' (Reversal)' if m.is_reversal else ''
             events.append({
                 'trn_date': m.trn_date.isoformat(),
@@ -438,6 +480,12 @@ def inventory_stock_lifecycle_ajax(request):
                 'detail': m.remarks or '',
                 'doc_url': '',
             })
+
+        period_opening_bal = period_opening_bal.quantize(step, rounding=ROUND_HALF_UP)
+        period_rcpt_qty = period_rcpt_qty.quantize(step, rounding=ROUND_HALF_UP)
+        period_issue_qty = period_issue_qty.quantize(step, rounding=ROUND_HALF_UP)
+        period_closing_bal = (period_opening_bal + period_rcpt_qty - period_issue_qty).quantize(step, rounding=ROUND_HALF_UP)
+        period_net_change = (period_closing_bal - period_opening_bal).quantize(step, rounding=ROUND_HALF_UP)
 
         sku_name = hed_row.product.prod_name if hed_row.product else hed_row.item.item_name
         uom_str = ''
@@ -456,6 +504,16 @@ def inventory_stock_lifecycle_ajax(request):
             'ledger_qty': str(hed_row.closing_qty),
             'computed_balance': str(running_bal),
             'balance_matches_ledger': hed_row.closing_qty == running_bal,
+            'is_periodic': is_periodic,
+            'from_date': from_dt.isoformat() if from_dt else '',
+            'to_date': to_dt.isoformat() if to_dt else '',
+            'period_opening_bal': str(period_opening_bal),
+            'period_rcpt_qty': str(period_rcpt_qty),
+            'period_issue_qty': str(period_issue_qty),
+            'period_closing_bal': str(period_closing_bal),
+            'period_net_change': f'{period_net_change:+f}',
+            'all_time_events_count': len(movements),
+            'period_events_count': len(events),
             'events': events,
             'item_level_events': [],
             'ledger_episodes': [],
@@ -477,6 +535,56 @@ def inventory_stock_lifecycle_ajax(request):
     except ValueError as exc:
         return JsonResponse({'error': str(exc)}, status=400)
     payload['inv_id'] = row.inv_id
+
+    # If periodic filtering requested for legacy InventoryStock:
+    all_events = payload.get('events', [])
+    filtered_events = []
+    period_opening_bal = Decimal('0')
+    period_rcpt_qty = Decimal('0')
+    period_issue_qty = Decimal('0')
+    step = Decimal('1').scaleb(-QTY_DECIMAL_PLACES)
+
+    for ev in all_events:
+        ev_dt_str = ev.get('trn_date')
+        ev_dt = None
+        if ev_dt_str:
+            try:
+                ev_dt = date.fromisoformat(ev_dt_str)
+            except ValueError:
+                pass
+        delta = Decimal(str(ev.get('qty_delta') or '0'))
+        bal = Decimal(str(ev.get('balance_after') or '0'))
+
+        if from_dt and ev_dt and ev_dt < from_dt:
+            period_opening_bal = bal
+            continue
+        if to_dt and ev_dt and ev_dt > to_dt:
+            continue
+
+        if delta >= Decimal('0'):
+            period_rcpt_qty += delta
+        else:
+            period_issue_qty += abs(delta)
+        filtered_events.append(ev)
+
+    period_opening_bal = period_opening_bal.quantize(step, rounding=ROUND_HALF_UP)
+    period_rcpt_qty = period_rcpt_qty.quantize(step, rounding=ROUND_HALF_UP)
+    period_issue_qty = period_issue_qty.quantize(step, rounding=ROUND_HALF_UP)
+    period_closing_bal = (period_opening_bal + period_rcpt_qty - period_issue_qty).quantize(step, rounding=ROUND_HALF_UP)
+    period_net_change = (period_closing_bal - period_opening_bal).quantize(step, rounding=ROUND_HALF_UP)
+
+    payload['is_periodic'] = is_periodic
+    payload['from_date'] = from_dt.isoformat() if from_dt else ''
+    payload['to_date'] = to_dt.isoformat() if to_dt else ''
+    payload['period_opening_bal'] = str(period_opening_bal)
+    payload['period_rcpt_qty'] = str(period_rcpt_qty)
+    payload['period_issue_qty'] = str(period_issue_qty)
+    payload['period_closing_bal'] = str(period_closing_bal)
+    payload['period_net_change'] = f'{period_net_change:+f}'
+    payload['all_time_events_count'] = len(all_events)
+    payload['period_events_count'] = len(filtered_events)
+    payload['events'] = filtered_events
+
     return JsonResponse(payload)
 
 

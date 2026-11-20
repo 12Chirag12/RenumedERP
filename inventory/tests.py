@@ -3,7 +3,7 @@ from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, TestCase
 
 from .transaction_posting import (
     _inward_item_inventory_postings,
@@ -121,3 +121,114 @@ class InwardInventoryPostingTests(SimpleTestCase):
             list(_inward_item_inventory_postings(line, inward)),
             [(None, Decimal('1900.000'))],
         )
+
+
+class InventoryStockLifecycleAjaxTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from django.test import Client
+        from masters.models import FinancialYear, MstCust, MstItem, MstProdCat, MstState, MstItemType, MstUom
+        from inventory.models import StockHed, StockDtl
+
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username='inv_test_user',
+            password='Password123!',
+        )
+        self.client = Client()
+        self.client.force_login(self.user)
+
+        self.fy = FinancialYear.objects.create(
+            fy_start_year=2026,
+            fy_end_year=2027,
+            fy_display='2026-27',
+            start_date=date(2026, 4, 1),
+            end_date=date(2027, 3, 31),
+            is_current=True,
+            is_open=True,
+        )
+        self.state = MstState.objects.create(state_name='Maharashtra', gst_code='27')
+        self.cust = MstCust.objects.create(cust_id=1, cust_name='Test Cust', short_name='TC', state=self.state)
+        self.cat = MstProdCat.objects.create(prod_cat_id='RM', prod_cat_name='Raw Materials')
+        self.uom = MstUom.objects.create(uom_name='Kilogram', short_name='kg')
+        self.item_type = MstItemType.objects.create(item_category=self.cat, item_type_name='Raw Material')
+        self.item = MstItem.objects.create(
+            item_name='Chemical A',
+            item_category=self.cat,
+            item_type=self.item_type,
+            uom=self.uom,
+        )
+
+        self.hed = StockHed.objects.create(
+            financial_year=self.fy,
+            customer=self.cust,
+            item=self.item,
+            item_category=self.cat,
+            op_date=date(2026, 4, 1),
+            opn_qty=Decimal('0.000'),
+            rcpt_qty=Decimal('50.000'),
+            issue_qty=Decimal('30.000'),
+            closing_qty=Decimal('20.000'),
+        )
+
+        # Movement 1: Inward on 2026-05-10 (+50)
+        StockDtl.objects.create(
+            stock=self.hed,
+            tran_id=StockDtl.TRAN_INW,
+            trn_type=StockDtl.TYPE_RECEIPT,
+            trn_no='1',
+            trn_date=date(2026, 5, 10),
+            quantity=Decimal('50.000'),
+            source_line_id='INW-1-1',
+        )
+
+        # Movement 2: Dispense on 2026-06-15 (-30)
+        StockDtl.objects.create(
+            stock=self.hed,
+            tran_id=StockDtl.TRAN_DIS,
+            trn_type=StockDtl.TYPE_ISSUE,
+            trn_no='2',
+            trn_date=date(2026, 6, 15),
+            quantity=Decimal('30.000'),
+            source_line_id='DIS-2-1',
+        )
+
+    def test_missing_inv_id_returns_400(self):
+        from django.urls import reverse
+        resp = self.client.get(reverse('inventory:inventory_stock_lifecycle_ajax'))
+        self.assertEqual(resp.status_code, 400)
+
+    def test_all_time_lifecycle(self):
+        from django.urls import reverse
+        resp = self.client.get(
+            reverse('inventory:inventory_stock_lifecycle_ajax'),
+            {'inv_id': self.hed.stock_lnkno},
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data['all_time_events_count'], 2)
+        self.assertEqual(len(data['events']), 2)
+        self.assertFalse(data['is_periodic'])
+
+    def test_periodic_lifecycle_filter(self):
+        from django.urls import reverse
+        # Filter for June only: Movement 1 (May) is prior -> opening bal 50. Movement 2 (June) is in-period -> issue 30.
+        resp = self.client.get(
+            reverse('inventory:inventory_stock_lifecycle_ajax'),
+            {
+                'inv_id': self.hed.stock_lnkno,
+                'from_date': '2026-06-01',
+                'to_date': '2026-06-30',
+            },
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data['is_periodic'])
+        self.assertEqual(data['period_opening_bal'], '50.000')
+        self.assertEqual(data['period_rcpt_qty'], '0.000')
+        self.assertEqual(data['period_issue_qty'], '30.000')
+        self.assertEqual(data['period_closing_bal'], '20.000')
+        self.assertEqual(data['period_net_change'], '-30.000')
+        self.assertEqual(len(data['events']), 1)
+        self.assertEqual(data['events'][0]['doc_id'], '2')
+
