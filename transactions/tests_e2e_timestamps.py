@@ -213,28 +213,20 @@ class InwardFormAndTemplateTests(BaseTransactionTimestampTestCase):
             'driver_name': 'Ramesh',
             'driver_no': '9876543210',
             'remarks': 'Auto timestamp test',
-            # inward_dt is intentionally omitted: user should not manually enter today's date!
+            'inward_dt': (date.today() - timedelta(days=1)).isoformat(),  # Stock came yesterday
         }
         form = InwardForm(data=form_data)
-        # Form field inward_dt must not be required
-        if 'inward_dt' in form.fields:
-            self.assertFalse(
-                form.fields['inward_dt'].required,
-                "R1 Requirement: inward_dt must NOT be a required manual input field in InwardForm.",
-            )
+        self.assertIn('inward_dt', form.fields)
+        self.assertEqual(form.fields['inward_dt'].widget.input_type, 'date')
 
-    def test_inward_template_no_manual_date_input_for_today_date(self):
-        """The inward form template must NOT render an editable manual input field for entering today's date."""
+    def test_inward_template_renders_inward_date_input(self):
+        """The inward form template renders an editable date input for inward_dt without auto-badge UI."""
         rendered = render_to_string(
             'transactions/inward_form.html',
             context={'form': InwardForm(), 'base_template': 'base.html'},
         )
-        # Verify that inward_dt is not rendered as an editable text/date input
-        self.assertNotIn(
-            '<input type="date" name="inward_dt"',
-            rendered,
-            "R1 Acceptance Criteria: Inward template must NOT have a manual input field for entering today's date.",
-        )
+        self.assertIn('name="inward_dt"', rendered)
+        self.assertNotIn('auto-date-badge', rendered)
 
     def test_supplier_inv_dt_remains_distinct_and_editable(self):
         """Supplier invoice date (inv_dt) remains a distinct, user-provided, and required input field."""

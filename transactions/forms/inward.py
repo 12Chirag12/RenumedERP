@@ -120,8 +120,8 @@ def _parse_optional_date(raw, line_idx, bidx, label):
 class InwardForm(forms.Form):
     inward_dt = forms.DateField(
         label='Inward Date',
-        required=False,
-        widget=forms.HiddenInput(attrs={'id': 'inwInwardDt'}),
+        error_messages={'required': 'Inward date is required.'},
+        widget=forms.DateInput(attrs={'class': 'cu-input', 'type': 'date', 'id': 'inwInwardDt'}),
     )
     customer = forms.ModelChoiceField(
         queryset=MstCust.objects.none(),

@@ -207,18 +207,17 @@ class StockAdjustmentTimestampTests(BaseInventoryTimestampTestCase):
             "R2 Requirement: TrnStkAdjHed must define 'updated_at' DateTimeField.",
         )
 
-    def test_stock_adjustment_template_no_manual_date_input(self):
-        """Template inventory/stock_adjustment.html must NOT render manual date input for today's date."""
+    def test_stock_adjustment_template_renders_date_input(self):
+        """Template inventory/stock_adjustment.html renders date input for document date."""
         rendered = render_to_string(
             'inventory/stock_adjustment.html',
             context={'base_template': 'base.html'},
         )
-        # Verify that stkAdjDate is not an editable date input
-        self.assertNotIn(
-            '<input type="date" id="stkAdjDate"',
+        self.assertIn(
+            'id="stkAdjDate"',
             rendered,
-            "R1 Acceptance Criteria: Stock adjustment template must NOT have a manual input field for document date.",
         )
+        self.assertNotIn('auto-date-badge', rendered)
 
     def test_stock_adjustment_posting_records_realtime_timestamp_in_stockdtl(self):
         """Posting stock adjustment records real-time timestamp in StockDtl."""

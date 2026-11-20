@@ -53,12 +53,7 @@
             <div class="cu-section-fields">
               <div class="cu-row-2-eq">
                 <div class="cu-field">
-                  <label class="cu-label">Inward date</label>
-                  <div class="auto-date-badge" style="padding: 6px 0;">
-                    <span class="badge bg-light text-dark border">
-                      <i class="bi bi-clock"></i> Auto-assigned (Real-Time)
-                    </span>
-                  </div>
+                  <label class="cu-label">Inward date <span class="req">*</span></label>
                   {{ form.inward_dt }}
                   {% if form.inward_dt.errors %}<span class="field-error">{{ form.inward_dt.errors.0 }}</span>{% endif %}
                 </div>
