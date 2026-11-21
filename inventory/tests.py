@@ -1,9 +1,10 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.test import SimpleTestCase, TestCase
+from inventory.models import StockHed, StockDtl
 
 from .transaction_posting import (
     _inward_item_inventory_postings,
@@ -231,4 +232,164 @@ class InventoryStockLifecycleAjaxTests(TestCase):
         self.assertEqual(data['period_net_change'], '-30.000')
         self.assertEqual(len(data['events']), 1)
         self.assertEqual(data['events'][0]['doc_id'], '2')
+
+    def test_stock_movement_reversal_consolidation(self):
+        """
+        Verify that multiple reversal/post pairs from document edits are consolidated
+        into net amendment events (+delta in green, -delta in red) and that zero-delta
+        edits are completely suppressed.
+        """
+        from datetime import datetime
+        from django.utils import timezone
+        from django.urls import reverse
+
+        from masters.models import MstItem
+        item2 = MstItem.objects.create(
+            item_name='Chemical B',
+            item_category=self.cat,
+            item_type=self.item_type,
+            uom=self.uom,
+        )
+
+        # Create a new StockHed
+        hed = StockHed.objects.create(
+            financial_year=self.fy,
+            customer=self.cust,
+            item=item2,
+            item_category=self.cat,
+            op_date=date(2026, 4, 1),
+            batch_no='BATCH-CONSOLIDATE-TEST',
+            opn_qty=Decimal('0.000'),
+            rcpt_qty=Decimal('29.500'),
+            issue_qty=Decimal('0.000'),
+            closing_qty=Decimal('29.500'),
+        )
+
+        base_t = timezone.now()
+
+        # Step 1: Initial inward of 29.500 kg (Main record)
+        m1 = StockDtl.objects.create(
+            stock=hed,
+            tran_id=StockDtl.TRAN_INW,
+            trn_type=StockDtl.TYPE_RECEIPT,
+            trn_no='INW-100',
+            trn_date=date(2026, 9, 1),
+            quantity=Decimal('29.500'),
+            is_reversal=False,
+            source_line_id='INW-100-1',
+        )
+        StockDtl.objects.filter(pk=m1.pk).update(created_at=base_t - timedelta(days=2))
+
+        # Step 2: User edits Inward, changing qty from 29.500 to 30.500 (+1.000 kg)
+        t_edit1 = base_t - timedelta(days=1)
+        m2_rev = StockDtl.objects.create(
+            stock=hed,
+            tran_id=StockDtl.TRAN_INW,
+            trn_type=StockDtl.TYPE_RECEIPT,
+            trn_no='INW-100',
+            trn_date=date(2026, 9, 1),
+            quantity=Decimal('29.500'),
+            is_reversal=True,
+            source_line_id='INW-100-REV1',
+        )
+        m2_post = StockDtl.objects.create(
+            stock=hed,
+            tran_id=StockDtl.TRAN_INW,
+            trn_type=StockDtl.TYPE_RECEIPT,
+            trn_no='INW-100',
+            trn_date=date(2026, 9, 1),
+            quantity=Decimal('30.500'),
+            is_reversal=False,
+            source_line_id='INW-100-POST1',
+        )
+        StockDtl.objects.filter(pk__in=[m2_rev.pk, m2_post.pk]).update(created_at=t_edit1)
+
+        # Step 3: User edits Inward metadata only (qty unchanged: 30.500 -> 30.500)
+        t_edit2 = base_t - timedelta(hours=12)
+        m3_rev = StockDtl.objects.create(
+            stock=hed,
+            tran_id=StockDtl.TRAN_INW,
+            trn_type=StockDtl.TYPE_RECEIPT,
+            trn_no='INW-100',
+            trn_date=date(2026, 9, 1),
+            quantity=Decimal('30.500'),
+            is_reversal=True,
+            source_line_id='INW-100-REV2',
+        )
+        m3_post = StockDtl.objects.create(
+            stock=hed,
+            tran_id=StockDtl.TRAN_INW,
+            trn_type=StockDtl.TYPE_RECEIPT,
+            trn_no='INW-100',
+            trn_date=date(2026, 9, 1),
+            quantity=Decimal('30.500'),
+            is_reversal=False,
+            source_line_id='INW-100-POST2',
+        )
+        StockDtl.objects.filter(pk__in=[m3_rev.pk, m3_post.pk]).update(created_at=t_edit2)
+
+        # Step 4: User edits Inward, reducing qty from 30.500 to 28.500 (-2.000 kg)
+        t_edit3 = base_t - timedelta(hours=2)
+        m4_rev = StockDtl.objects.create(
+            stock=hed,
+            tran_id=StockDtl.TRAN_INW,
+            trn_type=StockDtl.TYPE_RECEIPT,
+            trn_no='INW-100',
+            trn_date=date(2026, 9, 1),
+            quantity=Decimal('30.500'),
+            is_reversal=True,
+            source_line_id='INW-100-REV3',
+        )
+        m4_post = StockDtl.objects.create(
+            stock=hed,
+            tran_id=StockDtl.TRAN_INW,
+            trn_type=StockDtl.TYPE_RECEIPT,
+            trn_no='INW-100',
+            trn_date=date(2026, 9, 1),
+            quantity=Decimal('28.500'),
+            is_reversal=False,
+            source_line_id='INW-100-POST3',
+        )
+        StockDtl.objects.filter(pk__in=[m4_rev.pk, m4_post.pk]).update(created_at=t_edit3)
+
+        # Update hed receipt quantity to match the final net state
+        hed.rcpt_qty = Decimal('28.500')
+        hed.save()
+
+        # Query lifecycle AJAX
+        resp = self.client.get(
+            reverse('inventory:inventory_stock_lifecycle_ajax'),
+            {'inv_id': hed.stock_lnkno},
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+
+        # There are 7 raw StockDtl rows, but they must be consolidated into exactly 3 meaningful events:
+        # Event 1: Initial inward +29.500 (Main Record)
+        # Event 2: Edit 1 +1.000 (Qty Amendment)
+        # (Edit 2 zero-delta suppressed!)
+        # Event 3: Edit 3 -2.000 (Qty Amendment)
+        self.assertEqual(data['all_time_events_count'], 3)
+        self.assertEqual(len(data['events']), 3)
+
+        ev1 = data['events'][0]
+        self.assertEqual(ev1['label'], 'Inward RM/PM')
+        self.assertEqual(ev1['qty_delta'], '29.500')
+        self.assertEqual(ev1['balance_after'], '29.500')
+
+        ev2 = data['events'][1]
+        self.assertEqual(ev2['label'], 'Inward RM/PM (Qty Amendment)')
+        self.assertEqual(ev2['qty_delta'], '1.000')
+        self.assertEqual(ev2['balance_after'], '30.500')
+        self.assertIn('from 29.500 to 30.500', ev2['detail'])
+
+        ev3 = data['events'][2]
+        self.assertEqual(ev3['label'], 'Inward RM/PM (Qty Amendment)')
+        self.assertEqual(ev3['qty_delta'], '-2.000')
+        self.assertEqual(ev3['balance_after'], '28.500')
+        self.assertIn('from 30.500 to 28.500', ev3['detail'])
+
+        self.assertTrue(data['balance_matches_ledger'])
+        self.assertEqual(data['computed_balance'], '28.500')
+        self.assertEqual(data['ledger_qty'], '28.500')
 

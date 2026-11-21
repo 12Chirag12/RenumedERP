@@ -273,7 +273,7 @@ class InvoiceDatePreservationTests(BaseTransactionTimestampTestCase):
         )
         if hasattr(inward, 'created_at') and inward.created_at:
             self.assertEqual(
-                inward.created_at.date(),
+                timezone.localtime(inward.created_at).date(),
                 timezone.localdate(),
                 "created_at must reflect the real-time system date, distinct from past inv_dt.",
             )

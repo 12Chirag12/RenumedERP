@@ -442,6 +442,131 @@ def inventory_stock_view(request):
     )
 
 
+def _consolidate_stock_movements(raw_movements, step):
+    """
+    Consolidates raw StockDtl movements into clean business events.
+    Edits to transactions (which record paired -qty reversal and +qty post rows)
+    are condensed into a single net amendment event (e.g. +1.000 in green or -1.000 in red),
+    or completely omitted if net quantity did not change (e.g. metadata/remarks edits).
+    The initial creation is preserved as the main record.
+    """
+    if not raw_movements:
+        return [], Decimal('0')
+
+    def _sort_key(x):
+        t = x.created_at
+        if t is None:
+            t = timezone.make_aware(datetime.combine(x.trn_date, time.min))
+        elif not timezone.is_aware(t):
+            t = timezone.make_aware(t)
+        return (x.trn_date, t, x.stock_dtl_id)
+
+    # Sort strictly by trn_date, created_at, stock_dtl_id
+    sorted_m = sorted(raw_movements, key=_sort_key)
+
+    # Group movements from same document within the same edit session (< 5 seconds)
+    batches = []
+    current_batch = []
+
+    for m in sorted_m:
+        if not current_batch:
+            current_batch.append(m)
+            continue
+
+        prev = current_batch[-1]
+        same_doc = (m.tran_id == prev.tran_id and m.trn_no == prev.trn_no)
+
+        t_prev = prev.created_at
+        t_curr = m.created_at
+        if t_curr and t_prev:
+            dt = abs((t_curr - t_prev).total_seconds())
+        else:
+            dt = 0 if (m.trn_date == prev.trn_date and abs(m.stock_dtl_id - prev.stock_dtl_id) <= 10) else 999
+
+        if same_doc and dt < 5:
+            current_batch.append(m)
+        else:
+            batches.append(current_batch)
+            current_batch = [m]
+
+    if current_batch:
+        batches.append(current_batch)
+
+    consolidated = []
+    running_bal = Decimal('0')
+
+    for batch in batches:
+        first_m = batch[0]
+        revs = [x for x in batch if x.is_reversal]
+        posts = [x for x in batch if not x.is_reversal]
+
+        is_receipt = first_m.trn_type in (StockDtl.TYPE_OPENING, StockDtl.TYPE_RECEIPT)
+
+        if not revs:
+            # Clean initial creation / posting of document line(s) - Main Record
+            qty = sum(x.quantity for x in posts)
+            delta = qty if is_receipt else -qty
+            delta = delta.quantize(step, rounding=ROUND_HALF_UP)
+            running_bal = (running_bal + delta).quantize(step, rounding=ROUND_HALF_UP)
+
+            consolidated.append({
+                'trn_date': first_m.trn_date,
+                'created_at': first_m.created_at,
+                'type_key': first_m.tran_id,
+                'label': first_m.get_tran_id_display(),
+                'qty_delta': delta,
+                'balance_after': running_bal,
+                'doc_type': first_m.tran_id,
+                'doc_id': first_m.trn_no,
+                'doc_display': f'{first_m.tran_id} #{first_m.trn_no}',
+                'detail': first_m.remarks or '',
+                'doc_url': '',
+            })
+        else:
+            # Edit / amendment session or cancellation
+            old_qty = sum(x.quantity for x in revs)
+            new_qty = sum(x.quantity for x in posts)
+
+            if is_receipt:
+                delta = new_qty - old_qty
+            else:
+                delta = -(new_qty - old_qty)
+
+            delta = delta.quantize(step, rounding=ROUND_HALF_UP)
+
+            # If no net quantity change in this edit, completely skip emitting a row
+            if delta == Decimal('0'):
+                continue
+
+            running_bal = (running_bal + delta).quantize(step, rounding=ROUND_HALF_UP)
+
+            edit_time = batch[-1].created_at or first_m.created_at
+            edit_date = batch[-1].trn_date
+
+            if new_qty > Decimal('0'):
+                label = f"{first_m.get_tran_id_display()} (Qty Amendment)"
+                detail = f"Quantity changed from {old_qty:.3f} to {new_qty:.3f}"
+            else:
+                label = f"{first_m.get_tran_id_display()} (Cancelled)"
+                detail = "Document cancelled / deleted"
+
+            consolidated.append({
+                'trn_date': edit_date,
+                'created_at': edit_time,
+                'type_key': first_m.tran_id,
+                'label': label,
+                'qty_delta': delta,
+                'balance_after': running_bal,
+                'doc_type': first_m.tran_id,
+                'doc_id': first_m.trn_no,
+                'doc_display': f'{first_m.tran_id} #{first_m.trn_no}',
+                'detail': detail,
+                'doc_url': '',
+            })
+
+    return consolidated, running_bal
+
+
 @login_required
 @require_GET
 def inventory_stock_lifecycle_ajax(request):
@@ -467,36 +592,33 @@ def inventory_stock_lifecycle_ajax(request):
     # Check StockHed first
     hed_row = StockHed.objects.select_related('customer', 'product', 'item').filter(pk=inv_id).first()
     if hed_row:
-        movements = list(hed_row.movements.all().order_by('trn_date', 'stock_dtl_id'))
-        events = []
-        running_bal = Decimal('0')
+        raw_movements = list(hed_row.movements.all().order_by('trn_date', 'stock_dtl_id'))
         step = Decimal('1').scaleb(-QTY_DECIMAL_PLACES)
+        consolidated_events, final_bal = _consolidate_stock_movements(raw_movements, step)
 
+        events = []
         period_opening_bal = Decimal('0')
         period_rcpt_qty = Decimal('0')
         period_issue_qty = Decimal('0')
 
-        for m in movements:
-            if m.trn_type in (StockDtl.TYPE_OPENING, StockDtl.TYPE_RECEIPT):
-                delta = -m.quantity if m.is_reversal else m.quantity
-            else:
-                delta = m.quantity if m.is_reversal else -m.quantity
-            running_bal = (running_bal + delta).quantize(step, rounding=ROUND_HALF_UP)
+        for ev in consolidated_events:
+            delta = ev['qty_delta']
+            running_bal = ev['balance_after']
 
             prior = False
             post = False
             if has_time:
-                m_ts = m.created_at
+                m_ts = ev['created_at']
                 if m_ts is not None and not timezone.is_aware(m_ts):
                     m_ts = timezone.make_aware(m_ts, timezone.get_current_timezone())
                 if m_ts is not None:
                     prior = bool(from_dt and m_ts < from_dt)
                     post = bool(to_dt and m_ts > to_dt)
                 else:
-                    prior = bool(from_dt and m.trn_date < timezone.localtime(from_dt).date())
-                    post = bool(to_dt and m.trn_date > timezone.localtime(to_dt).date())
+                    prior = bool(from_dt and ev['trn_date'] < timezone.localtime(from_dt).date())
+                    post = bool(to_dt and ev['trn_date'] > timezone.localtime(to_dt).date())
             else:
-                m_d = m.trn_date or (timezone.localtime(m.created_at).date() if m.created_at else None)
+                m_d = ev['trn_date'] or (timezone.localtime(ev['created_at']).date() if ev['created_at'] else None)
                 prior = bool(from_dt and m_d and m_d < timezone.localtime(from_dt).date())
                 post = bool(to_dt and m_d and m_d > timezone.localtime(to_dt).date())
 
@@ -515,20 +637,19 @@ def inventory_stock_lifecycle_ajax(request):
             else:
                 period_issue_qty += abs(delta)
 
-            rev_tag = ' (Reversal)' if m.is_reversal else ''
             events.append({
-                'trn_date': m.trn_date.isoformat(),
-                'created_at': m.created_at.isoformat() if m.created_at else None,
-                'type_key': m.tran_id,
-                'label': f'{m.get_tran_id_display()}{rev_tag}',
+                'trn_date': ev['trn_date'].isoformat() if hasattr(ev['trn_date'], 'isoformat') else str(ev['trn_date']),
+                'created_at': ev['created_at'].isoformat() if ev['created_at'] else None,
+                'type_key': ev['type_key'],
+                'label': ev['label'],
                 'qty_delta': str(delta),
                 'qty_delta_display': f'{delta:+f}',
                 'balance_after': str(running_bal),
-                'doc_type': m.tran_id,
-                'doc_id': m.trn_no,
-                'doc_display': f'{m.tran_id} #{m.trn_no}',
-                'detail': m.remarks or '',
-                'doc_url': '',
+                'doc_type': ev['doc_type'],
+                'doc_id': ev['doc_id'],
+                'doc_display': ev['doc_display'],
+                'detail': ev['detail'],
+                'doc_url': ev.get('doc_url', ''),
             })
 
         period_opening_bal = period_opening_bal.quantize(step, rounding=ROUND_HALF_UP)
@@ -552,8 +673,8 @@ def inventory_stock_lifecycle_ajax(request):
             'batch_no': hed_row.batch_no or '—',
             'uom': uom_str,
             'ledger_qty': str(hed_row.closing_qty),
-            'computed_balance': str(running_bal),
-            'balance_matches_ledger': hed_row.closing_qty == running_bal,
+            'computed_balance': str(final_bal),
+            'balance_matches_ledger': hed_row.closing_qty == final_bal,
             'is_periodic': is_periodic,
             'from_date': from_date if from_date else (from_dt.isoformat() if from_dt else ''),
             'to_date': to_date if to_date else (to_dt.isoformat() if to_dt else ''),
@@ -562,7 +683,7 @@ def inventory_stock_lifecycle_ajax(request):
             'period_issue_qty': str(period_issue_qty),
             'period_closing_bal': str(period_closing_bal),
             'period_net_change': f'{period_net_change:+f}',
-            'all_time_events_count': len(movements),
+            'all_time_events_count': len(consolidated_events),
             'period_events_count': len(events),
             'events': events,
             'item_level_events': [],

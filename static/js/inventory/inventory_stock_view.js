@@ -273,9 +273,20 @@
         headers: { Accept: 'application/json' },
       })
         .then(function (r) {
-          return r.json().then(function (j) {
-            if (!r.ok) throw new Error(j.error || r.statusText);
-            return j;
+          return r.text().then(function (text) {
+            var data;
+            try {
+              data = JSON.parse(text);
+            } catch (parseErr) {
+              if (text.indexOf('OperationalError') !== -1 || text.indexOf('Unknown column') !== -1 || text.indexOf('no such column') !== -1) {
+                throw new Error('Database schema update required. Please run: python manage.py migrate');
+              }
+              throw new Error('Server returned an unexpected response (Status ' + r.status + ').');
+            }
+            if (!r.ok) {
+              throw new Error(data.error || r.statusText || ('Request failed with status ' + r.status));
+            }
+            return data;
           });
         })
         .then(function (data) {
