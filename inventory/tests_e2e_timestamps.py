@@ -213,10 +213,7 @@ class StockAdjustmentTimestampTests(BaseInventoryTimestampTestCase):
             'inventory/stock_adjustment.html',
             context={'base_template': 'base.html'},
         )
-        self.assertIn(
-            'id="stkAdjDate"',
-            rendered,
-        )
+        self.assertIn('id="stkAdjDate"', rendered)
         self.assertNotIn('auto-date-badge', rendered)
 
     def test_stock_adjustment_posting_records_realtime_timestamp_in_stockdtl(self):
