@@ -397,7 +397,7 @@ class SalesOrderForm(forms.Form):
             taxable = ((ord_qty_nos / Decimal(pkg_val)) * rate).quantize(_MONEY_QUANTIZE, rounding=ROUND_HALF_UP)
 
             prod_amt = (rate * ord_qty_nos).quantize(_MONEY_QUANTIZE, rounding=ROUND_HALF_UP)
-            cgst, sgst, igst = _line_gst_amounts(prod_amt, gst_per, gst_type)
+            cgst, sgst, igst = _line_gst_amounts(taxable, gst_per, gst_type)
 
             if not isinstance(dispatches_raw, list) or not dispatches_raw:
                 raise forms.ValidationError(f'Line {idx}: add at least one dispatch row.')
@@ -500,7 +500,7 @@ class SalesOrderForm(forms.Form):
         oth = cd['oth_charges']
         rnd = cd['round_off']
         total = (
-            prod_sum + taxable_sum + pkg + frt + oth + cgst_sum + sgst_sum + igst_sum + rnd
+            taxable_sum + pkg + frt + oth + cgst_sum + sgst_sum + igst_sum + rnd
         ).quantize(_MONEY_QUANTIZE, rounding=ROUND_HALF_UP)
 
         try:

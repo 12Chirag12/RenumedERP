@@ -112,7 +112,7 @@ function initPage_sales_order() {
     line.taxable_amt = roundMoney(packs * rate);
     line.prod_amt = roundMoney(rate * line.ord_qty_nos);
     var gp = line.gst_type === GST_EXEMPTED ? 0 : (parseFloat(line.gst_per) || 0);
-    var parts = lineGstParts(line.prod_amt, gp, line.gst_type);
+    var parts = lineGstParts(line.taxable_amt, gp, line.gst_type);
     line.cgst_amt = parts.cg;
     line.sgst_amt = parts.sg;
     line.igst_amt = parts.ig;
@@ -157,7 +157,7 @@ function initPage_sales_order() {
     var frt = parseFloat(document.getElementById('soFreight') && document.getElementById('soFreight').value) || 0;
     var oth = parseFloat(document.getElementById('soOthCharges') && document.getElementById('soOthCharges').value) || 0;
     var rnd = parseFloat(document.getElementById('soRoundOff') && document.getElementById('soRoundOff').value) || 0;
-    var total = roundMoney(sumProd + sumTax + pkg + frt + oth + sumC + sumS + sumI + rnd);
+    var total = roundMoney(sumTax + pkg + frt + oth + sumC + sumS + sumI + rnd);
     if (roProdAmt) roProdAmt.value = moneyStr(sumProd);
     if (roTaxable) roTaxable.value = moneyStr(sumTax);
     if (roCgst) roCgst.value = moneyStr(sumC);

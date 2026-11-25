@@ -1336,6 +1336,109 @@ class InwardSameItemAndBrandNameTests(TestCase):
         self.assertIn('pkg_style', ctx.exception.message_dict)
 
 
+class SalesOrderGstCalculationTests(TestCase):
+    """Ensure Sales Order GST is computed on Taxable value, not on Product amount."""
+
+    def setUp(self):
+        from masters.models import FinancialYear, MstCust, MstProd, MstProdCat, MstState, MstItemType, MstUom, MstPkgStyle
+        from transactions.forms.sales_order import SalesOrderForm, _line_gst_amounts
+        import json
+
+        self.fy = FinancialYear.objects.create(
+            fy_start_year=2026,
+            fy_end_year=2027,
+            fy_display='2026-27',
+            start_date=date(2026, 4, 1),
+            end_date=date(2027, 3, 31),
+            is_current=True,
+            is_open=True,
+        )
+        self.state = MstState.objects.create(state_name='Maharashtra', gst_code='27')
+        self.cust = MstCust.objects.create(cust_id=1, cust_name='Test Cust', short_name='TC', state=self.state)
+        self.cat = MstProdCat.objects.create(prod_cat_id='TB', prod_cat_name='Tablets')
+        self.item_type = MstItemType.objects.create(item_category=self.cat, item_type_name='Tablets')
+        self.uom = MstUom.objects.create(uom_name='Nos', short_name='nos')
+        self.prod = MstProd.objects.create(
+            prod_name='Aceclofenac Tablet 100mg',
+            prod_category=self.cat,
+            prod_type=self.item_type,
+            uom=self.uom,
+            hsn_code='30049066',
+        )
+        self.pkg = MstPkgStyle.objects.create(
+            pkg_type=self.item_type,
+            pkg_style_name='10X10',
+            pkg_style_value=Decimal('100'),
+        )
+
+    def test_line_gst_amounts_calculated_on_taxable(self):
+        """_line_gst_amounts computes tax as taxable * gst_per / 100."""
+        from transactions.forms.sales_order import _line_gst_amounts
+        from transactions.constants import GST_TYPE_CGST_SGST
+
+        taxable = Decimal('1000.00')
+        gst_per = Decimal('1.00')
+        cgst, sgst, igst = _line_gst_amounts(taxable, gst_per, GST_TYPE_CGST_SGST)
+        self.assertEqual(cgst, Decimal('5.00'))
+        self.assertEqual(sgst, Decimal('5.00'))
+        self.assertEqual(igst, Decimal('0.00'))
+
+    def test_sales_order_form_calculates_gst_on_taxable_value(self):
+        """SalesOrderForm must calculate line GST on taxable_amt, not prod_amt."""
+        import json
+        from transactions.forms.sales_order import SalesOrderForm
+        from transactions.constants import GST_TYPE_CGST_SGST
+
+        lines_payload = [
+            {
+                'prod_id': str(self.prod.pk),
+                'pkg_style_id': str(self.pkg.pk),
+                'order_qty': '1.00',  # 1 Lakh = 100,000 nos
+                'rate': '1.00',
+                'gst_type': GST_TYPE_CGST_SGST,
+                'gst_per': '1.00',
+                'export_type': 'Ex',
+                'dispatches': [
+                    {'disp_sche_dt': '2026-10-24', 'disp_qty': '1.00', 'remarks': ''}
+                ],
+            }
+        ]
+
+        form_data = {
+            'ord_rec_dt': '2026-10-01',
+            'customer': str(self.cust.pk),
+            'cust_ord_id': 'SO-GST-TEST-01',
+            'cust_ord_date': '2026-10-01',
+            'delivery_add': 'Warehouse 1',
+            'pkg_fwd_amt': '0.00',
+            'frieght_amt': '0.00',
+            'oth_charges': '0.00',
+            'round_off': '0.00',
+            'lines_json': json.dumps(lines_payload),
+        }
+
+        form = SalesOrderForm(data=form_data)
+        self.assertTrue(form.is_valid(), form.errors)
+        order = form.save()
+
+        # Check header totals
+        self.assertEqual(order.taxable_val, Decimal('1000.00'))
+        self.assertEqual(order.cgst_amt, Decimal('5.00'))
+        self.assertEqual(order.sgst_amt, Decimal('5.00'))
+        self.assertEqual(order.igst_amt, Decimal('0.00'))
+        # Total = 1000.00 (taxable) + 5.00 + 5.00 = 1010.00
+        self.assertEqual(order.total_amt, Decimal('1010.00'))
+
+        # Check line details
+        line = order.lines.first()
+        self.assertEqual(line.ord_qty_nos, Decimal('100000'))
+        self.assertEqual(line.prod_amt, Decimal('100000.00'))
+        self.assertEqual(line.taxable_amt, Decimal('1000.00'))
+        self.assertEqual(line.cgst_amt, Decimal('5.00'))
+        self.assertEqual(line.sgst_amt, Decimal('5.00'))
+
+
+
 
 
 
