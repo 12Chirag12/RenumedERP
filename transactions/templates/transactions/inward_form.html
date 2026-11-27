@@ -270,7 +270,7 @@
               {% else %}<span class="inw-table-doc-empty">—</span>{% endif %}
             </td>
             <td class="col-actions">
-              <a href="{% url 'transactions:inward' %}?edit_pk={{ r.inward_id }}" class="btn-action btn-edit" title="Edit"><i class="bi bi-pencil"></i></a>
+              <a href="{% url 'transactions:inward' %}?edit_pk={{ r.inward_id }}#inwForm" class="btn-action btn-edit" title="Edit"><i class="bi bi-pencil"></i></a>
               <button type="button" class="btn-action btn-delete" title="Delete"
                 data-delete-url="{% url 'transactions:inward_delete' r.inward_id %}"
                 data-delete-name="{{ r.grn_no|escapejs }}"

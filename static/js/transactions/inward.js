@@ -946,6 +946,15 @@ function initPage_inward() {
     return typeof elt.closest === 'function' && elt.closest('form') === form;
   }
 
+  function scrollToFormTop() {
+    var panel = document.querySelector('.inward-page .cu-panel') || form;
+    if (panel) {
+      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
   window.goToInwItems = function () {
     setLinesErr('');
     if (!grnCat || !grnCat.value) {
@@ -961,6 +970,7 @@ function initPage_inward() {
     // Navigation must not depend on an AJAX round trip. Show the step first,
     // then refresh its item choices in the background.
     setStep(2);
+    setTimeout(scrollToFormTop, 40);
     fetchItemsForGrn().then(function () {
       if (currentStep === 2) render();
     });
@@ -968,6 +978,7 @@ function initPage_inward() {
 
   window.goBackInwHeader = function () {
     setStep(1);
+    setTimeout(scrollToFormTop, 40);
   };
 
   function extFromName(name) {
@@ -1162,6 +1173,7 @@ function initPage_inward() {
       applySuggestedGrn(true);
     }
     setStep(1);
+    setTimeout(scrollToFormTop, 40);
   };
 
   if (grnCat) {
@@ -1293,6 +1305,8 @@ function initPage_inward() {
     var serverErr = (errEl && errEl.textContent.trim()) || (errElStep1 && errElStep1.textContent.trim()) || '';
     if (serverErr) {
       highlightAndScrollToLineError(serverErr);
+    } else if (isEdit || (window.location.search && window.location.search.indexOf('edit_pk') !== -1) || window.location.hash === '#inwForm') {
+      setTimeout(scrollToFormTop, 60);
     } else if (currentStep === 1) {
       var firstStep1Err = step1 ? step1.querySelector('.field-error') : null;
       if (firstStep1Err) {
@@ -1304,6 +1318,12 @@ function initPage_inward() {
         }
       }
     }
+  });
+
+  document.querySelectorAll('.inward-page .btn-edit').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      setTimeout(scrollToFormTop, 40);
+    });
   });
 }
 
