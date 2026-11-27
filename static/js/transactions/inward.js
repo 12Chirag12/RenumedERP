@@ -1307,6 +1307,15 @@ function initPage_inward() {
       highlightAndScrollToLineError(serverErr);
     } else if (isEdit || (window.location.search && window.location.search.indexOf('edit_pk') !== -1) || window.location.hash === '#inwForm') {
       setTimeout(scrollToFormTop, 60);
+    } else if (document.querySelector('.alert-success')) {
+      setTimeout(function () {
+        var alertEl = document.querySelector('.alert-success') || document.querySelector('.messages-container');
+        if (alertEl) {
+          alertEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+          scrollToFormTop();
+        }
+      }, 60);
     } else if (currentStep === 1) {
       var firstStep1Err = step1 ? step1.querySelector('.field-error') : null;
       if (firstStep1Err) {
@@ -1316,6 +1325,8 @@ function initPage_inward() {
           highlightEl(inputEl);
           try { inputEl.focus(); } catch (e) {}
         }
+      } else {
+        setTimeout(scrollToFormTop, 60);
       }
     }
   });

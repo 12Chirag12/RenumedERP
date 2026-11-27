@@ -197,7 +197,7 @@ def inward_view(request):
                     request,
                     f'Inward {"updated" if instance else "saved"} successfully. Internal ID {hed.inward_id}, GRN {hed.grn_no}.',
                 )
-                return redirect('transactions:inward')
+                return redirect(f"{reverse('transactions:inward')}#inwForm")
         else:
             header_error_fields = {
                 'inward_dt', 'customer', 'register_no', 'grn_category',

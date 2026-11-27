@@ -1544,6 +1544,18 @@ class InwardFormValidationAndStepNavigationTests(TestCase):
         self.assertIn('inv_no', resp.context['form'].errors)
         self.assertIn('lines_json', resp.context['form'].errors)
 
+    def test_inward_view_post_successful_redirects_with_inw_form_hash(self):
+        import json
+        from django.urls import reverse
+        data = self._valid_header_data()
+        data['lines_json'] = json.dumps([
+            {'item_id': self.item.pk, 'pkg_style': 'Bag', 'qty': '10.000', 'rate': '100.00', 'use_batches': False}
+        ])
+        resp = self.client.post(reverse('transactions:inward'), data)
+        self.assertEqual(resp.status_code, 302)
+        expected_url = reverse('transactions:inward') + '#inwForm'
+        self.assertEqual(resp.url, expected_url)
+
     def test_inward_form_validation_empty_lines(self):
         from transactions.forms.inward import InwardForm
         data = self._valid_header_data()
