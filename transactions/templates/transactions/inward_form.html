@@ -44,7 +44,7 @@
         {{ form.lines_json }}
 
         <!-- Step 1: 65% inward+transport | 35% document (tall preview) -->
-        <div id="inwStep1" class="cust-step">
+        <div id="inwStep1" class="cust-step"{% if start_step == 2 %} style="display: none;"{% endif %}>
           <div class="inw-step1-grid">
           <div class="inw-step1-main-row">
           <div class="inw-step1-left">
@@ -188,12 +188,15 @@
             <button type="button" class="btn-cancel" id="btnInwClear" onclick="resetInwardForm()"><i class="bi bi-x-lg"></i> Clear</button>
             {% endif %}
           </div>
-          <span class="field-error js-err" id="err-lines_json_step1"></span>
+          <span class="field-error js-err" id="err-lines_json_step1">{% if start_step != 2 and form.lines_json.errors %}{{ form.lines_json.errors.0 }}{% endif %}</span>
         </div>
 
         <!-- Step 2: lines + batches -->
-        <div id="inwStep2" class="cust-step inw-step2" style="display: none;">
-          <span class="field-error js-err" id="err-lines_json">{% if form.lines_json.errors %}{{ form.lines_json.errors.0 }}{% endif %}</span>
+        <div id="inwStep2" class="cust-step inw-step2"{% if start_step == 2 %} style="display: flex; flex-direction: column;"{% else %} style="display: none;"{% endif %}>
+          <div class="inw-error-alert" id="err-lines_json-alert"{% if not form.lines_json.errors %} style="display: none;"{% endif %}>
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span class="field-error js-err" id="err-lines_json">{% if form.lines_json.errors %}{{ form.lines_json.errors.0 }}{% endif %}</span>
+          </div>
 
           <div class="prod-grid-wrap inw-items-panel">
             <div class="prod-grid-toolbar inw-items-toolbar">
@@ -208,6 +211,19 @@
 
           <div class="cu-actions inw-step2-actions">
             <button type="button" class="btn-cancel" id="btnInwBack"><i class="bi bi-arrow-left"></i> Back</button>
+            {% if edit_instance %}
+            <button type="submit" class="btn-save btn-save-main" id="btnInwSaveStep2"
+              {% if form.lines_json.value|default:'[]' == '[]' %}aria-disabled="true"{% endif %}>
+              <i class="bi bi-check2-circle"></i> Update Inward
+            </button>
+            <a href="{% url 'transactions:inward' %}" class="btn-cancel" id="btnInwCancelStep2"><i class="bi bi-x-lg"></i> Cancel</a>
+            {% else %}
+            <button type="submit" class="btn-save btn-save-main" id="btnInwSaveStep2"
+              {% if form.lines_json.value|default:'[]' == '[]' %}aria-disabled="true"{% endif %}>
+              <i class="bi bi-check2-circle"></i> Save Inward
+            </button>
+            <button type="button" class="btn-cancel" id="btnInwClearStep2" onclick="resetInwardForm()"><i class="bi bi-x-lg"></i> Clear</button>
+            {% endif %}
           </div>
         </div>
       </form>

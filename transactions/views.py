@@ -199,8 +199,16 @@ def inward_view(request):
                 )
                 return redirect('transactions:inward')
         else:
-            if 'lines_json' in form.errors:
+            header_error_fields = {
+                'inward_dt', 'customer', 'register_no', 'grn_category',
+                'grn_no', 'supplier', 'inv_no', 'inv_dt', 'header_document',
+                'transporter', 'vehicle_no', 'driver_name', 'driver_no',
+            }
+            has_header_errors = any(f in form.errors for f in header_error_fields)
+            if not has_header_errors and 'lines_json' in form.errors:
                 start_step = 2
+            else:
+                start_step = 1
     else:
         form = InwardForm(instance=instance)
         if instance:

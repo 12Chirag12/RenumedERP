@@ -1438,6 +1438,224 @@ class SalesOrderGstCalculationTests(TestCase):
         self.assertEqual(line.sgst_amt, Decimal('5.00'))
 
 
+class InwardFormValidationAndStepNavigationTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        import json
+        from django.contrib.auth import get_user_model
+        from masters.models import (
+            FinancialYear,
+            MstCust,
+            MstItem,
+            MstItemType,
+            MstProdCat,
+            MstState,
+            MstSupplier,
+            MstTransport,
+            MstUom,
+        )
+
+        cls.user = get_user_model().objects.create_superuser('inw_admin', 'inw@example.com', 'adminpass')
+        cls.fy = FinancialYear.objects.create(
+            fy_start_year=2026,
+            fy_end_year=2027,
+            fy_display='2026-27',
+            start_date=date(2026, 4, 1),
+            end_date=date(2027, 3, 31),
+            is_current=True,
+            is_open=True,
+            is_closed=False,
+        )
+        cls.state = MstState.objects.create(state_name='Maharashtra', gst_code='27')
+        cls.cat_rm = MstProdCat.objects.create(prod_cat_id='RM', prod_cat_name='Raw Material')
+        cls.item_type = MstItemType.objects.create(item_type_name='Raw Material Type', item_category=cls.cat_rm)
+        cls.uom_kg = MstUom.objects.create(uom_name='Kilogram', short_name='KG')
+        cls.cust = MstCust.objects.create(
+            cust_name='Inward Test Cust',
+            short_name='ITC',
+            address='123 Test Street',
+            state=cls.state,
+            pin_code='400001',
+        )
+        cls.supl = MstSupplier.objects.create(
+            supl_name='Inward Test Supplier',
+            short_name='ITS',
+            address='456 Supplier Road',
+            state=cls.state,
+            pin_code='400001',
+        )
+        cls.trans = MstTransport.objects.create(transport_name='Test Cargo')
+        cls.item = MstItem.objects.create(
+            item_name='Paracetamol Active IP',
+            item_category=cls.cat_rm,
+            item_type=cls.item_type,
+            uom=cls.uom_kg,
+            mfg_date='Y',
+            exp_date='Y',
+        )
+
+    def setUp(self):
+        self.client.force_login(self.user)
+
+    def _valid_header_data(self):
+        return {
+            'inward_dt': '2026-10-15',
+            'register_no': 'R-00101',
+            'grn_category': str(self.cat_rm.pk),
+            'grn_no': 'RM-00101',
+            'customer': str(self.cust.pk),
+            'supplier': str(self.supl.pk),
+            'inv_no': 'INV-999',
+            'inv_dt': '2026-10-15',
+            'transporter': str(self.trans.pk),
+            'vehicle_no': 'MH04AB1234',
+        }
+
+    def test_inward_view_get_initial_step(self):
+        from django.urls import reverse
+        resp = self.client.get(reverse('transactions:inward'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['start_step'], 1)
+
+    def test_inward_view_post_header_error_stays_step1(self):
+        import json
+        from django.urls import reverse
+        data = self._valid_header_data()
+        data['customer'] = ''  # missing customer
+        data['lines_json'] = json.dumps([
+            {'item_id': self.item.pk, 'pkg_style': 'Bag', 'qty': '10.000', 'rate': '100.00', 'use_batches': False}
+        ])
+        resp = self.client.post(reverse('transactions:inward'), data)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['start_step'], 1)
+        self.assertIn('customer', resp.context['form'].errors)
+
+    def test_inward_view_post_lines_error_redirects_step2(self):
+        from django.urls import reverse
+        data = self._valid_header_data()
+        data['lines_json'] = '[]'  # empty lines
+        resp = self.client.post(reverse('transactions:inward'), data)
+        self.assertEqual(resp.status_code, 200)
+        # Should redirect wizard to Step 2 so user sees the Items error!
+        self.assertEqual(resp.context['start_step'], 2)
+        self.assertIn('lines_json', resp.context['form'].errors)
+
+    def test_inward_view_post_both_errors_stays_step1(self):
+        from django.urls import reverse
+        data = self._valid_header_data()
+        data['inv_no'] = ''  # header error
+        data['lines_json'] = '[]'  # lines error
+        resp = self.client.post(reverse('transactions:inward'), data)
+        self.assertEqual(resp.status_code, 200)
+        # Header errors take precedence: stay on Step 1 so user fixes header first
+        self.assertEqual(resp.context['start_step'], 1)
+        self.assertIn('inv_no', resp.context['form'].errors)
+        self.assertIn('lines_json', resp.context['form'].errors)
+
+    def test_inward_form_validation_empty_lines(self):
+        from transactions.forms.inward import InwardForm
+        data = self._valid_header_data()
+        data['lines_json'] = '[]'
+        form = InwardForm(data=data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('Add at least one item.', form.errors.get('lines_json', []))
+
+    def test_inward_form_validation_line_missing_item(self):
+        import json
+        from transactions.forms.inward import InwardForm
+        data = self._valid_header_data()
+        data['lines_json'] = json.dumps([
+            {'item_id': '', 'pkg_style': 'Box', 'qty': '5.000', 'rate': '50.00'}
+        ])
+        form = InwardForm(data=data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('Line 1: item is required.', form.errors.get('lines_json', []))
+
+    def test_inward_form_validation_line_zero_or_negative_qty(self):
+        import json
+        from transactions.forms.inward import InwardForm
+        data = self._valid_header_data()
+        data['lines_json'] = json.dumps([
+            {'item_id': self.item.pk, 'pkg_style': 'Drum', 'qty': '0', 'rate': '50.00', 'use_batches': False}
+        ])
+        form = InwardForm(data=data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('Line 1: quantity must be greater than zero.', form.errors.get('lines_json', []))
+
+    def test_inward_form_validation_duplicate_item_packing_style(self):
+        import json
+        from transactions.forms.inward import InwardForm
+        data = self._valid_header_data()
+        data['lines_json'] = json.dumps([
+            {'item_id': self.item.pk, 'pkg_style': '25kg Drum', 'qty': '10.000', 'rate': '50.00', 'use_batches': False},
+            {'item_id': self.item.pk, 'pkg_style': '25kg Drum', 'qty': '20.000', 'rate': '50.00', 'use_batches': False},
+        ])
+        form = InwardForm(data=data)
+        self.assertFalse(form.is_valid())
+        self.assertTrue(any('duplicate item' in e for e in form.errors.get('lines_json', [])))
+
+    def test_inward_form_validation_batch_sum_mismatch(self):
+        import json
+        from transactions.forms.inward import InwardForm
+        data = self._valid_header_data()
+        data['lines_json'] = json.dumps([
+            {
+                'item_id': self.item.pk,
+                'pkg_style': 'Bag',
+                'qty': '20.000',
+                'rate': '50.00',
+                'use_batches': True,
+                'batches': [
+                    {
+                        'batch_no': 'B-101',
+                        'arn_no': 'ARN-1',
+                        'brand_name': 'Brand X',
+                        'pack_style': 'Bag',
+                        'mfg_dt': '2026-05-01',
+                        'exp_dt': '2028-04-30',
+                        'batch_qty': '15.000',  # 15 != 20
+                    }
+                ],
+            }
+        ])
+        form = InwardForm(data=data)
+        self.assertFalse(form.is_valid())
+        self.assertTrue(any('sum of batch quantities' in e for e in form.errors.get('lines_json', [])))
+
+    def test_inward_form_validation_valid_with_batches(self):
+        import json
+        from transactions.forms.inward import InwardForm
+        data = self._valid_header_data()
+        data['lines_json'] = json.dumps([
+            {
+                'item_id': self.item.pk,
+                'pkg_style': 'Bag',
+                'qty': '20.000',
+                'rate': '50.00',
+                'use_batches': True,
+                'batches': [
+                    {
+                        'batch_no': 'B-101',
+                        'arn_no': 'ARN-1',
+                        'brand_name': 'Brand X',
+                        'pack_style': 'Bag',
+                        'mfg_dt': '2026-05-01',
+                        'exp_dt': '2028-04-30',
+                        'batch_qty': '20.000',
+                    }
+                ],
+            }
+        ])
+        form = InwardForm(data=data)
+        self.assertTrue(form.is_valid(), form.errors)
+        hed = form.save()
+        self.assertEqual(hed.grn_no, 'RM-00101')
+        self.assertEqual(hed.lines.count(), 1)
+        self.assertEqual(hed.batch_lines.count(), 1)
+        self.assertEqual(hed.batch_lines.first().batch_no, 'B-101')
+
+
+
 
 
 

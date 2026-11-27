@@ -22,6 +22,7 @@ function initPage_inward() {
   var btnNext = document.getElementById('btnInwNext');
   var btnBack = document.getElementById('btnInwBack');
   var btnSave = document.getElementById('btnInwSave');
+  var btnSaveStep2 = document.getElementById('btnInwSaveStep2');
   var errEl = document.getElementById('err-lines_json');
   var errElStep1 = document.getElementById('err-lines_json_step1');
   var headerIcon = document.getElementById('inwHeaderIcon');
@@ -180,8 +181,116 @@ function initPage_inward() {
   }
 
   function setLinesErr(msg) {
+    var alertBox = document.getElementById('err-lines_json-alert');
     if (errEl) errEl.textContent = msg || '';
+    if (alertBox) {
+      alertBox.style.display = msg ? 'flex' : 'none';
+    }
     if (errElStep1) errElStep1.textContent = msg || '';
+  }
+
+  function clearHighlights() {
+    form.querySelectorAll('.inw-field-error-highlight, .has-error, .pulse-attention').forEach(function (el) {
+      el.classList.remove('inw-field-error-highlight', 'has-error', 'pulse-attention');
+    });
+  }
+
+  function highlightEl(el) {
+    if (!el) return;
+    el.classList.add('inw-field-error-highlight');
+    setTimeout(function () {
+      el.classList.remove('inw-field-error-highlight');
+    }, 3000);
+  }
+
+  function highlightAndScrollToLineError(msg) {
+    if (!msg) return;
+    clearHighlights();
+    setLinesErr(msg);
+    setStep(2);
+
+    var batchMatch = msg.match(/Line\s+(\d+)\s+batch\s+(\d+)/i);
+    var lineMatch = msg.match(/Line\s+(\d+)/i);
+
+    if (batchMatch) {
+      var lIdx = parseInt(batchMatch[1], 10) - 1;
+      var bIdx = parseInt(batchMatch[2], 10) - 1;
+      var ln = state.lines[lIdx];
+      if (ln) {
+        ln.batchExpanded = true;
+        render();
+      }
+      setTimeout(function () {
+        var card = lineList.querySelector('.inw-line-card[data-line-idx="' + lIdx + '"]');
+        if (card) {
+          card.classList.add('has-error');
+          var row = card.querySelector('.inw-batch-row[data-bi="' + bIdx + '"]');
+          if (row) {
+            row.classList.add('has-error');
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            var targetInput = null;
+            if (/batch number/i.test(msg)) targetInput = row.querySelector('.inw-b-batchno');
+            else if (/packing style/i.test(msg)) targetInput = row.querySelector('.inw-b-packstyle');
+            else if (/quantity/i.test(msg)) targetInput = row.querySelector('.inw-b-qty');
+            else if (/manufacturing date/i.test(msg)) targetInput = row.querySelector('.inw-b-mfg');
+            else if (/expiry date/i.test(msg)) targetInput = row.querySelector('.inw-b-exp');
+            else if (/product/i.test(msg)) targetInput = row.querySelector('.inw-b-prod');
+            else targetInput = row.querySelector('input, select');
+
+            if (targetInput) {
+              highlightEl(targetInput);
+              try { targetInput.focus(); } catch (e) {}
+            }
+          } else {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      }, 60);
+      return;
+    }
+
+    if (lineMatch) {
+      var lineIdx = parseInt(lineMatch[1], 10) - 1;
+      var card = lineList.querySelector('.inw-line-card[data-line-idx="' + lineIdx + '"]');
+      if (card) {
+        card.classList.add('has-error');
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        var targetInput = null;
+        if (/item is required|invalid item/i.test(msg)) {
+          targetInput = card.querySelector('.searchable-dropdown input, .inw-item-select, select');
+        } else if (/quantity/i.test(msg)) {
+          targetInput = card.querySelector('.inw-qty');
+        } else if (/packing style/i.test(msg)) {
+          targetInput = card.querySelector('.inw-pkg');
+        } else if (/rate/i.test(msg)) {
+          targetInput = card.querySelector('.inw-rate');
+        } else if (/batch/i.test(msg)) {
+          var ln2 = state.lines[lineIdx];
+          if (ln2) {
+            ln2.batchExpanded = true;
+            render();
+            var updatedCard = lineList.querySelector('.inw-line-card[data-line-idx="' + lineIdx + '"]');
+            targetInput = updatedCard ? updatedCard.querySelector('.inw-add-batch') : null;
+          }
+        }
+
+        if (targetInput) {
+          highlightEl(targetInput);
+          try { targetInput.focus(); } catch (e) {}
+        }
+      }
+      return;
+    }
+
+    if (/add at least one item/i.test(msg)) {
+      if (btnAdd) {
+        btnAdd.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        btnAdd.classList.add('pulse-attention');
+        setTimeout(function () {
+          btnAdd.classList.remove('pulse-attention');
+        }, 3000);
+      }
+    }
   }
 
   function hasAtLeastOneItemSelected() {
@@ -193,9 +302,9 @@ function initPage_inward() {
   }
 
   function updateSaveState() {
-    if (!btnSave) return;
     var ok = hasAtLeastOneItemSelected();
-    btnSave.setAttribute('aria-disabled', ok ? 'false' : 'true');
+    if (btnSave) btnSave.setAttribute('aria-disabled', ok ? 'false' : 'true');
+    if (btnSaveStep2) btnSaveStep2.setAttribute('aria-disabled', ok ? 'false' : 'true');
   }
 
   function setHeader(step) {
@@ -538,6 +647,25 @@ function initPage_inward() {
             ln.batchExpanded = true;
             render();
             serialize();
+
+            setTimeout(function () {
+              var targetCard = lineList.querySelector('.inw-line-card[data-line-idx="' + i + '"]');
+              if (targetCard) {
+                var innerBox = targetCard.querySelector('.inw-batch-inner');
+                var lastRow = innerBox ? innerBox.lastElementChild : null;
+                if (lastRow) {
+                  lastRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                  lastRow.classList.add('inw-batch-new-highlight');
+                  setTimeout(function () {
+                    lastRow.classList.remove('inw-batch-new-highlight');
+                  }, 1500);
+                  var bno = lastRow.querySelector('.inw-b-batchno');
+                  if (bno) {
+                    try { bno.focus(); } catch (e) {}
+                  }
+                }
+              }
+            }, 60);
           });
         }
       }
@@ -618,7 +746,12 @@ function initPage_inward() {
   function addLine() {
     setLinesErr('');
     if (!grnCat || !grnCat.value) {
+      setStep(1);
       setLinesErr('Select GRN type first.');
+      if (grnCat) {
+        highlightEl(grnCat);
+        try { grnCat.focus(); } catch (e) {}
+      }
       return;
     }
     state.lines.push({
@@ -634,44 +767,170 @@ function initPage_inward() {
       batchExpanded: false,
     });
     render();
+    serialize();
+
+    setTimeout(function () {
+      if (!lineList) return;
+      var lastCard = lineList.lastElementChild;
+      if (lastCard) {
+        lastCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        lastCard.classList.add('inw-line-new-highlight');
+        setTimeout(function () {
+          lastCard.classList.remove('inw-line-new-highlight');
+        }, 1500);
+
+        var searchInput = lastCard.querySelector('.searchable-dropdown input, .inw-item-select, select');
+        if (searchInput) {
+          try { searchInput.focus(); } catch (e) {}
+        }
+      }
+    }, 60);
+  }
+
+  function validateInwardForm(showErr) {
+    clearHighlights();
+    setLinesErr('');
+
+    // --- STEP 1 CHECKS ---
+    var inwDt = document.getElementById('inwInwardDt');
+    var regNo = document.getElementById('inwRegisterNo');
+    var grnNo = document.getElementById('inwGrnNo');
+    var cust = document.getElementById('inwCustomer');
+    var supl = document.getElementById('inwSupplier');
+    var invNo = document.getElementById('inwInvNo') || form.querySelector('[name="inv_no"]');
+    var invDt = document.getElementById('inwInvDt') || form.querySelector('[name="inv_dt"]');
+
+    var step1Errors = [];
+    if (!inwDt || !inwDt.value.trim()) step1Errors.push({ el: inwDt, msg: 'Inward date is required.' });
+    if (!regNo || !regNo.value.trim()) step1Errors.push({ el: regNo, msg: 'Register no. is required.' });
+    if (!grnCat || !grnCat.value.trim()) step1Errors.push({ el: grnCat, msg: 'GRN type is required.' });
+    if (!grnNo || !grnNo.value.trim()) step1Errors.push({ el: grnNo, msg: 'GRN no. is required.' });
+    if (!cust || !cust.value.trim()) step1Errors.push({ el: cust, msg: 'Customer is required.' });
+    if (!supl || !supl.value.trim()) step1Errors.push({ el: supl, msg: 'Supplier is required.' });
+    if (!invNo || !invNo.value.trim()) step1Errors.push({ el: invNo, msg: 'Invoice no. is required.' });
+    if (!invDt || !invDt.value.trim()) step1Errors.push({ el: invDt, msg: 'Invoice date is required.' });
+
+    if (step1Errors.length > 0) {
+      if (showErr) {
+        setStep(1);
+        var first = step1Errors[0];
+        setLinesErr(first.msg);
+        if (first.el) {
+          first.el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          highlightEl(first.el);
+          try { first.el.focus(); } catch (e) {}
+        }
+      }
+      return false;
+    }
+
+    // --- STEP 2 (ITEMS) CHECKS ---
+    serialize();
+    var raw = (linesHidden && linesHidden.value) ? linesHidden.value.trim() : '';
+    if (!raw || raw === '[]' || !state.lines.length) {
+      if (showErr) {
+        highlightAndScrollToLineError('Add at least one item.');
+      }
+      return false;
+    }
+
+    var seenItemPkgStyles = {};
+    for (var i = 0; i < state.lines.length; i++) {
+      var line = state.lines[i];
+      var lineNum = i + 1;
+
+      // 1. Item required
+      if (!line.item_id) {
+        if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ': item is required.');
+        return false;
+      }
+
+      // 2. Quantity required and > 0
+      var qtyNum = parseFloat(line.qty);
+      if (isNaN(qtyNum) || qtyNum <= 0) {
+        if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ': quantity must be greater than zero.');
+        return false;
+      }
+
+      // 3. Duplicate packing style for same item
+      var normPkg = (line.pkg_style || '').trim().toLowerCase();
+      var key = String(line.item_id) + '::' + normPkg;
+      if (seenItemPkgStyles[key] !== undefined) {
+        var firstNum = seenItemPkgStyles[key] + 1;
+        var dupMsg = normPkg
+          ? 'Line ' + lineNum + ': Same item with packing style "' + (line.pkg_style || '').trim() + '" is already added in Line ' + firstNum + '. The same item cannot have the same packing style.'
+          : 'Line ' + lineNum + ': Same item with empty packing style is already added in Line ' + firstNum + '. The same item cannot have the same packing style.';
+        if (showErr) highlightAndScrollToLineError(dupMsg);
+        return false;
+      }
+      seenItemPkgStyles[key] = i;
+
+      // 4. Batch checks if enabled
+      if (line.use_batches) {
+        if (!line.batches || !line.batches.length) {
+          if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ': add at least one batch or turn off Use batch details.');
+          return false;
+        }
+
+        var batchNos = {};
+        var bSum = 0;
+        for (var b = 0; b < line.batches.length; b++) {
+          var batch = line.batches[b];
+          var bNum = b + 1;
+
+          if (!batch.batch_no || !batch.batch_no.trim()) {
+            if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ' batch ' + bNum + ': batch number is required.');
+            return false;
+          }
+
+          var bnKey = batch.batch_no.trim().toLowerCase();
+          if (batchNos[bnKey]) {
+            if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ': duplicate batch number "' + batch.batch_no.trim() + '" for this item.');
+            return false;
+          }
+          batchNos[bnKey] = true;
+
+          if (!batch.pack_style || !batch.pack_style.trim()) {
+            if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ' batch ' + bNum + ': packing style is required.');
+            return false;
+          }
+
+          var bQtyNum = parseFloat(batch.batch_qty);
+          if (isNaN(bQtyNum) || bQtyNum <= 0) {
+            if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ' batch ' + bNum + ': batch quantity must be > 0.');
+            return false;
+          }
+          bSum += bQtyNum;
+
+          if (line.mfg_date_enabled && (!batch.mfg_dt || !batch.mfg_dt.trim())) {
+            if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ' batch ' + bNum + ': manufacturing date is required for this item.');
+            return false;
+          }
+
+          if (line.exp_date_enabled && (!batch.exp_dt || !batch.exp_dt.trim())) {
+            if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ' batch ' + bNum + ': expiry date is required for this item.');
+            return false;
+          }
+
+          if (batch.exp_dt && batch.mfg_dt && batch.exp_dt <= batch.mfg_dt) {
+            if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ' batch ' + bNum + ': expiry date must be after manufacturing date.');
+            return false;
+          }
+        }
+
+        // Sum of batches == line qty (allowing tiny floating tolerance 0.0005)
+        if (Math.abs(bSum - qtyNum) > 0.0005) {
+          if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ': sum of batch quantities (' + bSum.toFixed(3) + ') must equal line quantity (' + qtyNum.toFixed(3) + ').');
+          return false;
+        }
+      }
+    }
+
+    return true;
   }
 
   function prepareLinesForSubmit(showErr) {
-    setLinesErr('');
-    serialize();
-    var raw = (linesHidden && linesHidden.value) ? linesHidden.value.trim() : '';
-    if (!raw || raw === '[]') {
-      if (showErr) setLinesErr('Add at least one item.');
-      return false;
-    }
-    try {
-      var rows = JSON.parse(raw);
-      if (!Array.isArray(rows) || !rows.length) {
-        if (showErr) setLinesErr('Add at least one item.');
-        return false;
-      }
-      var seenItemPkgStyles = {};
-      for (var rIdx = 0; rIdx < rows.length; rIdx++) {
-        var r = rows[rIdx];
-        if (!r.item_id) continue;
-        var normPkg = (r.pkg_style || '').trim().toLowerCase();
-        var key = String(r.item_id) + '::' + normPkg;
-        if (seenItemPkgStyles[key] !== undefined) {
-          var firstIdx = seenItemPkgStyles[key] + 1;
-          var curIdx = rIdx + 1;
-          var msg = normPkg
-            ? 'Line ' + curIdx + ': Same item with packing style "' + (r.pkg_style || '').trim() + '" is already added in Line ' + firstIdx + '. The same item cannot have the same packing style.'
-            : 'Line ' + curIdx + ': Same item with empty packing style is already added in Line ' + firstIdx + '. The same item cannot have the same packing style.';
-          if (showErr) setLinesErr(msg);
-          return false;
-        }
-        seenItemPkgStyles[key] = rIdx;
-      }
-    } catch (e) {
-      if (showErr) setLinesErr('Invalid item data.');
-      return false;
-    }
-    return true;
+    return validateInwardForm(showErr);
   }
 
   function isThisFormHtmxRequest(e) {
@@ -684,7 +943,12 @@ function initPage_inward() {
   window.goToInwItems = function () {
     setLinesErr('');
     if (!grnCat || !grnCat.value) {
+      setStep(1);
       setLinesErr('Select GRN type first.');
+      if (grnCat) {
+        highlightEl(grnCat);
+        try { grnCat.focus(); } catch (e) {}
+      }
       return;
     }
 
@@ -933,27 +1197,26 @@ function initPage_inward() {
   }
 
   form.addEventListener('submit', function (e) {
-    if (!prepareLinesForSubmit(true)) e.preventDefault();
+    if (!validateInwardForm(true)) e.preventDefault();
   });
 
-  if (btnSave) {
-    btnSave.addEventListener('click', function (e) {
-      // Button stays clickable for UX, even when "disabled".
-      if (btnSave.getAttribute('aria-disabled') === 'true' || !hasAtLeastOneItemSelected()) {
+  [btnSave, btnSaveStep2].forEach(function (btn) {
+    if (!btn) return;
+    btn.addEventListener('click', function (e) {
+      if (!validateInwardForm(true)) {
         e.preventDefault();
-        setLinesErr('Add at least one item.');
       }
     });
-  }
+  });
 
   document.body.addEventListener('htmx:configRequest', function (e) {
     if (!isThisFormHtmxRequest(e)) return;
-    if (!prepareLinesForSubmit(true)) e.preventDefault();
+    if (!validateInwardForm(true)) e.preventDefault();
   });
 
   document.body.addEventListener('htmx:beforeRequest', function (e) {
     if (!isThisFormHtmxRequest(e)) return;
-    if (!prepareLinesForSubmit(true)) e.preventDefault();
+    if (!validateInwardForm(true)) e.preventDefault();
   });
 
   function normalizeBatchFromJson(b) {
@@ -1020,6 +1283,21 @@ function initPage_inward() {
     if (!state.lines.length) render();
     if (!isEdit) applySuggestedGrn(false);
     updateSaveState();
+
+    var serverErr = (errEl && errEl.textContent.trim()) || (errElStep1 && errElStep1.textContent.trim()) || '';
+    if (serverErr) {
+      highlightAndScrollToLineError(serverErr);
+    } else if (currentStep === 1) {
+      var firstStep1Err = step1 ? step1.querySelector('.field-error') : null;
+      if (firstStep1Err) {
+        var parentField = firstStep1Err.closest('.cu-field');
+        var inputEl = parentField ? parentField.querySelector('input, select, textarea') : null;
+        if (inputEl) {
+          highlightEl(inputEl);
+          try { inputEl.focus(); } catch (e) {}
+        }
+      }
+    }
   });
 }
 
