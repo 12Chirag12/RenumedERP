@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.urls import reverse
 
 from masters.models import FinancialYear, MstCust, MstProdCat, MstState, MstSupplier, MstTransport
 from transactions.models import TrnInwHed
@@ -1668,6 +1669,171 @@ class InwardFormValidationAndStepNavigationTests(TestCase):
         self.assertEqual(hed.lines.count(), 1)
         self.assertEqual(hed.batch_lines.count(), 1)
         self.assertEqual(hed.batch_lines.first().batch_no, 'B-101')
+
+
+class SalesOrderValidationAndStepNavigationTests(TestCase):
+    """Test step navigation, redirect anchor, and line validation for Sales Order."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from django.urls import reverse
+        from masters.models import FinancialYear, MstCust, MstProd, MstProdCat, MstState, MstItemType, MstUom, MstPkgStyle
+        from transactions.constants import GST_TYPE_CGST_SGST
+
+        User = get_user_model()
+        self.user = User.objects.create_user(username='so_tester', password='pw')
+        self.client.force_login(self.user)
+
+        self.fy = FinancialYear.objects.create(
+            fy_start_year=2026,
+            fy_end_year=2027,
+            fy_display='2026-27',
+            start_date=date(2026, 4, 1),
+            end_date=date(2027, 3, 31),
+            is_current=True,
+            is_open=True,
+        )
+        self.state = MstState.objects.create(state_name='Maharashtra', gst_code='27')
+        self.cust = MstCust.objects.create(cust_id=1, cust_name='Apex Health', short_name='APEX', state=self.state)
+        self.cat = MstProdCat.objects.create(prod_cat_id='TB', prod_cat_name='Tablets')
+        self.item_type = MstItemType.objects.create(item_category=self.cat, item_type_name='Tablets')
+        self.uom = MstUom.objects.create(uom_name='Nos', short_name='nos')
+        self.prod = MstProd.objects.create(
+            prod_name='Paracetamol 500mg',
+            prod_category=self.cat,
+            prod_type=self.item_type,
+            uom=self.uom,
+            hsn_code='30049066',
+        )
+        self.pkg = MstPkgStyle.objects.create(
+            pkg_type=self.item_type,
+            pkg_style_name='10X10',
+            pkg_style_value=Decimal('100'),
+        )
+
+    def _valid_header_data(self):
+        return {
+            'ord_rec_dt': '2026-10-01',
+            'customer': str(self.cust.pk),
+            'cust_ord_id': 'ORD-TEST-001',
+            'cust_ord_date': '2026-10-01',
+            'delivery_add': 'Plot 4, MIDC Area',
+            'pkg_fwd_amt': '0.00',
+            'frieght_amt': '0.00',
+            'oth_charges': '0.00',
+            'round_off': '0.00',
+            'terms_cond': 'Net 30',
+            'remarks': 'Urgent dispatch',
+        }
+
+    def test_sales_order_view_get_initial_step(self):
+        url = reverse('transactions:sales_order')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['start_step'], 1)
+
+    def test_sales_order_view_header_error_keeps_step_1(self):
+        url = reverse('transactions:sales_order')
+        data = self._valid_header_data()
+        data['cust_ord_id'] = ''  # missing required header field
+        data['lines_json'] = '[]'  # also empty lines
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['start_step'], 1)
+
+    def test_sales_order_view_lines_error_navigates_to_step_2(self):
+        url = reverse('transactions:sales_order')
+        data = self._valid_header_data()
+        data['lines_json'] = '[]'  # Header is completely valid, but lines missing
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['start_step'], 2)
+        self.assertEqual(response.context['sales_order_page_data']['startStep'], 2)
+
+    def test_sales_order_view_header_error_precedence_over_lines_error(self):
+        url = reverse('transactions:sales_order')
+        data = self._valid_header_data()
+        data['cust_ord_date'] = ''  # missing header field
+        data['lines_json'] = '[]'
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['start_step'], 1)
+
+    def test_sales_order_view_successful_save_redirects_to_soform(self):
+        import json
+        from transactions.constants import GST_TYPE_CGST_SGST
+
+        url = reverse('transactions:sales_order')
+        data = self._valid_header_data()
+        data['lines_json'] = json.dumps([
+            {
+                'prod_id': str(self.prod.pk),
+                'pkg_style_id': str(self.pkg.pk),
+                'order_qty': '1.00',
+                'rate': '10.00',
+                'gst_type': GST_TYPE_CGST_SGST,
+                'gst_per': '12.00',
+                'export_type': 'Ex',
+                'dispatches': [
+                    {'disp_sche_dt': '2026-10-15', 'disp_qty': '1.00', 'remarks': 'Slot 1'}
+                ],
+            }
+        ])
+        response = self.client.post(url, data)
+        expected_redirect = reverse('transactions:sales_order') + '#soForm'
+        self.assertRedirects(response, expected_redirect)
+
+    def test_sales_order_form_dispatches_sum_mismatch_error(self):
+        import json
+        from transactions.forms.sales_order import SalesOrderForm
+        from transactions.constants import GST_TYPE_CGST_SGST
+
+        data = self._valid_header_data()
+        data['lines_json'] = json.dumps([
+            {
+                'prod_id': str(self.prod.pk),
+                'pkg_style_id': str(self.pkg.pk),
+                'order_qty': '1.00',  # 1.00 lakh
+                'rate': '10.00',
+                'gst_type': GST_TYPE_CGST_SGST,
+                'gst_per': '12.00',
+                'export_type': 'Ex',
+                'dispatches': [
+                    {'disp_sche_dt': '2026-10-15', 'disp_qty': '0.50', 'remarks': ''}  # only 0.50 lakh
+                ],
+            }
+        ])
+        form = SalesOrderForm(data=data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('lines_json', form.errors)
+        self.assertIn('sum of dispatch quantities', form.errors['lines_json'][0])
+
+    def test_sales_order_form_dispatch_date_before_order_date_error(self):
+        import json
+        from transactions.forms.sales_order import SalesOrderForm
+        from transactions.constants import GST_TYPE_CGST_SGST
+
+        data = self._valid_header_data()
+        data['ord_rec_dt'] = '2026-10-10'
+        data['lines_json'] = json.dumps([
+            {
+                'prod_id': str(self.prod.pk),
+                'pkg_style_id': str(self.pkg.pk),
+                'order_qty': '1.00',
+                'rate': '10.00',
+                'gst_type': GST_TYPE_CGST_SGST,
+                'gst_per': '12.00',
+                'export_type': 'Ex',
+                'dispatches': [
+                    {'disp_sche_dt': '2026-10-05', 'disp_qty': '1.00', 'remarks': ''}  # before 2026-10-10
+                ],
+            }
+        ])
+        form = SalesOrderForm(data=data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('lines_json', form.errors)
+        self.assertIn('must not be before order record date', form.errors['lines_json'][0])
+
 
 
 

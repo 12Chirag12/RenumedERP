@@ -403,8 +403,16 @@ def sales_order_view(request):
                         form.add_error(field, errs)
                 else:
                     form.add_error(None, exc)
-                if 'lines_json' in form.errors:
+                header_error_fields = {
+                    'ord_rec_dt', 'customer', 'cust_ord_id', 'cust_ord_date',
+                    'delivery_add', 'pkg_fwd_amt', 'frieght_amt', 'oth_charges',
+                    'round_off', 'terms_cond', 'remarks', 'header_document',
+                }
+                has_header_errors = any(f in form.errors for f in header_error_fields)
+                if not has_header_errors and 'lines_json' in form.errors:
                     start_step = 2
+                else:
+                    start_step = 1
                 messages.error(
                     request,
                     'The sales order could not be saved. Please correct the errors and try again.',
@@ -415,10 +423,18 @@ def sales_order_view(request):
                     f'Sales order {"updated" if instance else "saved"} successfully. '
                     f'Internal ID {hed.order_id}, customer order {hed.cust_ord_id}.',
                 )
-                return redirect('transactions:sales_order')
+                return redirect(f"{reverse('transactions:sales_order')}#soForm")
         else:
-            if 'lines_json' in form.errors:
+            header_error_fields = {
+                'ord_rec_dt', 'customer', 'cust_ord_id', 'cust_ord_date',
+                'delivery_add', 'pkg_fwd_amt', 'frieght_amt', 'oth_charges',
+                'round_off', 'terms_cond', 'remarks', 'header_document',
+            }
+            has_header_errors = any(f in form.errors for f in header_error_fields)
+            if not has_header_errors and 'lines_json' in form.errors:
                 start_step = 2
+            else:
+                start_step = 1
             messages.error(
                 request,
                 'The sales order could not be saved. Please correct the errors and try again.',

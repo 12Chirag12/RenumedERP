@@ -1077,6 +1077,106 @@
   box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.15);
 }
 
+.sales-order-page #err-lines_json:empty {
+  display: none;
+}
+
+.sales-order-page .inw-error-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fef2f2;
+  border: 1.5px solid #f87171;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  color: #991b1b;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(185, 28, 28, 0.08);
+}
+
+.sales-order-page .inw-error-alert i {
+  font-size: 16px;
+  color: #dc2626;
+  flex-shrink: 0;
+}
+
+.sales-order-page .inw-error-alert .field-error {
+  color: #991b1b;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+}
+
+@keyframes soLinePulse {
+  0% {
+    box-shadow: 0 0 0 4px rgba(11, 88, 114, 0.35);
+    border-color: var(--primary-action);
+    transform: translateY(-2px);
+  }
+  100% {
+    box-shadow: 0 2px 8px rgba(11, 31, 58, 0.05);
+    border-color: var(--border);
+    transform: translateY(0);
+  }
+}
+
+.sales-order-page .so-line-new-highlight,
+.sales-order-page .inw-line-new-highlight {
+  animation: soLinePulse 1.2s ease-out;
+}
+
+@keyframes soBatchPulse {
+  0% {
+    background-color: #ecfeff;
+    border-color: #06b6d4;
+  }
+  100% {
+    background-color: transparent;
+    border-color: var(--border);
+  }
+}
+
+.sales-order-page .so-batch-new-highlight,
+.sales-order-page .inw-batch-new-highlight {
+  animation: soBatchPulse 1.2s ease-out;
+}
+
+@keyframes soErrorShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+
+.sales-order-page .so-line-card.has-error,
+.sales-order-page .inw-line-card.has-error {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2) !important;
+  animation: soErrorShake 0.4s ease-in-out;
+}
+
+.sales-order-page .inw-batch-row.has-error {
+  border-color: #ef4444 !important;
+  background-color: #fef2f2 !important;
+}
+
+.sales-order-page .inw-field-error-highlight {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25) !important;
+  background-color: #fff8f8 !important;
+  animation: soErrorShake 0.4s ease-in-out;
+}
+
+.sales-order-page .pulse-attention {
+  animation: soBtnPulse 1.5s infinite;
+}
+
+@keyframes soBtnPulse {
+  0% { box-shadow: 0 0 0 0 rgba(11, 88, 114, 0.6); }
+  70% { box-shadow: 0 0 0 8px rgba(11, 88, 114, 0); }
+}
+
 @media (max-width: 768px) {
   .sales-order-page .inw-step1-actions {
     grid-template-columns: 1fr;

@@ -20,6 +20,8 @@ function initPage_sales_order() {
   var btnNext = document.getElementById('btnSoNext');
   var btnBack = document.getElementById('btnSoBack');
   var btnSave = document.getElementById('btnSoSave');
+  var btnSaveStep2 = document.getElementById('btnSoSaveStep2');
+  var alertBox = document.getElementById('err-lines_json-alert');
   var errEl = document.getElementById('err-lines_json');
   var errElStep1 = document.getElementById('err-lines_json_step1');
   var headerIcon = document.getElementById('soHeaderIcon');
@@ -167,8 +169,26 @@ function initPage_sales_order() {
   }
 
   function setLinesErr(msg) {
+    var alertBox = document.getElementById('err-lines_json-alert');
     if (errEl) errEl.textContent = msg || '';
+    if (alertBox) {
+      alertBox.style.display = msg ? 'flex' : 'none';
+    }
     if (errElStep1) errElStep1.textContent = msg || '';
+  }
+
+  function clearHighlights() {
+    form.querySelectorAll('.inw-field-error-highlight, .has-error, .pulse-attention').forEach(function (el) {
+      el.classList.remove('inw-field-error-highlight', 'has-error', 'pulse-attention');
+    });
+  }
+
+  function highlightEl(el) {
+    if (!el) return;
+    el.classList.add('inw-field-error-highlight');
+    setTimeout(function () {
+      el.classList.remove('inw-field-error-highlight');
+    }, 3000);
   }
 
   function hasAtLeastOneProduct() {
@@ -180,9 +200,102 @@ function initPage_sales_order() {
   }
 
   function updateSaveState() {
-    if (!btnSave) return;
     var ok = hasAtLeastOneProduct();
-    btnSave.setAttribute('aria-disabled', ok ? 'false' : 'true');
+    if (btnSave) btnSave.setAttribute('aria-disabled', ok ? 'false' : 'true');
+    if (btnSaveStep2) btnSaveStep2.setAttribute('aria-disabled', ok ? 'false' : 'true');
+  }
+
+  function highlightAndScrollToLineError(msg) {
+    if (!msg) return;
+    clearHighlights();
+    setLinesErr(msg);
+    setStep(2);
+
+    var dispMatch = msg.match(/Line\s+(\d+)\s+dispatch\s+(\d+)/i);
+    var lineMatch = msg.match(/Line\s+(\d+)/i);
+
+    if (dispMatch) {
+      var lIdx = parseInt(dispMatch[1], 10) - 1;
+      var dIdx = parseInt(dispMatch[2], 10) - 1;
+      var ln = state.lines[lIdx];
+      if (ln) {
+        ln.collapsed = false;
+        ln.dispatchExpanded = true;
+        render();
+      }
+      setTimeout(function () {
+        var card = lineList && lineList.querySelector('.so-line-card[data-line-idx="' + lIdx + '"]');
+        if (card) {
+          card.classList.add('has-error');
+          var row = card.querySelector('.inw-batch-row[data-di="' + dIdx + '"]');
+          if (row) {
+            row.classList.add('has-error');
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            var targetInput = null;
+            if (/date/i.test(msg)) targetInput = row.querySelector('.so-d-dt');
+            else if (/qty|quantity/i.test(msg)) targetInput = row.querySelector('.so-d-qty');
+            else if (/remark/i.test(msg)) targetInput = row.querySelector('.so-d-rem');
+            else targetInput = row.querySelector('input, select');
+
+            if (targetInput) {
+              highlightEl(targetInput);
+              try { targetInput.focus(); } catch (e) {}
+            }
+          } else {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      }, 60);
+      return;
+    }
+
+    if (lineMatch) {
+      var lineIdx = parseInt(lineMatch[1], 10) - 1;
+      var ln2 = state.lines[lineIdx];
+      if (ln2) {
+        ln2.collapsed = false;
+        if (/dispatch/i.test(msg)) {
+          ln2.dispatchExpanded = true;
+        }
+        render();
+      }
+      setTimeout(function () {
+        var card = lineList && lineList.querySelector('.so-line-card[data-line-idx="' + lineIdx + '"]');
+        if (card) {
+          card.classList.add('has-error');
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          var targetInput = null;
+          if (/product/i.test(msg)) {
+            targetInput = card.querySelector('.searchable-dropdown input, .so-prod-select, select');
+          } else if (/packing style|packing value/i.test(msg)) {
+            targetInput = card.querySelector('.so-pkg-select, select');
+          } else if (/order quantity|quantity/i.test(msg)) {
+            targetInput = card.querySelector('.so-oqty');
+          } else if (/rate/i.test(msg)) {
+            targetInput = card.querySelector('.so-rate');
+          } else if (/export type/i.test(msg)) {
+            targetInput = card.querySelector('.so-export');
+          } else if (/gst/i.test(msg)) {
+            targetInput = card.querySelector('.so-gst-per, .so-gst-type');
+          } else if (/dispatch/i.test(msg)) {
+            targetInput = card.querySelector('.inw-add-batch');
+          }
+
+          if (targetInput) {
+            highlightEl(targetInput);
+            try { targetInput.focus(); } catch (e) {}
+          }
+        }
+      }, 60);
+      return;
+    }
+
+    setTimeout(function () {
+      if (btnAdd) {
+        highlightEl(btnAdd);
+        try { btnAdd.focus(); } catch (e) {}
+      }
+    }, 60);
   }
 
   function setHeader(step) {
@@ -595,6 +708,25 @@ function initPage_sales_order() {
         ln.dispatchExpanded = true;
         render();
         serialize();
+
+        setTimeout(function () {
+          var card = lineList && lineList.querySelector('.so-line-card[data-line-idx="' + i + '"]');
+          if (card) {
+            var dispatchRows = card.querySelectorAll('.inw-batch-row');
+            var lastRow = dispatchRows[dispatchRows.length - 1];
+            if (lastRow) {
+              lastRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              lastRow.classList.add('so-batch-new-highlight');
+              setTimeout(function () {
+                lastRow.classList.remove('so-batch-new-highlight');
+              }, 1500);
+              var dtInput = lastRow.querySelector('.so-d-dt, input');
+              if (dtInput) {
+                try { dtInput.focus(); } catch (e) {}
+              }
+            }
+          }
+        }, 60);
       });
 
       lineList.appendChild(card);
@@ -739,27 +871,176 @@ function initPage_sales_order() {
     });
     collapseAllExcept(state.lines.length - 1);
     render();
+    serialize();
+
+    setTimeout(function () {
+      if (!lineList) return;
+      var lastCard = lineList.lastElementChild;
+      if (lastCard) {
+        lastCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        lastCard.classList.add('so-line-new-highlight');
+        setTimeout(function () {
+          lastCard.classList.remove('so-line-new-highlight');
+        }, 1500);
+
+        var searchInput = lastCard.querySelector('.searchable-dropdown input, .so-prod-select, select');
+        if (searchInput) {
+          try { searchInput.focus(); } catch (e) {}
+        }
+      }
+    }, 60);
+  }
+
+  function validateSalesOrderForm(showErr) {
+    clearHighlights();
+    setLinesErr('');
+
+    // --- STEP 1 CHECKS ---
+    var ordRecDt = document.getElementById('soOrdRecDt');
+    var cust = document.getElementById('soCustomer');
+    var custOrdId = document.getElementById('soCustOrdId');
+    var custOrdDate = document.getElementById('soCustOrdDate');
+
+    var step1Errors = [];
+    if (!ordRecDt || !ordRecDt.value.trim()) step1Errors.push({ el: ordRecDt, msg: 'Order record date is required.' });
+    if (!cust || !cust.value.trim()) step1Errors.push({ el: cust, msg: 'Customer is required.' });
+    if (!custOrdId || !custOrdId.value.trim()) step1Errors.push({ el: custOrdId, msg: 'Customer order no. is required.' });
+    if (!custOrdDate || !custOrdDate.value.trim()) step1Errors.push({ el: custOrdDate, msg: 'Customer order date is required.' });
+
+    if (step1Errors.length > 0) {
+      if (showErr) {
+        setStep(1);
+        var first = step1Errors[0];
+        setLinesErr(first.msg);
+        if (first.el) {
+          first.el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          highlightEl(first.el);
+          try { first.el.focus(); } catch (e) {}
+        }
+      }
+      return false;
+    }
+
+    // --- STEP 2 (PRODUCTS) CHECKS ---
+    serialize();
+    var raw = (linesHidden && linesHidden.value) ? linesHidden.value.trim() : '';
+    if (!raw || raw === '[]' || !state.lines.length) {
+      if (showErr) {
+        highlightAndScrollToLineError('Add at least one product line.');
+      }
+      return false;
+    }
+
+    var seenTriplets = {};
+    var ordRecDateVal = (ordRecDt && ordRecDt.value.trim()) || '';
+
+    for (var i = 0; i < state.lines.length; i++) {
+      var line = state.lines[i];
+      var lineNum = i + 1;
+
+      // Product required
+      if (!line.prod_id || String(line.prod_id) === '0') {
+        if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ': product is required.');
+        return false;
+      }
+
+      // Packing style required
+      if (!line.pkg_style_id) {
+        if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ': packing style is required.');
+        return false;
+      }
+
+      // Order qty required and > 0
+      var oq = parseFloat(line.order_qty);
+      if (isNaN(oq) || oq <= 0) {
+        if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ': order quantity must be greater than zero.');
+        return false;
+      }
+
+      // Rate required and > 0
+      var rt = parseFloat(line.rate);
+      if (isNaN(rt) || rt <= 0) {
+        if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ': rate must be greater than zero.');
+        return false;
+      }
+
+      // Duplicate triplet (prod_id, pkg_style_id, rate)
+      var tripKey = String(line.prod_id) + '::' + String(line.pkg_style_id) + '::' + rt.toFixed(2);
+      if (seenTriplets[tripKey] !== undefined) {
+        if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ': duplicate product entry (same product, packing style, and rate).');
+        return false;
+      }
+      seenTriplets[tripKey] = i;
+
+      // Export type required
+      if (!line.export_type || !String(line.export_type).trim()) {
+        if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ': export type is required.');
+        return false;
+      }
+
+      // GST %
+      if (line.gst_type !== GST_EXEMPTED) {
+        var gp = parseFloat(line.gst_per);
+        if (isNaN(gp) || gp < 0 || gp > 100) {
+          if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ': GST % must be between 0 and 100.');
+          return false;
+        }
+      }
+
+      // Dispatches
+      if (!line.dispatches || !line.dispatches.length) {
+        if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ': add at least one dispatch row.');
+        return false;
+      }
+
+      var dispSum = 0;
+      var seenDt = {};
+      for (var d = 0; d < line.dispatches.length; d++) {
+        var disp = line.dispatches[d];
+        var dispNum = d + 1;
+
+        if (!disp.disp_sche_dt || !disp.disp_sche_dt.trim()) {
+          if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ' dispatch ' + dispNum + ': schedule date is required.');
+          return false;
+        }
+
+        if (ordRecDateVal && disp.disp_sche_dt < ordRecDateVal) {
+          if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ' dispatch ' + dispNum + ': schedule date must not be before order record date.');
+          return false;
+        }
+
+        var dtKey = disp.disp_sche_dt.trim();
+        if (seenDt[dtKey]) {
+          if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ': duplicate dispatch schedule date for the same product.');
+          return false;
+        }
+        seenDt[dtKey] = true;
+
+        var dq = parseFloat(disp.disp_qty);
+        if (isNaN(dq) || dq <= 0) {
+          if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ' dispatch ' + dispNum + ': dispatch qty must be greater than zero.');
+          return false;
+        }
+        dispSum += dq;
+
+        if (disp.remarks && String(disp.remarks).length > 20) {
+          if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ' dispatch ' + dispNum + ': remarks must be 20 characters or fewer.');
+          return false;
+        }
+      }
+
+      // Compare dispSum with order_qty
+      if (Math.abs(dispSum - oq) > 0.0005) {
+        if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ': sum of dispatch quantities (' + dispSum.toFixed(2) + ') must equal order quantity (' + oq.toFixed(2) + ').');
+        return false;
+      }
+    }
+
+    return true;
   }
 
   function prepareLinesForSubmit(showErr) {
-    setLinesErr('');
-    serialize();
-    var raw = (linesHidden && linesHidden.value) ? linesHidden.value.trim() : '';
-    if (!raw || raw === '[]') {
-      if (showErr) setLinesErr('Add at least one product line.');
-      return false;
-    }
-    try {
-      var rows = JSON.parse(raw);
-      if (!Array.isArray(rows) || !rows.length) {
-        if (showErr) setLinesErr('Add at least one product line.');
-        return false;
-      }
-    } catch (e) {
-      if (showErr) setLinesErr('Invalid line data.');
-      return false;
-    }
-    return true;
+    return validateSalesOrderForm(showErr);
   }
 
   function isThisFormHtmxRequest(e) {
@@ -769,15 +1050,26 @@ function initPage_sales_order() {
     return typeof elt.closest === 'function' && elt.closest('form') === form;
   }
 
+  function scrollToFormTop() {
+    var panel = document.querySelector('.sales-order-page .cu-panel') || form;
+    if (panel) {
+      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
   function showProductsStep() {
     setLinesErr('');
     setStep(2);
+    setTimeout(scrollToFormTop, 40);
   }
 
   window.goToSoProducts = showProductsStep;
 
   window.goBackSoHeader = function () {
     setStep(1);
+    setTimeout(scrollToFormTop, 40);
   };
 
   function extFromName(name) {
@@ -962,20 +1254,21 @@ function initPage_sales_order() {
     render();
     isEdit = false;
     setStep(1);
+    setTimeout(scrollToFormTop, 40);
   };
 
   form.addEventListener('submit', function (e) {
     if (!prepareLinesForSubmit(true)) e.preventDefault();
   });
 
-  if (btnSave) {
-    btnSave.addEventListener('click', function (e) {
-      if (btnSave.getAttribute('aria-disabled') === 'true' || !hasAtLeastOneProduct()) {
+  [btnSave, btnSaveStep2].forEach(function (btn) {
+    if (!btn) return;
+    btn.addEventListener('click', function (e) {
+      if (!prepareLinesForSubmit(true)) {
         e.preventDefault();
-        setLinesErr('Add at least one product line.');
       }
     });
-  }
+  });
 
   document.body.addEventListener('htmx:configRequest', function (e) {
     if (!isThisFormHtmxRequest(e)) return;
@@ -1073,6 +1366,16 @@ function initPage_sales_order() {
   }).then(function () {
     render();
     serialize();
+
+    if (initialStep === 2 && errEl && errEl.textContent.trim()) {
+      setTimeout(function () {
+        highlightAndScrollToLineError(errEl.textContent.trim());
+      }, 250);
+    }
+
+    if (window.location.hash === '#soForm' || isEdit || document.querySelector('.messages-box .alert, .alert-success')) {
+      setTimeout(scrollToFormTop, 100);
+    }
   });
 
   // Customer-filtered products: reload product list when customer changes.
