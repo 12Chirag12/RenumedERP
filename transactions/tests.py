@@ -1240,21 +1240,13 @@ class InwardSameItemAndBrandNameTests(TestCase):
                     'use_batches': False,
                     'batches': [],
                 },
-                {
-                    'item_id': self.item.pk,
-                    'pkg_style': '   ',  # Empty/whitespace duplicate
-                    'qty': '25.000',
-                    'rate': '350.00',
-                    'use_batches': False,
-                    'batches': [],
-                },
             ]),
         }
         form = InwardForm(data=form_data)
         self.assertFalse(form.is_valid())
         self.assertIn('lines_json', form.errors)
         self.assertTrue(
-            any('The same item cannot have the same packing style' in err for err in form.errors['lines_json'])
+            any('packing style is required' in err for err in form.errors['lines_json'])
         )
 
     def test_different_items_same_packing_style_is_allowed(self):
@@ -1570,6 +1562,17 @@ class InwardFormValidationAndStepNavigationTests(TestCase):
         form = InwardForm(data=data)
         self.assertFalse(form.is_valid())
         self.assertIn('Line 1: item is required.', form.errors.get('lines_json', []))
+
+    def test_inward_form_validation_line_missing_pkg_style(self):
+        import json
+        from transactions.forms.inward import InwardForm
+        data = self._valid_header_data()
+        data['lines_json'] = json.dumps([
+            {'item_id': self.item.pk, 'pkg_style': '', 'qty': '5.000', 'rate': '50.00', 'use_batches': False}
+        ])
+        form = InwardForm(data=data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('Line 1: packing style is required.', form.errors.get('lines_json', []))
 
     def test_inward_form_validation_line_zero_or_negative_qty(self):
         import json

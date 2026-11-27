@@ -435,6 +435,10 @@ class InwardForm(forms.Form):
                     f'Line {idx}: item "{item.item_name}" has no UOM. Set it on the Item master first.'
                 )
 
+            if not pkg_style:
+                raise forms.ValidationError(
+                    f'Line {idx}: packing style is required.'
+                )
             if len(pkg_style) > 30:
                 raise forms.ValidationError(
                     f'Line {idx}: packing style must be 30 characters or fewer.'
@@ -516,7 +520,7 @@ class InwardForm(forms.Form):
                 brand_name = (b.get('brand_name') or '').strip()
                 if len(brand_name) > 150:
                     raise forms.ValidationError(
-                        f'Line {idx} batch {bidx}: brand name must be at most 150 characters.'
+                        f'Line {idx} batch {bidx}: make / brand name must be at most 150 characters.'
                     )
 
                 pack_style = (b.get('pack_style') or '').strip()

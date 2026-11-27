@@ -448,7 +448,7 @@ function initPage_inward() {
         '</div>' +
       '</div>' +
       '<div class="inw-br-field inw-br-brand">' +
-        '<label>Brand name</label>' +
+        '<label>Make</label>' +
         '<input type="text" maxlength="150" class="cu-input inw-b-brand" value="' + escHtml(b.brand_name) + '" placeholder="Optional">' +
       '</div>' +
       '<div class="inw-br-field">' +
@@ -546,9 +546,9 @@ function initPage_inward() {
           '<label>Item <span class="req">*</span></label>' +
           '<select class="cu-select searchable-dropdown inw-item-select" data-idx="' + idx + '">' +
           itemOptionsHtml(line.item_id) + '</select></div>' +
-          '<div class="inw-cell"><label>Packing Style <span  </span></label>' +
-          '<input type="text" maxlength="30" " class="cu-input inw-pkg" value="' + 
-          escHtml(line.pkg_style) + '"></div>' +
+          '<div class="inw-cell"><label>Packing style <span class="req">*</span></label>' +
+          '<input type="text" maxlength="30" class="cu-input inw-pkg" value="' + 
+          escHtml(line.pkg_style) + '" placeholder="e.g. 25 Kg Drum"></div>' +
           '<div class="inw-cell"><label>Quantity <span class="req">*</span></label>' +
           '<input type="number" class="cu-input inw-qty" min="0.001" max="99999999.999" step="0.001" data-idx="' + idx + '" value="' +
           escHtml(line.qty) + '"></div>' +
@@ -845,7 +845,13 @@ function initPage_inward() {
         return false;
       }
 
-      // 2. Quantity required and > 0
+      // 2. Packing style required
+      if (!line.pkg_style || !line.pkg_style.trim()) {
+        if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ': packing style is required.');
+        return false;
+      }
+
+      // 3. Quantity required and > 0
       var qtyNum = parseFloat(line.qty);
       if (isNaN(qtyNum) || qtyNum <= 0) {
         if (showErr) highlightAndScrollToLineError('Line ' + lineNum + ': quantity must be greater than zero.');
